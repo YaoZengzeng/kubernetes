@@ -33,6 +33,9 @@ import (
 // associated with it which runs the probe loop until the container permanently terminates, or the
 // stop channel is closed. The worker uses the probe Manager's statusManager to get up-to-date
 // container IDs.
+// worker负责处理它的容器的periodic probing
+// 每个worker都有一个goroutine，它运行probe loop直到容器永远结束，或者stop channel被关闭
+// worker使用probe Manager的status Manager去获取最新的container ID
 type worker struct {
 	// Channel for stopping the probe.
 	stopCh chan struct{}
@@ -83,6 +86,7 @@ func newWorker(
 	}
 
 	switch probeType {
+	// 只有readiness和liveness这两种情况
 	case readiness:
 		w.spec = container.ReadinessProbe
 		w.resultsManager = m.readinessManager
@@ -139,6 +143,8 @@ func (w *worker) stop() {
 
 // doProbe probes the container once and records the result.
 // Returns whether the worker should continue.
+// doProbe探测一次容器并且记录结果
+// 返回worker是否继续
 func (w *worker) doProbe() (keepGoing bool) {
 	defer func() { recover() }() // Actually eat panics (HandleCrash takes care of logging)
 	defer runtime.HandleCrash(func(_ interface{}) { keepGoing = true })
@@ -165,6 +171,7 @@ func (w *worker) doProbe() (keepGoing bool) {
 		return true // Wait for more information.
 	}
 
+	// pod更新了容器，使用最新的容器
 	if w.containerID.String() != c.ContainerID {
 		if !w.containerID.IsEmpty() {
 			w.resultsManager.Remove(w.containerID)
@@ -177,6 +184,7 @@ func (w *worker) doProbe() (keepGoing bool) {
 
 	if w.onHold {
 		// Worker is on hold until there is a new container.
+		// 保持worker，直到有新的容器被创建
 		return true
 	}
 
@@ -191,6 +199,7 @@ func (w *worker) doProbe() (keepGoing bool) {
 			w.pod.Spec.RestartPolicy != v1.RestartPolicyNever
 	}
 
+	// 容器启动时间太短，没有超过配置的初始化等待时间InitialDelaySeconds
 	if int32(time.Since(c.State.Running.StartedAt.Time).Seconds()) < w.spec.InitialDelaySeconds {
 		return true
 	}
@@ -198,6 +207,7 @@ func (w *worker) doProbe() (keepGoing bool) {
 	// TODO: in order for exec probes to correctly handle downward API env, we must be able to reconstruct
 	// the full container environment here, OR we must make a call to the CRI in order to get those environment
 	// values from the running container.
+	// 调用probe检测容器状态
 	result, err := w.probeManager.prober.probe(w.probeType, w.pod, status, w.container, w.containerID)
 	if err != nil {
 		// Prober error, throw away the result.
@@ -221,6 +231,7 @@ func (w *worker) doProbe() (keepGoing bool) {
 
 	if w.probeType == liveness && result == results.Failure {
 		// The container fails a liveness check, it will need to be restarted.
+		// 如果容器没有通过liveness check，它需要被重启
 		// Stop probing until we see a new container ID. This is to reduce the
 		// chance of hitting #21751, where running `docker exec` when a
 		// container is being stopped may lead to corrupted container state.

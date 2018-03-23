@@ -46,6 +46,7 @@ import (
 //   KubeletConfiguration is intended to be shared between nodes
 // In general, please try to avoid adding flags or configuration fields,
 // we already have a confusingly large amount of them.
+// KubeletFlags中配置的参数是在整个node的生命周期中都不会改变并且同时不能在节点之间共享的信息
 type KubeletFlags struct {
 	KubeConfig          flag.StringFlag
 	BootstrapKubeconfig string
@@ -75,6 +76,7 @@ type KubeletFlags struct {
 	ProviderID string
 
 	// Container-runtime-specific options.
+	// 容器运行时相关的配置
 	config.ContainerRuntimeOptions
 
 	// certDirectory is the directory where the TLS certs are located (by
@@ -92,11 +94,14 @@ type KubeletFlags struct {
 
 	// rootDirectory is the directory path to place kubelet files (volume
 	// mounts,etc).
+	// rootDirectory是用来存放一些kubelet文件(volume, mounts等等)的路径
 	RootDirectory string
 
 	// The Kubelet will use this directory for checkpointing downloaded configurations and tracking configuration health.
+	// Kubelet会用该目录checkpointing下载下来的配置并且追踪它的健康
 	// The Kubelet will create this directory if it does not already exist.
 	// The path may be absolute or relative; relative paths are under the Kubelet's current working directory.
+	// 相对路径是针对kubelet的当前目录而言的
 	// Providing this flag enables dynamic kubelet configuration.
 	// To use this flag, the DynamicKubeletConfig feature gate must be enabled.
 	DynamicConfigDir flag.StringFlag
@@ -108,6 +113,7 @@ type KubeletFlags struct {
 	InitConfigDir flag.StringFlag
 
 	// registerNode enables automatic registration with the apiserver.
+	// registerNode使能自动注册到apiserver
 	RegisterNode bool
 
 	// registerWithTaints are an array of taints to add to a node object when
@@ -120,6 +126,7 @@ type KubeletFlags struct {
 	// +optional
 	AllowedUnsafeSysctls []string
 	// containerized should be set to true if kubelet is running in a container.
+	// 如果kubelet运行在一个容器中，则containerized设置为true
 	Containerized bool
 	// remoteRuntimeEndpoint is the endpoint of remote runtime service
 	RemoteRuntimeEndpoint string
@@ -142,13 +149,16 @@ type KubeletFlags struct {
 	// Currently only memory is supported. [default=none]"
 	ExperimentalQOSReserved map[string]string
 	// Node Labels are the node labels to add when registering the node in the cluster
+	// 当把节点注册到集群中添加的node labels
 	NodeLabels map[string]string
 	// volumePluginDir is the full path of the directory in which to search
 	// for additional third party volume plugins
+	// volumePluginDir是寻找额外的第三方volume插件的目录
 	VolumePluginDir string
 	// lockFilePath is the path that kubelet will use to as a lock file.
 	// It uses this file as a lock to synchronize with other kubelet processes
 	// that may be running.
+	// 用于和其他kubelet进程同步的锁
 	LockFilePath string
 	// ExitOnLockContention is a flag that signifies to the kubelet that it is running
 	// in "bootstrap" mode. This requires that 'LockFilePath' has been set.
@@ -253,6 +263,8 @@ func NewKubeletConfiguration() (*kubeletconfig.KubeletConfiguration, error) {
 
 // KubeletServer encapsulates all of the parameters necessary for starting up
 // a kubelet. These can either be set via command line or directly.
+// KubeletServer封装了启动一个kubelet所需的所有参数
+// 它们既可以来自命令行，也可以直接进行设置
 type KubeletServer struct {
 	KubeletFlags
 	kubeletconfig.KubeletConfiguration

@@ -48,6 +48,8 @@ var (
 // Currently, all docker containers receive their own mount namespaces.
 // NsenterMounter works by executing nsenter to run commands in
 // the host's mount namespace.
+// 现在所有的docker容器都有它们自己的mount namespace
+// NsenterMounter通过执行nsenter在宿主机的mount namespace中运行命令
 type NsenterMounter struct {
 	ne *nsenter.Nsenter
 }

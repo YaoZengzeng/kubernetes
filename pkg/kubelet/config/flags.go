@@ -41,6 +41,8 @@ type ContainerRuntimeOptions struct {
 	// A shared PID namespace is the only option in non-docker runtimes and is required by the CRI. The ability to
 	// disable it for docker will be removed unless a compelling use case is discovered with widespread use.
 	// TODO: Remove once we no longer support disabling shared PID namespace (https://issues.k8s.io/41938)
+	// 除了docker以外的运行时都只有shared PID namespace这一个选项
+	// 这个选项以后也会被移除，除非找到一个广泛使用的场景
 	DockerDisableSharedPID bool
 	// PodSandboxImage is the image whose network/ipc namespaces
 	// containers in each pod will use.

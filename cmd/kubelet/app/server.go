@@ -114,6 +114,7 @@ manifest can be provided to the Kubelet.
 File: Path passed as a flag on the command line. Files under this path will be monitored
 periodically for updates. The monitoring period is 20s by default and is configurable
 via a flag.
+pod spec也可以从某个路径中读取，默认情况下，每隔20s读取一次，并且路径和时间都可以进行设置
 
 HTTP endpoint: HTTP endpoint passed as a parameter on the command line. This endpoint
 is checked every 20 seconds (also configurable with a flag).
@@ -129,6 +130,7 @@ HTTP server: The kubelet can also listen for HTTP and respond to a simple API
 
 // UnsecuredDependencies returns a Dependencies suitable for being run, or an error if the server setup
 // is not valid.  It will not start any background processes, and does not include authentication/authorization
+// UnsecuredDependencies不会启动任何的background process并且不包含任何的认证
 func UnsecuredDependencies(s *options.KubeletServer) (*kubelet.Dependencies, error) {
 	// Initialize the TLS Options
 	tlsOptions, err := InitializeTLS(&s.KubeletFlags, &s.KubeletConfiguration)
@@ -138,6 +140,7 @@ func UnsecuredDependencies(s *options.KubeletServer) (*kubelet.Dependencies, err
 
 	mounter := mount.New(s.ExperimentalMounterPath)
 	var writer kubeio.Writer = &kubeio.StdWriter{}
+	// 将kubelet运行在容器内
 	if s.Containerized {
 		glog.V(2).Info("Running kubelet in containerized mode (experimental)")
 		mounter = mount.NewNsenterMounter()
@@ -145,6 +148,7 @@ func UnsecuredDependencies(s *options.KubeletServer) (*kubelet.Dependencies, err
 	}
 
 	var dockerClientConfig *dockershim.ClientConfig
+	// 如果容器运行时是docker，则构建dockershim.ClientConfig
 	if s.ContainerRuntime == kubetypes.DockerContainerRuntime {
 		dockerClientConfig = &dockershim.ClientConfig{
 			DockerEndpoint:            s.DockerEndpoint,
@@ -155,7 +159,9 @@ func UnsecuredDependencies(s *options.KubeletServer) (*kubelet.Dependencies, err
 
 	return &kubelet.Dependencies{
 		Auth:                nil, // default does not enforce auth[nz]
+		// cadvisor.New启动后台进程（后台的http.ListenAndServer以及一些后台的cleaner）
 		CAdvisorInterface:   nil, // cadvisor.New launches background processes (bg http.ListenAndServe, and some bg cleaners), not set here
+		// cloud provider可能会启动后台进程
 		Cloud:               nil, // cloud provider might start background processes
 		ContainerManager:    nil,
 		DockerClientConfig:  dockerClientConfig,
@@ -164,6 +170,7 @@ func UnsecuredDependencies(s *options.KubeletServer) (*kubelet.Dependencies, err
 		ExternalKubeClient:  nil,
 		EventClient:         nil,
 		Mounter:             mounter,
+		// 读取一系列的网络插件，包括kubenet以及CNI
 		NetworkPlugins:      ProbeNetworkPlugins(s.CNIConfDir, s.CNIBinDir),
 		OOMAdjuster:         oom.NewOOMAdjuster(),
 		OSInterface:         kubecontainer.RealOS{},
@@ -177,6 +184,8 @@ func UnsecuredDependencies(s *options.KubeletServer) (*kubelet.Dependencies, err
 // The kubeDeps argument may be nil - if so, it is initialized from the settings on KubeletServer.
 // Otherwise, the caller is assumed to have set up the Dependencies object and a default one will
 // not be generated.
+// kubeDeps可能为nil，如果是的话，它会根据KubeletServer进行初始化，否则会假设调用者已经创建好了Dependencies对象
+// 并且不会创建一个默认的对象
 func Run(s *options.KubeletServer, kubeDeps *kubelet.Dependencies) error {
 	// To help debugging, immediately log version
 	glog.Infof("Version: %+v", version.Get())
@@ -222,10 +231,13 @@ func initConfigz(kc *kubeletconfiginternal.KubeletConfiguration) error {
 }
 
 // makeEventRecorder sets up kubeDeps.Recorder if it's nil. It's a no-op otherwise.
+// 如果kubeDeps.Recorder为nil的话，则对其进行设置，否则就只是空操作
 func makeEventRecorder(kubeDeps *kubelet.Dependencies, nodeName types.NodeName) {
 	if kubeDeps.Recorder != nil {
 		return
 	}
+	// 创建event broadcaster
+	// 所有创建的事件都会先汇总到这里
 	eventBroadcaster := record.NewBroadcaster()
 	kubeDeps.Recorder = eventBroadcaster.NewRecorder(legacyscheme.Scheme, v1.EventSource{Component: componentKubelet, Host: string(nodeName)})
 	eventBroadcaster.StartLogging(glog.V(3).Infof)
@@ -239,11 +251,13 @@ func makeEventRecorder(kubeDeps *kubelet.Dependencies, nodeName types.NodeName) 
 
 func run(s *options.KubeletServer, kubeDeps *kubelet.Dependencies) (err error) {
 	// Set global feature gates based on the value on the initial KubeletServer
+	// 根据初始化的KubeletServer中的值设置全局的feature gates
 	err = utilfeature.DefaultFeatureGate.SetFromMap(s.KubeletConfiguration.FeatureGates)
 	if err != nil {
 		return err
 	}
 	// validate the initial KubeletServer (we set feature gates first, because this validation depends on feature gates)
+	// 检测初始的KubeletServer
 	if err := options.ValidateKubeletServer(s); err != nil {
 		return err
 	}
@@ -267,6 +281,7 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.Dependencies) (err error) {
 	}
 
 	// Register current configuration with /configz endpoint
+	// 将当前的配置注册到/configz这个endpoint
 	err = initConfigz(&s.KubeletConfiguration)
 	if err != nil {
 		glog.Errorf("unable to register KubeletConfiguration with configz, error: %v", err)
@@ -308,6 +323,7 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.Dependencies) (err error) {
 		}
 	}
 
+	// 获取node name，如果kubeDeps.Cloud不为空，则由cloud provider获取，否则设置为主机名
 	nodeName, err := getNodeName(kubeDeps.Cloud, nodeutil.GetHostname(s.HostnameOverride))
 	if err != nil {
 		return err
@@ -320,6 +336,7 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.Dependencies) (err error) {
 	}
 
 	// if in standalone mode, indicate as much by setting all clients to nil
+	// 如果处于standalone mode，则将所有的clients都设置为nil
 	if standaloneMode {
 		kubeDeps.KubeClient = nil
 		kubeDeps.ExternalKubeClient = nil
@@ -328,11 +345,13 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.Dependencies) (err error) {
 		glog.Warningf("standalone mode, no API client")
 	} else if kubeDeps.KubeClient == nil || kubeDeps.ExternalKubeClient == nil || kubeDeps.EventClient == nil || kubeDeps.HeartbeatClient == nil {
 		// initialize clients if not standalone mode and any of the clients are not provided
+		// 如果不处于standalone mode或者有任何client没提供，初始化client
 		var kubeClient clientset.Interface
 		var eventClient v1core.EventsGetter
 		var heartbeatClient v1core.CoreV1Interface
 		var externalKubeClient clientset.Interface
 
+		// 创建api server的client端配置
 		clientConfig, err := CreateAPIServerClientConfig(s)
 
 		var clientCertificateManager certificate.Manager
@@ -363,15 +382,18 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.Dependencies) (err error) {
 			}
 
 			// make a separate client for events
+			// 为event设置一个独立的client
 			eventClientConfig := *clientConfig
 			eventClientConfig.QPS = float32(s.EventRecordQPS)
 			eventClientConfig.Burst = int(s.EventBurst)
+			// 创建针对event的API server的client
 			eventClient, err = v1core.NewForConfig(&eventClientConfig)
 			if err != nil {
 				glog.Warningf("Failed to create API Server client for Events: %v", err)
 			}
 
 			// make a separate client for heartbeat with throttling disabled and a timeout attached
+			// 创建一个单独的client用于心跳，关闭限流并且设置超时
 			heartbeatClientConfig := *clientConfig
 			heartbeatClientConfig.Timeout = s.KubeletConfiguration.NodeStatusUpdateFrequency.Duration
 			heartbeatClientConfig.QPS = float32(-1)
@@ -400,6 +422,7 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.Dependencies) (err error) {
 
 	// Alpha Dynamic Configuration Implementation;
 	// if the kubelet config controller is available, inject the latest to start the config and status sync loops
+	// 如果可以获取kubelet的config controller，注入最新的用来启动配置并且开始状态同步的循环
 	if utilfeature.DefaultFeatureGate.Enabled(features.DynamicKubeletConfig) && kubeDeps.KubeletConfigController != nil && !standaloneMode && !s.RunOnce {
 		kubeDeps.KubeletConfigController.StartSync(kubeDeps.KubeClient, string(nodeName))
 	}
@@ -451,6 +474,7 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.Dependencies) (err error) {
 
 		devicePluginEnabled := utilfeature.DefaultFeatureGate.Enabled(features.DevicePlugins)
 
+		// 创建container manager
 		kubeDeps.ContainerManager, err = cm.NewContainerManager(
 			kubeDeps.Mounter,
 			kubeDeps.CAdvisorInterface,
@@ -620,6 +644,7 @@ func createClientConfig(s *options.KubeletServer) (*restclient.Config, error) {
 // CreateAPIServerClientConfig generates a client.Config from command line flags
 // via createClientConfig and then injects chaos into the configuration via addChaosToClientConfig.
 // This func is exported to support integration with third party kubelet extensions (e.g. kubernetes-mesos).
+// 本函数用于和其他第三方kubelet扩展集成
 func CreateAPIServerClientConfig(s *options.KubeletServer) (*restclient.Config, error) {
 	clientConfig, err := createClientConfig(s)
 	if err != nil {
@@ -628,9 +653,11 @@ func CreateAPIServerClientConfig(s *options.KubeletServer) (*restclient.Config, 
 
 	clientConfig.ContentType = s.ContentType
 	// Override kubeconfig qps/burst settings from flags
+	// 用flag设置kubeconfig的qps/burst
 	clientConfig.QPS = float32(s.KubeAPIQPS)
 	clientConfig.Burst = int(s.KubeAPIBurst)
 
+	// 如果设置了chaos的话，在客户端的连接中注入随机的错误
 	addChaosToClientConfig(s, clientConfig)
 	return clientConfig, nil
 }
@@ -652,6 +679,7 @@ func addChaosToClientConfig(s *options.KubeletServer, config *restclient.Config)
 //   2 Kubelet binary
 //   3 Standalone 'kubernetes' binary
 // Eventually, #2 will be replaced with instances of #3
+// RunKubelet用于负责设置并且运行kubelet
 func RunKubelet(kubeFlags *options.KubeletFlags, kubeCfg *kubeletconfiginternal.KubeletConfiguration, kubeDeps *kubelet.Dependencies, runOnce bool) error {
 	hostname := nodeutil.GetHostname(kubeFlags.HostnameOverride)
 	// Query the cloud provider for our node name, default to hostname if kubeDeps.Cloud == nil
@@ -660,6 +688,7 @@ func RunKubelet(kubeFlags *options.KubeletFlags, kubeCfg *kubeletconfiginternal.
 		return err
 	}
 	// Setup event recorder if required.
+	// 创建event recorder
 	makeEventRecorder(kubeDeps, nodeName)
 
 	// TODO(mtaufen): I moved the validation of these fields here, from UnsecuredKubeletConfig,
@@ -694,6 +723,7 @@ func RunKubelet(kubeFlags *options.KubeletFlags, kubeCfg *kubeletconfiginternal.
 
 	builder := kubeDeps.Builder
 	if builder == nil {
+		// 将builder设置为CreateAndInitKubelet，用于真正启动一个kubelet实例
 		builder = CreateAndInitKubelet
 	}
 	if kubeDeps.OSInterface == nil {
@@ -737,6 +767,7 @@ func RunKubelet(kubeFlags *options.KubeletFlags, kubeCfg *kubeletconfiginternal.
 
 	// NewMainKubelet should have set up a pod source config if one didn't exist
 	// when the builder was run. This is just a precaution.
+	// NewMainKubelet应该设置好一个pod source config，如果builder运行的时候还不存在的话
 	if kubeDeps.PodConfig == nil {
 		return fmt.Errorf("failed to create kubelet, pod source config was nil")
 	}
@@ -746,11 +777,13 @@ func RunKubelet(kubeFlags *options.KubeletFlags, kubeCfg *kubeletconfiginternal.
 
 	// process pods and exit.
 	if runOnce {
+		// 在runOnce的情况下处理pod并退出
 		if _, err := k.RunOnce(podCfg.Updates()); err != nil {
 			return fmt.Errorf("runonce failed: %v", err)
 		}
 		glog.Infof("Started kubelet as runonce")
 	} else {
+		// 启动kubelet
 		startKubelet(k, podCfg, kubeCfg, kubeDeps)
 		glog.Infof("Started kubelet")
 	}
@@ -759,14 +792,17 @@ func RunKubelet(kubeFlags *options.KubeletFlags, kubeCfg *kubeletconfiginternal.
 
 func startKubelet(k kubelet.Bootstrap, podCfg *config.PodConfig, kubeCfg *kubeletconfiginternal.KubeletConfiguration, kubeDeps *kubelet.Dependencies) {
 	// start the kubelet
+	// 启动kubelet
 	go wait.Until(func() { k.Run(podCfg.Updates()) }, 0, wait.NeverStop)
 
 	// start the kubelet server
+	// 启动kubelet server
 	if kubeCfg.EnableServer {
 		go wait.Until(func() {
 			k.ListenAndServe(net.ParseIP(kubeCfg.Address), uint(kubeCfg.Port), kubeDeps.TLSOptions, kubeDeps.Auth, kubeCfg.EnableDebuggingHandlers, kubeCfg.EnableContentionProfiling)
 		}, 0, wait.NeverStop)
 	}
+	// 启动read only server
 	if kubeCfg.ReadOnlyPort > 0 {
 		go wait.Until(func() {
 			k.ListenAndServeReadOnly(net.ParseIP(kubeCfg.Address), uint(kubeCfg.ReadOnlyPort))
@@ -845,6 +881,7 @@ func CreateAndInitKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 
 	k.BirthCry()
 
+	// 启动GC
 	k.StartGarbageCollection()
 
 	return k, nil
@@ -852,6 +889,7 @@ func CreateAndInitKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 
 // parseResourceList parses the given configuration map into an API
 // ResourceList or returns an error.
+// parseResourceList将给定的configuration map映射为API ResourceList或者返回一个error
 func parseResourceList(m map[string]string) (v1.ResourceList, error) {
 	if len(m) == 0 {
 		return nil, nil

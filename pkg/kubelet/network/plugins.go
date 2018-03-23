@@ -46,6 +46,7 @@ const NET_PLUGIN_EVENT_POD_CIDR_CHANGE = "pod-cidr-change"
 const NET_PLUGIN_EVENT_POD_CIDR_CHANGE_DETAIL_CIDR = "pod-cidr"
 
 // Plugin is an interface to network plugins for the kubelet
+// kubelet需要的网络插件的接口
 type NetworkPlugin interface {
 	// Init initializes the plugin.  This will be called exactly once
 	// before any other methods are called.
@@ -53,10 +54,12 @@ type NetworkPlugin interface {
 
 	// Called on various events like:
 	// NET_PLUGIN_EVENT_POD_CIDR_CHANGE
+	// 当一些事件发生时被调用，例如NET_PLUGIN_EVENT_POD_CIDR_CHANGED
 	Event(name string, details map[string]interface{})
 
 	// Name returns the plugin's name. This will be used when searching
 	// for a plugin by name, e.g.
+	// Name返回插件的名字，这会在根据名字搜索插件时被调用
 	Name() string
 
 	// Returns a set of NET_PLUGIN_CAPABILITY_*
@@ -65,15 +68,18 @@ type NetworkPlugin interface {
 	// SetUpPod is the method called after the infra container of
 	// the pod has been created but before the other containers of the
 	// pod are launched.
+	// SetUpPod是在infra container已经被创建但是pod的其他容器还未启动的时候调用的
 	SetUpPod(namespace string, name string, podSandboxID kubecontainer.ContainerID, annotations map[string]string) error
 
 	// TearDownPod is the method called before a pod's infra container will be deleted
 	TearDownPod(namespace string, name string, podSandboxID kubecontainer.ContainerID) error
 
 	// GetPodNetworkStatus is the method called to obtain the ipv4 or ipv6 addresses of the container
+	// GetPodNetworkStatus用于获取容器的ipv4或者ipv6地址
 	GetPodNetworkStatus(namespace string, name string, podSandboxID kubecontainer.ContainerID) (*PodNetworkStatus, error)
 
 	// Status returns error if the network plugin is in error state
+	// Status返回error，如果网络插件处于error状态
 	Status() error
 }
 

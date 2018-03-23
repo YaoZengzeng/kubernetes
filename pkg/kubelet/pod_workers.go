@@ -63,6 +63,7 @@ type UpdatePodOptions struct {
 	// drop update requests if it was fulfilling a previous request.  this is
 	// only guaranteed to be invoked in response to a kill pod request which is
 	// always delivered.
+	// OnCompleteFunc只有在请求是kill pod时才会肯定被执行
 	OnCompleteFunc OnCompleteFunc
 	// if update type is kill, use the specified options to kill the pod.
 	KillPodOptions *KillPodOptions
@@ -152,6 +153,7 @@ func newPodWorkers(syncPodFn syncPodFnType, recorder record.EventRecorder, workQ
 
 func (p *podWorkers) managePodLoop(podUpdates <-chan UpdatePodOptions) {
 	var lastSyncTime time.Time
+	// 不断从podUpdates中获取更新信息
 	for update := range podUpdates {
 		err := func() error {
 			podUID := update.Pod.UID
@@ -160,6 +162,7 @@ func (p *podWorkers) managePodLoop(podUpdates <-chan UpdatePodOptions) {
 			// Time. This ensures the worker doesn't start syncing until
 			// after the cache is at least newer than the finished time of
 			// the previous sync.
+			// 确保cache比上次sync的finished time更新，才进行同步
 			status, err := p.podCache.GetNewerThan(podUID, lastSyncTime)
 			if err != nil {
 				// This is the legacy event thrown by manage pod loop
@@ -192,6 +195,9 @@ func (p *podWorkers) managePodLoop(podUpdates <-chan UpdatePodOptions) {
 // Apply the new setting to the specified pod.
 // If the options provide an OnCompleteFunc, the function is invoked if the update is accepted.
 // Update requests are ignored if a kill pod request is pending.
+// 给指定pod添加新的设置
+// 如果options提供了一个OnCompleteFunc函数，该函数就会在update被接收之后被调用
+// Update请求会被忽略，如果一个kill pod request正在被pending
 func (p *podWorkers) UpdatePod(options *UpdatePodOptions) {
 	pod := options.Pod
 	uid := pod.UID
@@ -206,24 +212,30 @@ func (p *podWorkers) UpdatePod(options *UpdatePodOptions) {
 		// the channel is consumed. However, it is guaranteed that in such case
 		// the channel is empty, so buffer of size 1 is enough.
 		podUpdates = make(chan UpdatePodOptions, 1)
+		// podUpdates是一个map[id]chan，能够从该channel中获取最新的UpdatePodOptions
 		p.podUpdates[uid] = podUpdates
 
 		// Creating a new pod worker either means this is a new pod, or that the
 		// kubelet just restarted. In either case the kubelet is willing to believe
 		// the status of the pod for the first pod worker sync. See corresponding
 		// comment in syncPod.
+		// 创建一个新的pod worker，这可能意味着这是一个新pod，也可能是kubelet刚刚启动
+		// 在任意情况下，kubelet都会相信pod的状态
 		go func() {
 			defer runtime.HandleCrash()
 			p.managePodLoop(podUpdates)
 		}()
 	}
 	if !p.isWorking[pod.UID] {
+		// 将pod加入isWorking这个map中
 		p.isWorking[pod.UID] = true
 		podUpdates <- *options
 	} else {
 		// if a request to kill a pod is pending, we do not let anything overwrite that request.
+		// 如果一个请求kill pod的请求正在被pending，我们确保它不会被覆盖
 		update, found := p.lastUndeliveredWorkUpdate[pod.UID]
 		if !found || update.UpdateType != kubetypes.SyncPodKill {
+			// 将最后一个未发送的update请求放在lastUndeliveredWorkUpdate中
 			p.lastUndeliveredWorkUpdate[pod.UID] = *options
 		}
 	}

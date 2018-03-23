@@ -25,6 +25,7 @@ import (
 )
 
 // Manager provides a probe results cache and channel of updates.
+// Manager提供了probe结果的缓存以及一个更新的channel
 type Manager interface {
 	// Get returns the cached result for the container with the given ID.
 	Get(kubecontainer.ContainerID) (Result, bool)
@@ -35,6 +36,7 @@ type Manager interface {
 	Remove(kubecontainer.ContainerID)
 	// Updates creates a channel that receives an Update whenever its result changes (but not
 	// removed).
+	// Updates创建一个channel，每次它的result改变的时候都会收到一个Update
 	// NOTE: The current implementation only supports a single updates channel.
 	Updates() <-chan Update
 }

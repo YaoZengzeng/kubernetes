@@ -42,6 +42,7 @@ const (
 	BackOffPullImage        = "BackOff"
 
 	// kubelet event reason list
+	// kubelet事件列表
 	NodeReady                            = "NodeReady"
 	NodeNotReady                         = "NodeNotReady"
 	NodeSchedulable                      = "NodeSchedulable"

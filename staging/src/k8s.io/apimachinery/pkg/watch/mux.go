@@ -25,6 +25,7 @@ import (
 
 // FullChannelBehavior controls how the Broadcaster reacts if a watcher's watch
 // channel is full.
+// FullChannelBehavior控制如果一个watcher的watch channel满了，Broadcaster应该怎么处理
 type FullChannelBehavior int
 
 const (
@@ -39,6 +40,7 @@ const incomingQueueLength = 25
 
 // Broadcaster distributes event notifications among any number of watchers. Every event
 // is delivered to every watcher.
+// Broadcaster在任意的watcher之间分发event通知，每个event都分发给每个watcher
 type Broadcaster struct {
 	// TODO: see if this lock is needed now that new watchers go through
 	// the incoming channel.
@@ -64,8 +66,11 @@ type Broadcaster struct {
 // NewBroadcaster creates a new Broadcaster. queueLength is the maximum number of events to queue per watcher.
 // It is guaranteed that events will be distributed in the order in which they occur,
 // but the order in which a single event is distributed among all of the watchers is unspecified.
+// NewBroadcaster创建一个新的Broadcaster, queueLength是每个watcher队列能存放的最大event数
+// 保证event会以它们出现的顺序分发，但是单个event在所有watcher之间分发的顺序是不确定的
 func NewBroadcaster(queueLength int, fullChannelBehavior FullChannelBehavior) *Broadcaster {
 	m := &Broadcaster{
+		// broadcasterWatcher对单个watcher进行处理
 		watchers:            map[int64]*broadcasterWatcher{},
 		incoming:            make(chan Event, incomingQueueLength),
 		watchQueueLength:    queueLength,
@@ -185,6 +190,7 @@ func (m *Broadcaster) closeAll() {
 }
 
 // Action distributes the given event among all watchers.
+// Action将指定的event发送到所有的watcher
 func (m *Broadcaster) Action(action EventType, obj runtime.Object) {
 	m.incoming <- Event{action, obj}
 }
@@ -201,6 +207,7 @@ func (m *Broadcaster) Shutdown() {
 }
 
 // loop receives from m.incoming and distributes to all watchers.
+// loop从m.incoming中获取event并且分发到所有的watcher
 func (m *Broadcaster) loop() {
 	// Deliberately not catching crashes here. Yes, bring down the process if there's a
 	// bug in watch.Broadcaster.
@@ -220,6 +227,7 @@ func (m *Broadcaster) loop() {
 }
 
 // distribute sends event to all watchers. Blocking.
+// distribute将event送给所有的watcher
 func (m *Broadcaster) distribute(event Event) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
@@ -228,6 +236,8 @@ func (m *Broadcaster) distribute(event Event) {
 			select {
 			case w.result <- event:
 			case <-w.stopped:
+			// 当fullChannleBehavior为DropIfChannelFull，如果不能加入队列就
+			// 直接删除
 			default: // Don't block if the event can't be queued.
 			}
 		}

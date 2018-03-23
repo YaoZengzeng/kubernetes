@@ -87,6 +87,7 @@ type kubeGenericRuntimeManager struct {
 	keyring credentialprovider.DockerKeyring
 
 	// Runner of lifecycle events.
+	// 用于lifecycle event的runner
 	runner kubecontainer.HandlerRunner
 
 	// RuntimeHelper that wraps kubelet to generate runtime container options.
@@ -102,6 +103,7 @@ type kubeGenericRuntimeManager struct {
 	imagePuller images.ImageManager
 
 	// gRPC service clients
+	// grpc客户端，用于获取CRI服务
 	runtimeService internalapi.RuntimeService
 	imageService   internalapi.ImageManagerService
 
@@ -112,6 +114,7 @@ type kubeGenericRuntimeManager struct {
 	seccompProfileRoot string
 
 	// Internal lifecycle event handlers for container resource management.
+	// 用于容器资源管理的内部生命周期时间处理
 	internalLifecycle cm.InternalContainerLifecycle
 
 	// A shim to legacy functions for backward compatibility.
@@ -125,6 +128,7 @@ type KubeGenericRuntime interface {
 }
 
 // LegacyLogProvider gives the ability to use unsupported docker log drivers (e.g. journald)
+// LegacyLogProvider能够支持不被支持的docker的log driver
 type LegacyLogProvider interface {
 	// Get the last few lines of the logs for a specific container.
 	GetContainerLogTail(uid kubetypes.UID, name, namespace string, containerID kubecontainer.ContainerID) (string, error)
@@ -160,6 +164,7 @@ func NewKubeGenericRuntimeManager(
 		machineInfo:         machineInfo,
 		osInterface:         osInterface,
 		runtimeHelper:       runtimeHelper,
+		// 对runtime service和image service进行封装
 		runtimeService:      newInstrumentedRuntimeService(runtimeService),
 		imageService:        newInstrumentedImageManagerService(imageService),
 		keyring:             credentialprovider.NewDockerKeyring(),
@@ -197,6 +202,7 @@ func NewKubeGenericRuntimeManager(
 		}
 	}
 
+	// 创建image manager
 	kubeRuntimeManager.imagePuller = images.NewImageManager(
 		kubecontainer.FilterEventRecorder(recorder),
 		kubeRuntimeManager,
@@ -565,6 +571,13 @@ func (m *kubeGenericRuntimeManager) computePodActions(pod *v1.Pod, podStatus *ku
 //  4. Create sandbox if necessary.
 //  5. Create init containers.
 //  6. Create normal containers.
+// SyncPod将正在运行的pod同步到目标状态，通过执行以下命令：
+// 1、计算sandbox和container的变化
+// 2、有必要的话，杀死pod sandbox
+// 3、杀死任何不该运行的pod
+// 4、有必要的话，创建sandbox
+// 5、创建init container
+// 6、创建普通的container
 func (m *kubeGenericRuntimeManager) SyncPod(pod *v1.Pod, _ v1.PodStatus, podStatus *kubecontainer.PodStatus, pullSecrets []v1.Secret, backOff *flowcontrol.Backoff) (result kubecontainer.PodSyncResult) {
 	// Step 1: Compute sandbox and container changes.
 	podContainerChanges := m.computePodActions(pod, podStatus)
@@ -575,6 +588,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(pod *v1.Pod, _ v1.PodStatus, podStat
 			glog.Errorf("Couldn't make a ref to pod %q: '%v'", format.Pod(pod), err)
 		}
 		if podContainerChanges.SandboxID != "" {
+			// sandbox已经被改变了，它会被kill并且重启
 			m.recorder.Eventf(ref, v1.EventTypeNormal, events.SandboxChanged, "Pod sandbox changed, it will be killed and re-created.")
 		} else {
 			glog.V(4).Infof("SyncPod received new pod %q, will create a sandbox for it", format.Pod(pod))
@@ -633,6 +647,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(pod *v1.Pod, _ v1.PodStatus, podStat
 	}
 
 	// Step 4: Create a sandbox for the pod if necessary.
+	// 为pod创建一个新的sandbox
 	podSandboxID := podContainerChanges.SandboxID
 	if podContainerChanges.CreateSandbox {
 		var msg string
@@ -668,6 +683,8 @@ func (m *kubeGenericRuntimeManager) SyncPod(pod *v1.Pod, _ v1.PodStatus, podStat
 
 		// If we ever allow updating a pod from non-host-network to
 		// host-network, we may use a stale IP.
+		// 如果我们运行更新一个pod，从non-host-network到host-network
+		// 我们也许可以使用stable IP
 		if !kubecontainer.IsHostNetworkPod(pod) {
 			// Overwrite the podIP passed in the pod status, since we just started the pod sandbox.
 			podIP = m.determinePodSandboxIP(pod.Namespace, pod.Name, podSandboxStatus)
@@ -687,6 +704,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(pod *v1.Pod, _ v1.PodStatus, podStat
 	}
 
 	// Step 5: start the init container.
+	// 启动init container
 	if container := podContainerChanges.NextInitContainerToStart; container != nil {
 		// Start the next init container.
 		startContainerResult := kubecontainer.NewSyncResult(kubecontainer.StartContainer, container.Name)
@@ -710,6 +728,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(pod *v1.Pod, _ v1.PodStatus, podStat
 	}
 
 	// Step 6: start containers in podContainerChanges.ContainersToStart.
+	// 启动需要启动的container
 	for _, idx := range podContainerChanges.ContainersToStart {
 		container := &pod.Spec.Containers[idx]
 		startContainerResult := kubecontainer.NewSyncResult(kubecontainer.StartContainer, container.Name)

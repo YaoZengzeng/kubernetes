@@ -65,6 +65,7 @@ import (
 )
 
 // ProbeVolumePlugins collects all volume plugins into an easy to use list.
+// ProbeVolumePlugins会收集所有的volume插件进入一个easy to use list
 func ProbeVolumePlugins() []volume.VolumePlugin {
 	allPlugins := []volume.VolumePlugin{}
 
@@ -101,6 +102,7 @@ func ProbeVolumePlugins() []volume.VolumePlugin {
 	allPlugins = append(allPlugins, local.ProbeVolumePlugins()...)
 	allPlugins = append(allPlugins, storageos.ProbeVolumePlugins()...)
 	if utilfeature.DefaultFeatureGate.Enabled(features.CSIPersistentVolume) {
+		// 添加CSI插件
 		allPlugins = append(allPlugins, csi.ProbeVolumePlugins()...)
 	}
 	return allPlugins
@@ -109,15 +111,19 @@ func ProbeVolumePlugins() []volume.VolumePlugin {
 // GetDynamicPluginProber gets the probers of dynamically discoverable plugins
 // for kubelet.
 // Currently only Flexvolume plugins are dynamically discoverable.
+// GetDynamicPluginProber获取一个prober，用于动态获取kubelet的discoverable plugins
+// 目前只有Flexvolume是可以动态发现的
 func GetDynamicPluginProber(pluginDir string) volume.DynamicPluginProber {
 	return flexvolume.GetDynamicPluginProber(pluginDir)
 }
 
 // ProbeNetworkPlugins collects all compiled-in plugins
+// ProbeNetworkPlugins包含了所有的插件
 func ProbeNetworkPlugins(cniConfDir, cniBinDir string) []network.NetworkPlugin {
 	allPlugins := []network.NetworkPlugin{}
 
 	// for each existing plugin, add to the list
+	// 将所有已存在的插件加入list
 	allPlugins = append(allPlugins, cni.ProbeNetworkPlugins(cniConfDir, cniBinDir)...)
 	allPlugins = append(allPlugins, kubenet.NewPlugin(cniBinDir))
 

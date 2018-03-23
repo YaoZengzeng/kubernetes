@@ -83,6 +83,7 @@ func (m *imageManager) logIt(ref *v1.ObjectReference, eventtype, event, prefix, 
 
 // EnsureImageExists pulls the image for the specified pod and container, and returns
 // (imageRef, error message, error).
+// EnsureImageExists为指定的pod和container拉取镜像
 func (m *imageManager) EnsureImageExists(pod *v1.Pod, container *v1.Container, pullSecrets []v1.Secret) (string, string, error) {
 	logPrefix := fmt.Sprintf("%s/%s", pod.Name, container.Image)
 	ref, err := kubecontainer.GenerateContainerRef(pod, container)
@@ -91,6 +92,7 @@ func (m *imageManager) EnsureImageExists(pod *v1.Pod, container *v1.Container, p
 	}
 
 	// If the image contains no tag or digest, a default tag should be applied.
+	// 如果image没有tag或者digest，添加一个默认的tag
 	image, err := applyDefaultImageTag(container.Image)
 	if err != nil {
 		msg := fmt.Sprintf("Failed to apply default image tag %q: %v", container.Image, err)
@@ -106,7 +108,9 @@ func (m *imageManager) EnsureImageExists(pod *v1.Pod, container *v1.Container, p
 		return "", msg, ErrImageInspect
 	}
 
+	// 如果镜像不存在
 	present := imageRef != ""
+	// 根据container的策略或者是否present，判断是否拉取镜像
 	if !shouldPullImage(container, present) {
 		if present {
 			msg := fmt.Sprintf("Container image %q already present on machine", container.Image)

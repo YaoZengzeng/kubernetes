@@ -110,16 +110,20 @@ type containerManagerImpl struct {
 	NodeConfig
 	status Status
 	// External containers being managed.
+	// 被管理的外部container
 	systemContainers []*systemContainer
 	qosContainers    QOSContainersInfo
 	// Tasks that are run periodically
+	// 定期运行的task
 	periodicTasks []func()
 	// Holds all the mounted cgroup subsystems
 	subsystems *CgroupSubsystems
 	nodeInfo   *v1.Node
 	// Interface for cgroup management
+	// 管理cgroup的接口
 	cgroupManager CgroupManager
 	// Capacity of this node.
+	// 本节点的capacity
 	capacity v1.ResourceList
 	// Absolute cgroupfs path to a cgroup that Kubelet needs to place all pods under.
 	// This path include a top level container for enforcing Node Allocatable.
@@ -131,6 +135,7 @@ type containerManagerImpl struct {
 	// Interface for exporting and allocating devices reported by device plugins.
 	devicePluginManager deviceplugin.Manager
 	// Interface for CPU affinity management.
+	// 用于CPU亲和性管理的接口
 	cpuManager cpumanager.Manager
 }
 
@@ -201,6 +206,7 @@ func NewContainerManager(mountUtil mount.Interface, cadvisorInterface cadvisor.I
 	}
 
 	// Check whether swap is enabled. The Kubelet does not support running with swap enabled.
+	// 检查swap是否打开，kubelet不支持在swap打开的情况下运行
 	swapData, err := ioutil.ReadFile("/proc/swaps")
 	if err != nil {
 		return nil, err
@@ -210,6 +216,7 @@ func NewContainerManager(mountUtil mount.Interface, cadvisorInterface cadvisor.I
 
 	// If there is more than one line (table headers) in /proc/swaps, swap is enabled and we should
 	// error out unless --fail-swap-on is set to false.
+	// 如果在/proc/swaps中多于1行，则swap是打开的，则我们应该报错，除非--fail-swap-on被设置为false
 	if failSwapOn && len(swapLines) > 1 {
 		return nil, fmt.Errorf("Running with swap on is not supported, please disable swap! or set --fail-swap-on flag to false. /proc/swaps contained: %v", swapLines)
 	}
@@ -264,6 +271,7 @@ func NewContainerManager(mountUtil mount.Interface, cadvisorInterface cadvisor.I
 	}
 
 	glog.Infof("Creating device plugin manager: %t", devicePluginEnabled)
+	// 创建设备插件manager
 	if devicePluginEnabled {
 		cm.devicePluginManager, err = deviceplugin.NewManagerImpl()
 	} else {
@@ -274,6 +282,7 @@ func NewContainerManager(mountUtil mount.Interface, cadvisorInterface cadvisor.I
 	}
 
 	// Initialize CPU manager
+	// 初始化CPU manager
 	if utilfeature.DefaultFeatureGate.Enabled(kubefeatures.CPUManager) {
 		cm.cpuManager, err = cpumanager.NewManager(
 			nodeConfig.ExperimentalCPUManagerPolicy,

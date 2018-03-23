@@ -41,6 +41,7 @@ import (
 
 // A wrapper around v1.PodStatus that includes a version to enforce that stale pod statuses are
 // not sent to the API server.
+// v1.PodStatus的一个wrapper，包含了一个版本信息，用于确保过时的pod状态不会发送到api server
 type versionedPodStatus struct {
 	status v1.PodStatus
 	// Monotonically increasing version number (per pod).
@@ -57,6 +58,7 @@ type podStatusSyncRequest struct {
 
 // Updates pod statuses in apiserver. Writes only when new status has changed.
 // All methods are thread-safe.
+// 更新apiserver中的pod status，只在新的status改变的时候才写
 type manager struct {
 	kubeClient clientset.Interface
 	podManager kubepod.Manager
@@ -86,6 +88,9 @@ type PodDeletionSafetyProvider interface {
 
 // Manager is the Source of truth for kubelet pod status, and should be kept up-to-date with
 // the latest v1.PodStatus. It also syncs updates back to the API server.
+// Manager是kubelet的pod status的source of truth，应该和最新的v1.PodStatus保持一致
+// 同时它还负责将更新同步到API server中
+// 但是它并不负责监控pod状态的变化，而是提供接口供其他组件使用，例如probeManager
 type Manager interface {
 	PodStatusProvider
 
@@ -93,6 +98,7 @@ type Manager interface {
 	Start()
 
 	// SetPodStatus caches updates the cached status for the given pod, and triggers a status update.
+	// SetPodStatus缓存更新
 	SetPodStatus(pod *v1.Pod, status v1.PodStatus)
 
 	// SetContainerReadiness updates the cached container status with the given readiness, and
@@ -115,6 +121,7 @@ func NewManager(kubeClient clientset.Interface, podManager kubepod.Manager, podD
 		kubeClient:        kubeClient,
 		podManager:        podManager,
 		podStatuses:       make(map[types.UID]versionedPodStatus),
+		// 最多缓存1000个podStatusSyncRequest
 		podStatusChannel:  make(chan podStatusSyncRequest, 1000), // Buffer up to 1000 statuses
 		apiStatusVersions: make(map[kubetypes.MirrorPodUID]uint64),
 		podDeletionSafety: podDeletionSafety,
@@ -132,6 +139,8 @@ func (m *manager) Start() {
 	// Don't start the status manager if we don't have a client. This will happen
 	// on the master, where the kubelet is responsible for bootstrapping the pods
 	// of the master components.
+	// 不要启动status manager，如果我们没有api server的client的话，这会在master节点上发生
+	// 在master上kubelet会负责启动包含master组件的各个pod
 	if m.kubeClient == nil {
 		glog.Infof("Kubernetes client is nil, not starting status manager.")
 		return
@@ -140,13 +149,21 @@ func (m *manager) Start() {
 	glog.Info("Starting to sync pod status with apiserver")
 	syncTicker := time.Tick(syncPeriod)
 	// syncPod and syncBatch share the same go routine to avoid sync races.
+	// syncPod和syncBatch共享同一个goroutine从而防止竞争
 	go wait.Forever(func() {
 		select {
+		// podStatusChannel是所有pod状态更新发送的地方
+		// 调用方不会直接操纵这个channel，而是会通过Manager的各种方法
+		// 这些方法会往这个channel写数据
 		case syncRequest := <-m.podStatusChannel:
 			glog.V(5).Infof("Status Manager: syncing pod: %q, with status: (%d, %v) from podStatusChannel",
 				syncRequest.podUID, syncRequest.status.version, syncRequest.status.status)
+			// 根据pod和参数中的状态信息对apiserver中的数据进行更新
+			// 如果发现pod已经被删除也会把它从内部数据结构中删除
 			m.syncPod(syncRequest.podUID, syncRequest.status)
 		case <-syncTicker:
+			// syncBatch()和api server之间同步pod状态
+			// 保证api server和自己缓存的最新pod状态保持一致
 			m.syncBatch()
 		}
 	}, 0)
@@ -453,6 +470,8 @@ func (m *manager) syncPod(uid types.UID, status versionedPodStatus) {
 		glog.V(3).Infof("Pod %q (%s) does not exist on the server", status.podName, uid)
 		// If the Pod is deleted the status will be cleared in
 		// RemoveOrphanedStatuses, so we just ignore the update here.
+		// 如果pod已经在apiserver中删除了，它的状态会在RemoveOrphanaedStatuses
+		// 中删除，因此我们在这里忽略这些updaate
 		return
 	}
 	if err != nil {

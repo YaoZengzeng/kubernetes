@@ -46,6 +46,8 @@ const maxQueuedEvents = 1000
 // EventSink must respect the namespace that will be embedded in 'event'.
 // It is assumed that EventSink will return the same sorts of errors as
 // pkg/client's REST client.
+// EventSink知道如何存储events（client.Client实现了它）
+// EventSink必须遵守内嵌在'event'中的namespace
 type EventSink interface {
 	Create(event *v1.Event) (*v1.Event, error)
 	Update(event *v1.Event) (*v1.Event, error)
@@ -53,10 +55,12 @@ type EventSink interface {
 }
 
 // EventRecorder knows how to record events on behalf of an EventSource.
+// EventRecorder知道如何代表一个EventSource记录event
 type EventRecorder interface {
 	// Event constructs an event from the given information and puts it in the queue for sending.
 	// 'object' is the object this event is about. Event will make a reference-- or you may also
 	// pass a reference to the object directly.
+	// Event根据给定信息构建一个event并且将它放入一个队列里等待发送
 	// 'type' of this event, and can be one of Normal, Warning. New types could be added in future
 	// 'reason' is the reason this event is generated. 'reason' should be short and unique; it
 	// should be in UpperCamelCase format (starting with a capital letter). "reason" will be used
@@ -65,6 +69,7 @@ type EventRecorder interface {
 	// 'message' is intended to be human readable.
 	//
 	// The resulting event will be created in the same namespace as the reference object.
+	// 创建的event最终会和引用的object处在同一个namespace
 	Event(object runtime.Object, eventtype, reason, message string)
 
 	// Eventf is just like Event, but with Sprintf for the message field.
@@ -75,10 +80,13 @@ type EventRecorder interface {
 }
 
 // EventBroadcaster knows how to receive events and send them to any EventSink, watcher, or log.
+// EventBroadcaster知道如何接受事件并且将它们发送给任何的EventSink，watcher以及log
 type EventBroadcaster interface {
 	// StartEventWatcher starts sending events received from this EventBroadcaster to the given
 	// event handler function. The return value can be ignored or used to stop recording, if
 	// desired.
+	// StartEventWatcher将从EventBroadcaster收到的event发送到指定的eventHandler
+	// 返回值可以忽略或者用来停止记录
 	StartEventWatcher(eventHandler func(*v1.Event)) watch.Interface
 
 	// StartRecordingToSink starts sending events received from this EventBroadcaster to the given
@@ -91,6 +99,8 @@ type EventBroadcaster interface {
 
 	// NewRecorder returns an EventRecorder that can be used to send events to this EventBroadcaster
 	// with the event source set to the given event source.
+	// NewRecorder返回一个EventRecorder，它可以用来给EventBroadcaster发送event
+	// 并且将event source设置为给定的event source
 	NewRecorder(scheme *runtime.Scheme, source v1.EventSource) EventRecorder
 }
 
@@ -168,6 +178,9 @@ func isKeyNotFoundError(err error) bool {
 // was successfully recorded or discarded, false if it should be retried.
 // If updateExistingEvent is false, it creates a new event, otherwise it updates
 // existing event.
+// recordEvent会试着将event写入sink，它会返回true，如果event被成功地记录或丢弃
+// 如果需要重试的话，返回false
+// 如果updateExistingEvent为false，它就会创建一个新的event，否则会更新一个已经存在的event
 func recordEvent(sink EventSink, event *v1.Event, patch []byte, updateExistingEvent bool, eventCorrelator *EventCorrelator) bool {
 	var newEvent *v1.Event
 	var err error
@@ -175,8 +188,10 @@ func recordEvent(sink EventSink, event *v1.Event, patch []byte, updateExistingEv
 		newEvent, err = sink.Patch(event, patch)
 	}
 	// Update can fail because the event may have been removed and it no longer exists.
+	// Update可能会失败，因为event可能被移除了
 	if !updateExistingEvent || (updateExistingEvent && isKeyNotFoundError(err)) {
 		// Making sure that ResourceVersion is empty on creation
+		// 在创建的时候，确保ResourceVersion为空
 		event.ResourceVersion = ""
 		newEvent, err = sink.Create(event)
 	}
@@ -215,6 +230,7 @@ func recordEvent(sink EventSink, event *v1.Event, patch []byte, updateExistingEv
 func (eventBroadcaster *eventBroadcasterImpl) StartLogging(logf func(format string, args ...interface{})) watch.Interface {
 	return eventBroadcaster.StartEventWatcher(
 		func(e *v1.Event) {
+			// 调用log函数对事件进行记录
 			logf("Event(%#v): type: '%v' reason: '%v' %v", e.InvolvedObject, e.Type, e.Reason, e.Message)
 		})
 }
@@ -222,10 +238,12 @@ func (eventBroadcaster *eventBroadcasterImpl) StartLogging(logf func(format stri
 // StartEventWatcher starts sending events received from this EventBroadcaster to the given event handler function.
 // The return value can be ignored or used to stop recording, if desired.
 func (eventBroadcaster *eventBroadcasterImpl) StartEventWatcher(eventHandler func(*v1.Event)) watch.Interface {
+	// 调用获取watcher，可以从中获取eventBroadcaster获取的各种事件
 	watcher := eventBroadcaster.Watch()
 	go func() {
 		defer utilruntime.HandleCrash()
 		for {
+			// 从watcher的channel中获取各类事件
 			watchEvent, open := <-watcher.ResultChan()
 			if !open {
 				return
@@ -236,6 +254,7 @@ func (eventBroadcaster *eventBroadcasterImpl) StartEventWatcher(eventHandler fun
 				// ever happen.
 				continue
 			}
+			// 最终调用hanler进行处理
 			eventHandler(event)
 		}
 	}()
@@ -250,6 +269,7 @@ func (eventBroadcaster *eventBroadcasterImpl) NewRecorder(scheme *runtime.Scheme
 type recorderImpl struct {
 	scheme *runtime.Scheme
 	source v1.EventSource
+	// 可直接调用Broadcaster的方法
 	*watch.Broadcaster
 	clock clock.Clock
 }
@@ -278,6 +298,7 @@ func (recorder *recorderImpl) generateEvent(object runtime.Object, timestamp met
 
 func validateEventType(eventtype string) bool {
 	switch eventtype {
+	// 目前的eventtype只有normal和warning两种类型
 	case v1.EventTypeNormal, v1.EventTypeWarning:
 		return true
 	}

@@ -189,6 +189,7 @@ type Bootstrap interface {
 }
 
 // Builder creates and initializes a Kubelet instance
+// Builder创建并且初始化一个Kubelet实例
 type Builder func(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	kubeDeps *Dependencies,
 	crOptions *config.ContainerRuntimeOptions,
@@ -224,6 +225,8 @@ type Builder func(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 // Dependencies is a bin for things we might consider "injected dependencies" -- objects constructed
 // at runtime that are necessary for running the Kubelet. This is a temporary solution for grouping
 // these objects while we figure out a more comprehensive dependency injection story for the Kubelet.
+// Dependencies是一种“依赖注入”，包含了那些在运行时期间构造，用于运行kubelet的对象
+// 以后可能会有更好的方案
 type Dependencies struct {
 	// TODO(mtaufen): KubeletBuilder:
 	//                Mesos currently uses this as a hook to let them make their own call to
@@ -286,12 +289,14 @@ func makePodSourceConfig(kubeCfg *kubeletconfiginternal.KubeletConfiguration, ku
 	cfg := config.NewPodConfig(config.PodConfigNotificationIncremental, kubeDeps.Recorder)
 
 	// define file config source
+	// 从文件中获取pod配置
 	if kubeCfg.PodManifestPath != "" {
 		glog.Infof("Adding manifest path: %v", kubeCfg.PodManifestPath)
 		config.NewSourceFile(kubeCfg.PodManifestPath, nodeName, kubeCfg.FileCheckFrequency.Duration, cfg.Channel(kubetypes.FileSource))
 	}
 
 	// define url config source
+	// 从url中获取pod配置
 	if kubeCfg.ManifestURL != "" {
 		glog.Infof("Adding manifest url %q with HTTP header %v", kubeCfg.ManifestURL, manifestURLHeader)
 		config.NewSourceURL(kubeCfg.ManifestURL, manifestURLHeader, nodeName, kubeCfg.HTTPCheckFrequency.Duration, cfg.Channel(kubetypes.HTTPSource))
@@ -300,6 +305,8 @@ func makePodSourceConfig(kubeCfg *kubeletconfiginternal.KubeletConfiguration, ku
 	// Restore from the checkpoint path
 	// NOTE: This MUST happen before creating the apiserver source
 	// below, or the checkpoint would override the source of truth.
+	// 从checkpoint path中恢复，这必须在创建apiserver source之前
+	// 否则checkpoint会掩盖真实的pod配置
 
 	var updatechannel chan<- interface{}
 	if bootstrapCheckpointPath != "" {
@@ -322,10 +329,12 @@ func makePodSourceConfig(kubeCfg *kubeletconfiginternal.KubeletConfiguration, ku
 }
 
 func getRuntimeAndImageServices(remoteRuntimeEndpoint string, remoteImageEndpoint string, runtimeRequestTimeout metav1.Duration) (internalapi.RuntimeService, internalapi.ImageManagerService, error) {
+	// 创建远程的runtime service
 	rs, err := remote.NewRemoteRuntimeService(remoteRuntimeEndpoint, runtimeRequestTimeout.Duration)
 	if err != nil {
 		return nil, nil, err
 	}
+	// 创建远程的image service
 	is, err := remote.NewRemoteImageService(remoteImageEndpoint, runtimeRequestTimeout.Duration)
 	if err != nil {
 		return nil, nil, err
@@ -335,6 +344,7 @@ func getRuntimeAndImageServices(remoteRuntimeEndpoint string, remoteImageEndpoin
 
 // NewMainKubelet instantiates a new Kubelet object along with all the required internal modules.
 // No initialization of Kubelet and its modules should happen here.
+// NewMainKubelet实例化一个新的Kubelet对象以及所有它需要的内部对象
 func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	kubeDeps *Dependencies,
 	crOptions *config.ContainerRuntimeOptions,
@@ -390,6 +400,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	nodeName := types.NodeName(hostname)
 	cloudIPs := []net.IP{}
 	cloudNames := []string{}
+	// 如果cloud provider不为空
 	if kubeDeps.Cloud != nil {
 		var err error
 		instances, ok := kubeDeps.Cloud.Instances()
@@ -424,6 +435,8 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 
 	}
 
+	// 如果PodConfig为空，则对其进行设置
+	// 所有的pod配置都从PodConfig中来
 	if kubeDeps.PodConfig == nil {
 		var err error
 		kubeDeps.PodConfig, err = makePodSourceConfig(kubeCfg, kubeDeps, nodeName, bootstrapCheckpointPath)
@@ -592,8 +605,10 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 
 	klet.podCache = kubecontainer.NewCache()
 	// podManager is also responsible for keeping secretManager and configMapManager contents up-to-date.
+	// podManager负责保持secretManager和configMapManager的内容是最新的
 	klet.podManager = kubepod.NewBasicPodManager(kubepod.NewBasicMirrorClient(klet.kubeClient), secretManager, configMapManager)
 
+	// 如果没有指定remoteImageEndpoint，则将其设置为和remoteRuntimeEndpoint相同
 	if remoteRuntimeEndpoint != "" {
 		// remoteImageEndpoint is same as remoteRuntimeEndpoint if not explicitly specified
 		if remoteImageEndpoint == "" {
@@ -620,18 +635,24 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	pluginSettings.LegacyRuntimeHost = nl
 
 	// rktnetes cannot be run with CRI.
+	// rktnetes不能以CRI方式启动
 	if containerRuntime != kubetypes.RktContainerRuntime {
 		// kubelet defers to the runtime shim to setup networking. Setting
 		// this to nil will prevent it from trying to invoke the plugin.
 		// It's easier to always probe and initialize plugins till cri
 		// becomes the default.
+		// kubelet会让runtime shim去设置networking
+		// 将其设置为nil可以防止对插件进行调用，在cri变为默认配置之前，总是去探测并且
+		// 初始化插件是更为简单的方法
 		klet.networkPlugin = nil
 		// if left at nil, that means it is unneeded
 		var legacyLogProvider kuberuntime.LegacyLogProvider
 
 		switch containerRuntime {
+		// 如果运行时为docker
 		case kubetypes.DockerContainerRuntime:
 			// Create and start the CRI shim running as a grpc server.
+			// 创建并且启动CRI shim作为grpc server
 			streamingConfig := getStreamingConfig(kubeCfg, kubeDeps)
 			ds, err := dockershim.NewDockerService(kubeDeps.DockerClientConfig, crOptions.PodSandboxImage, streamingConfig,
 				&pluginSettings, runtimeCgroups, kubeCfg.CgroupDriver, crOptions.DockershimRootDirectory,
@@ -639,6 +660,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 			if err != nil {
 				return nil, err
 			}
+			// 启动docker shime
 			if err := ds.Start(); err != nil {
 				return nil, err
 			}
@@ -657,6 +679,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 			}
 
 			// Create dockerLegacyService when the logging driver is not supported.
+			// 创建dockerLegacyService，如果不支持logging driver的话
 			supported, err := ds.IsCRISupportedLogDriver()
 			if err != nil {
 				return nil, err
@@ -666,16 +689,19 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 				legacyLogProvider = dockershim.NewLegacyLogProvider(klet.dockerLegacyService)
 			}
 		case kubetypes.RemoteContainerRuntime:
+			// 对于远程的CRI不做任何操作
 			// No-op.
 			break
 		default:
 			return nil, fmt.Errorf("unsupported CRI runtime: %q", containerRuntime)
 		}
+		// 获取runtime service和image service，并将它们封装进generic runtime manager中
 		runtimeService, imageService, err := getRuntimeAndImageServices(remoteRuntimeEndpoint, remoteImageEndpoint, kubeCfg.RuntimeRequestTimeout)
 		if err != nil {
 			return nil, err
 		}
 		klet.runtimeService = runtimeService
+		// 将runtime service和image service都封装进generic runtime manager中
 		runtime, err := kuberuntime.NewKubeGenericRuntimeManager(
 			kubecontainer.FilterEventRecorder(kubeDeps.Recorder),
 			klet.livenessManager,
@@ -764,6 +790,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	klet.updatePodCIDR(kubeCfg.PodCIDR)
 
 	// setup containerGC
+	// 创建container GC
 	containerGC, err := kubecontainer.NewContainerGC(klet.containerRuntime, containerGCPolicy, klet.sourcesReady)
 	if err != nil {
 		return nil, err
@@ -772,12 +799,14 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	klet.containerDeletor = newPodContainerDeletor(klet.containerRuntime, integer.IntMax(containerGCPolicy.MaxPerPodContainer, minDeadContainerInPod))
 
 	// setup imageManager
+	// 设置image manager
 	imageManager, err := images.NewImageGCManager(klet.containerRuntime, klet.StatsProvider, kubeDeps.Recorder, nodeRef, imageGCPolicy)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize image manager: %v", err)
 	}
 	klet.imageManager = imageManager
 
+	// 创建status manager
 	klet.statusManager = status.NewManager(klet.kubeClient, klet.podManager, klet)
 
 	if utilfeature.DefaultFeatureGate.Enabled(features.RotateKubeletServerCertificate) && kubeDeps.TLSOptions != nil {
@@ -808,6 +837,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 		}
 	}
 
+	// 创建probe manager
 	klet.probeManager = prober.NewManager(
 		klet.statusManager,
 		klet.livenessManager,
@@ -831,6 +861,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	}
 
 	// setup volumeManager
+	// 设置volume manager
 	klet.volumeManager = volumemanager.NewVolumeManager(
 		kubeCfg.EnableControllerAttachDetach,
 		nodeName,
@@ -859,6 +890,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	klet.setNodeStatusFuncs = klet.defaultNodeStatusFuncs()
 
 	// setup eviction manager
+	// 设置eviction manager
 	evictionManager, evictionAdmitHandler := eviction.NewManager(klet.resourceAnalyzer, evictionConfig, killPodNow(klet.podWorkers, kubeDeps.Recorder), klet.imageManager, klet.containerGC, kubeDeps.Recorder, nodeRef, klet.clock)
 
 	klet.evictionManager = evictionManager
@@ -904,6 +936,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	klet.softAdmitHandlers.AddPodAdmitHandler(lifecycle.NewNoNewPrivsAdmitHandler(klet.containerRuntime))
 	if utilfeature.DefaultFeatureGate.Enabled(features.Accelerators) {
 		if containerRuntime == kubetypes.DockerContainerRuntime {
+			// 只有在运行时为docker的时候，才会创建gpu manager
 			if klet.gpuManager, err = nvidia.NewNvidiaGPUManager(klet, kubeDeps.DockerClientConfig); err != nil {
 				return nil, err
 			}
@@ -917,6 +950,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	}
 	// Finally, put the most recent version of the config on the Kubelet, so
 	// people can see how it was configured.
+	// 将最新的配置信息存入kubelet,这样就能看到它是怎么配置的了
 	klet.kubeletConfiguration = *kubeCfg
 	return klet, nil
 }
@@ -927,6 +961,7 @@ type serviceLister interface {
 
 // Kubelet is the main kubelet implementation.
 type Kubelet struct {
+	// kubelet的配置保存在kubeletConfiguration中
 	kubeletConfiguration kubeletconfiginternal.KubeletConfiguration
 
 	hostname        string
@@ -938,6 +973,7 @@ type Kubelet struct {
 	rootDirectory   string
 
 	// podWorkers handle syncing Pods in response to events.
+	// podWorkers处理events用于同步pods
 	podWorkers PodWorkers
 
 	// resyncInterval is the interval between periodic full reconciliations of
@@ -945,6 +981,7 @@ type Kubelet struct {
 	resyncInterval time.Duration
 
 	// sourcesReady records the sources seen by the kubelet, it is thread-safe.
+	// sourcesReady中记录了kubelet可见的sources
 	sourcesReady config.SourcesReady
 
 	// podManager is a facade that abstracts away the various sources of pods
@@ -957,16 +994,19 @@ type Kubelet struct {
 	// Optional, defaults to /logs/ from /var/log
 	logServer http.Handler
 	// Optional, defaults to simple Docker implementation
+	// 可选项，默认为简单的Docker实现
 	runner kubecontainer.ContainerCommandRunner
 
 	// cAdvisor used for container information.
 	cadvisor cadvisor.Interface
 
 	// Set to true to have the node register itself with the apiserver.
+	// 如果节点已经注册到api server中的话，设置为true
 	registerNode bool
 	// List of taints to add to a node object when the kubelet registers itself.
 	registerWithTaints []api.Taint
 	// Set to true to have the node register itself as schedulable.
+	// 如果node将自己设置为可调度的，则设置为true
 	registerSchedulable bool
 	// for internal book keeping; access only from within registerWithApiserver
 	registrationCompleted bool
@@ -1051,6 +1091,7 @@ type Kubelet struct {
 	containerRuntimeName string
 
 	// Container runtime.
+	// 容器运行时
 	containerRuntime kubecontainer.Runtime
 
 	// Container runtime service (needed by container runtime Start()).
@@ -1073,9 +1114,12 @@ type Kubelet struct {
 	// 2. nodeStatusUpdateFrequency needs to be large enough for kubelet to generate node
 	//    status. Kubelet may fail to update node status reliably if the value is too small,
 	//    as it takes time to gather all necessary node information.
+	// nodeStatusUpdateFrequency必须足够大，大到足以让kubelet产生node status
+	// 如果值太小，kubelet可能不能可靠地更新节点状态，因为收集必要的节点信息需要时间
 	nodeStatusUpdateFrequency time.Duration
 
 	// Generates pod events.
+	// 产生pod events
 	pleg pleg.PodLifecycleEventGenerator
 
 	// Store kubecontainer.PodStatus for all pods.
@@ -1103,6 +1147,7 @@ type Kubelet struct {
 	writer kubeio.Writer
 
 	// Manager of non-Runtime containers.
+	// 管理non-Runtime容器的manager
 	containerManager cm.ContainerManager
 
 	// Maximum Number of Pods which can be run by this Kubelet
@@ -1294,6 +1339,8 @@ func (kl *Kubelet) StartGarbageCollection() {
 
 // initializeModules will initialize internal modules that do not require the container runtime to be up.
 // Note that the modules here must not depend on modules that are not initialized here.
+// initializeModules会初始化那些不依赖于container runtime已经启动的internal modules
+// 这里的module不能依赖于那些还没有初始化的module
 func (kl *Kubelet) initializeModules() error {
 	// Prometheus metrics.
 	metrics.Register(kl.runtimeCache)
@@ -1311,6 +1358,7 @@ func (kl *Kubelet) initializeModules() error {
 	}
 
 	// Start the image manager.
+	// 启动image manager
 	kl.imageManager.Start()
 
 	// Start the certificate manager.
@@ -1319,6 +1367,7 @@ func (kl *Kubelet) initializeModules() error {
 	}
 
 	// Start container manager.
+	// 启动容器manager
 	node, err := kl.getNodeAnyWay()
 	if err != nil {
 		return fmt.Errorf("Kubelet failed to get node info: %v", err)
@@ -1334,6 +1383,7 @@ func (kl *Kubelet) initializeModules() error {
 	}
 
 	// Initialize GPUs
+	// 初始化GPU
 	if err := kl.gpuManager.Start(); err != nil {
 		glog.Errorf("Failed to start gpuManager %v", err)
 	}
@@ -1356,11 +1406,13 @@ func (kl *Kubelet) initializeRuntimeDependentModules() {
 }
 
 // Run starts the kubelet reacting to config updates
+// Run启动kubelet,并对config update做出反应
 func (kl *Kubelet) Run(updates <-chan kubetypes.PodUpdate) {
 	if kl.logServer == nil {
 		kl.logServer = http.StripPrefix("/logs/", http.FileServer(http.Dir("/var/log/")))
 	}
 	if kl.kubeClient == nil {
+		// 没有定义api server，因此不会发送node status update
 		glog.Warning("No api server defined - no node status update will be sent.")
 	}
 
@@ -1374,6 +1426,7 @@ func (kl *Kubelet) Run(updates <-chan kubetypes.PodUpdate) {
 
 	if kl.kubeClient != nil {
 		// Start syncing node status immediately, this may set up things the runtime needs to run.
+		// 开始同步节点状态，这可能会设置runtime运行需要的东西
 		go wait.Until(kl.syncNodeStatus, kl.nodeStatusUpdateFrequency, wait.NeverStop)
 	}
 	go wait.Until(kl.syncNetworkStatus, 30*time.Second, wait.NeverStop)
@@ -1394,10 +1447,12 @@ func (kl *Kubelet) Run(updates <-chan kubetypes.PodUpdate) {
 	}
 
 	// Start component sync loops.
+	// 启动组件的sync loop
 	kl.statusManager.Start()
 	kl.probeManager.Start()
 
 	// Start the pod lifecycle event generator.
+	// 启动pod lifecycle的事件发生器
 	kl.pleg.Start()
 	kl.syncLoop(updates, kl)
 }
@@ -1444,6 +1499,7 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 	updateType := o.updateType
 
 	// if we want to kill a pod, do it now!
+	// 如果我们的目标是kill pod，那么立即执行
 	if updateType == kubetypes.SyncPodKill {
 		killPodOptions := o.killPodOptions
 		if killPodOptions == nil || killPodOptions.PodStatusFunc == nil {
@@ -1463,6 +1519,7 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 
 	// Latency measurements for the main workflow are relative to the
 	// first time the pod was seen by the API server.
+	// 记录真正执行pod与apiserver第一次看到该pod的时间间隔
 	var firstSeenTime time.Time
 	if firstSeenTimeStr, ok := pod.Annotations[kubetypes.ConfigFirstSeenAnnotationKey]; ok {
 		firstSeenTime = kubetypes.ConvertToTimestamp(firstSeenTimeStr).Get()
@@ -1474,6 +1531,7 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 		if !firstSeenTime.IsZero() {
 			// This is the first time we are syncing the pod. Record the latency
 			// since kubelet first saw the pod if firstSeenTime is set.
+			// 记录kubelet第一次同步pod的时间
 			metrics.PodWorkerStartLatency.Observe(metrics.SinceInMicroseconds(firstSeenTime))
 		} else {
 			glog.V(3).Infof("First seen time not recorded for pod %q", pod.UID)
@@ -1481,6 +1539,7 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 	}
 
 	// Generate final API pod status with pod and status manager status
+	// 根据pod manager以及status manager产生最终的API pod
 	apiPodStatus := kl.generateAPIPodStatus(pod, podStatus)
 	// The pod IP may be changed in generateAPIPodStatus if the pod is using host network. (See #24576)
 	// TODO(random-liu): After writing pod spec into container labels, check whether pod is using host network, and
@@ -1488,6 +1547,7 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 	podStatus.IP = apiPodStatus.PodIP
 
 	// Record the time it takes for the pod to become running.
+	// 记录pod变为running的时间间隔
 	existingStatus, ok := kl.statusManager.GetPodStatus(pod.UID)
 	if !ok || existingStatus.Phase == v1.PodPending && apiPodStatus.Phase == v1.PodRunning &&
 		!firstSeenTime.IsZero() {
@@ -1496,6 +1556,7 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 
 	runnable := kl.canRunPod(pod)
 	if !runnable.Admit {
+		// Pod不能执行
 		// Pod is not runnable; update the Pod and Container statuses to why.
 		apiPodStatus.Reason = runnable.Reason
 		apiPodStatus.Message = runnable.Message
@@ -1514,6 +1575,7 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 	}
 
 	// Update status in the status manager
+	// 更新status manager中的状态
 	kl.statusManager.SetPodStatus(pod, apiPodStatus)
 
 	// Kill pod if it should not be running
@@ -1534,6 +1596,7 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 	}
 
 	// If the network plugin is not ready, only start the pod if it uses the host network
+	// 如果network plugin没有准备好，则只启动使用host network的pod
 	if rs := kl.runtimeState.networkErrors(); len(rs) != 0 && !kubecontainer.IsHostNetworkPod(pod) {
 		kl.recorder.Eventf(pod, v1.EventTypeWarning, events.NetworkNotReady, "network is not ready: %v", rs)
 		return fmt.Errorf("network is not ready: %v", rs)
@@ -1541,6 +1604,7 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 
 	// Create Cgroups for the pod and apply resource parameters
 	// to them if cgroups-per-qos flag is enabled.
+	// 如果使能了cgroups-per-qos，则为每个pod创建cgroups并且添加resouce parameter
 	pcm := kl.containerManager.NewPodContainerManager()
 	// If pod has already been terminated then we need not create
 	// or update the pod's cgroup
@@ -1586,6 +1650,7 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 	}
 
 	// Create Mirror Pod for Static Pod if it doesn't already exist
+	// 为static pod创建mirror pod，如果它不存在的话
 	if kubepod.IsStaticPod(pod) {
 		podFullName := kubecontainer.GetPodFullName(pod)
 		deleted := false
@@ -1615,6 +1680,7 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 	}
 
 	// Make data directories for the pod
+	// 创建pod的data directory
 	if err := kl.makePodDataDirs(pod); err != nil {
 		kl.recorder.Eventf(pod, v1.EventTypeWarning, events.FailedToMakePodDataDirectories, "error making pod data directories: %v", err)
 		glog.Errorf("Unable to make pod data directories for pod %q: %v", format.Pod(pod), err)
@@ -1624,6 +1690,7 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 	// Volume manager will not mount volumes for terminated pods
 	if !kl.podIsTerminated(pod) {
 		// Wait for volumes to attach/mount
+		// 等待volume的attach/mount
 		if err := kl.volumeManager.WaitForAttachAndMount(pod); err != nil {
 			kl.recorder.Eventf(pod, v1.EventTypeWarning, events.FailedMountVolume, "Unable to mount volumes for pod %q: %v", format.Pod(pod), err)
 			glog.Errorf("Unable to mount volumes for pod %q: %v; skipping pod", format.Pod(pod), err)
@@ -1632,9 +1699,11 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 	}
 
 	// Fetch the pull secrets for the pod
+	// 获取pod的pull secrets
 	pullSecrets := kl.getPullSecretsForPod(pod)
 
 	// Call the container runtime's SyncPod callback
+	// 调用容器运行时的SyncPod callback
 	result := kl.containerRuntime.SyncPod(pod, apiPodStatus, podStatus, pullSecrets, kl.backOff)
 	kl.reasonCache.Update(pod.UID, result)
 	if err := result.Error(); err != nil {
@@ -1767,23 +1836,31 @@ func (kl *Kubelet) canRunPod(pod *v1.Pod) lifecycle.PodAdmitResult {
 // any new change seen, will run a sync against desired state and running state. If
 // no changes are seen to the configuration, will synchronize the last known desired
 // state every sync-frequency seconds. Never returns.
+// syncLoop是处理变化的主循环，它从三个channel中watch变化（file, apiserver以及http）并且创建一个
+// 它们的union。对于发现的任何新变化，它都会在desired state和running state之间执行一次同步
+// 如果配置没有发生什么变化，会每隔sync-frequency秒同步一次最后一次知道的desired state
+// 从不返回
 func (kl *Kubelet) syncLoop(updates <-chan kubetypes.PodUpdate, handler SyncHandler) {
 	glog.Info("Starting kubelet main sync loop.")
 	// The resyncTicker wakes up kubelet to checks if there are any pod workers
 	// that need to be sync'd. A one-second period is sufficient because the
 	// sync interval is defaulted to 10s.
+	// resyncTicker会唤醒kubelet去检查是否有pod worker需要同步
+	// 一秒钟的间隔已经足够了因为sync interval默认为10s
 	syncTicker := time.NewTicker(time.Second)
 	defer syncTicker.Stop()
 	housekeepingTicker := time.NewTicker(housekeepingPeriod)
 	defer housekeepingTicker.Stop()
 	plegCh := kl.pleg.Watch()
 	for {
+		// 遇到错误则加入runtimeState.runtimeErrors中，每次遇到错误，休眠5秒
 		if rs := kl.runtimeState.runtimeErrors(); len(rs) != 0 {
 			glog.Infof("skipping pod synchronization - %v", rs)
 			time.Sleep(5 * time.Second)
 			continue
 		}
 
+		// 记录一次loop启动的时间以及结束的时间
 		kl.syncLoopMonitor.Store(kl.clock.Now())
 		if !kl.syncLoopIteration(updates, handler, syncTicker.C, housekeepingTicker.C, plegCh) {
 			break
@@ -1803,9 +1880,11 @@ func (kl *Kubelet) syncLoop(updates <-chan kubetypes.PodUpdate, handler SyncHand
 // 5.  plegCh:         a channel to read PLEG updates from
 //
 // Events are also read from the kubelet liveness manager's update channel.
+// 事件也从kubelet的liveness manager的update channel中获取
 //
 // The workflow is to read from one of the channels, handle that event, and
 // update the timestamp in the sync loop monitor.
+// 工作流程为从其中一个channel读取事件并处理，并且更新sync loop monitor中的时间戳
 //
 // Here is an appropriate place to note that despite the syntactical
 // similarity to the switch statement, the case statements in a select are
@@ -1822,8 +1901,10 @@ func (kl *Kubelet) syncLoop(updates <-chan kubetypes.PodUpdate, handler SyncHand
 // * plegCh: update the runtime cache; sync pod
 // * syncCh: sync all pods waiting for sync
 // * houseKeepingCh: trigger cleanup of pods
+// houseKeepingCh: 触发pod的清理工作
 // * liveness manager: sync pods that have failed or in which one or more
 //                     containers have failed liveness checks
+// liveness manager: 同步那些经过liveness检测，已经fail的或者其中的一个或多个container已经fail的pod
 func (kl *Kubelet) syncLoopIteration(configCh <-chan kubetypes.PodUpdate, handler SyncHandler,
 	syncCh <-chan time.Time, housekeepingCh <-chan time.Time, plegCh <-chan *pleg.PodLifecycleEvent) bool {
 	select {
@@ -1842,6 +1923,9 @@ func (kl *Kubelet) syncLoopIteration(configCh <-chan kubetypes.PodUpdate, handle
 			// ADD as if they are new pods. These pods will then go through the
 			// admission process and *may* be rejected. This can be resolved
 			// once we have checkpointing.
+			// 在重启之后，kubelet会把所有还存在的pod加入ADD，仿佛它们是新的pod一样
+			// 这些pod会经过admission process并且可能被拒绝
+			// 这在我们有了checkpointing之后可以被处理
 			handler.HandlePodAdditions(u.Pods)
 		case kubetypes.UPDATE:
 			glog.V(2).Infof("SyncLoop (UPDATE, %q): %q", u.Source, format.PodsWithDeletiontimestamps(u.Pods))
@@ -1855,11 +1939,13 @@ func (kl *Kubelet) syncLoopIteration(configCh <-chan kubetypes.PodUpdate, handle
 		case kubetypes.DELETE:
 			glog.V(2).Infof("SyncLoop (DELETE, %q): %q", u.Source, format.Pods(u.Pods))
 			// DELETE is treated as a UPDATE because of graceful deletion.
+			// 因为graceful deletion，将DELETE作为UPDATE
 			handler.HandlePodUpdates(u.Pods)
 		case kubetypes.RESTORE:
 			glog.V(2).Infof("SyncLoop (RESTORE, %q): %q", u.Source, format.Pods(u.Pods))
 			// These are pods restored from the checkpoint. Treat them as new
 			// pods.
+			// 这些pod都是从checkpoint中恢复的，把它们当成新的pod
 			handler.HandlePodAdditions(u.Pods)
 		case kubetypes.SET:
 			// TODO: Do we want to support this?
@@ -1876,9 +1962,14 @@ func (kl *Kubelet) syncLoopIteration(configCh <-chan kubetypes.PodUpdate, handle
 			// routines will start reclaiming resources. It is important that this
 			// takes place only after kubelet calls the update handler to process
 			// the update to ensure the internal pod cache is up-to-date.
+			// 当从source中至少获取一个update之后，将source标记为ready
+			// 一旦所有source被标记为ready，各个cleanup routines会开始回收资源
+			// 这必须在kubelet调用了update handler去处理update，保证internal cache是最新的之后
+			// 进行
 			kl.sourcesReady.AddSource(u.Source)
 		}
 	case e := <-plegCh:
+		// 除了ContainerRemoved这一事件之外，其他都是值得的
 		if isSyncPodWorthy(e) {
 			// PLEG event for a pod; sync it.
 			if pod, ok := kl.podManager.GetPodByUID(e.ID); ok {
@@ -1942,6 +2033,9 @@ func (kl *Kubelet) dispatchWork(pod *v1.Pod, syncType kubetypes.SyncPodType, mir
 			// handle the work item. Check if the DeletionTimestamp has been
 			// set, and force a status update to trigger a pod deletion request
 			// to the apiserver.
+			// 如果pod已经处于terminated状态，不会有pod worker去处理它
+			// 检测DeletionTimestamp是否设置，并且强制进status update从而触发一个
+			// pod deletion请求到apiserver
 			kl.statusManager.TerminatePod(pod)
 		}
 		return
@@ -1959,6 +2053,7 @@ func (kl *Kubelet) dispatchWork(pod *v1.Pod, syncType kubetypes.SyncPodType, mir
 	})
 	// Note the number of containers for new pods.
 	if syncType == kubetypes.SyncPodCreate {
+		// 如果是创建新pod，统计pod中的容器数目
 		metrics.ContainersPerPodCount.Observe(float64(len(pod.Spec.Containers)))
 	}
 }
@@ -1977,6 +2072,7 @@ func (kl *Kubelet) handleMirrorPod(mirrorPod *v1.Pod, start time.Time) {
 // a config source.
 func (kl *Kubelet) HandlePodAdditions(pods []*v1.Pod) {
 	start := kl.clock.Now()
+	// 将pod按创建的时间进行排序
 	sort.Sort(sliceutils.PodsByCreationTime(pods))
 	for _, pod := range pods {
 		existingPods := kl.podManager.GetPods()
@@ -1984,6 +2080,8 @@ func (kl *Kubelet) HandlePodAdditions(pods []*v1.Pod) {
 		// manager as the source of truth for the desired state. If a pod does
 		// not exist in the pod manager, it means that it has been deleted in
 		// the apiserver and no action (other than cleanup) is required.
+		// 总是先将pod加入pod manager，kubelet将pod manager作为目标状态的source of truth
+		// 如果pod不存在在pod manager中，这以为它已经从apiserver中删除了并且不会有任何行为（除了删除）
 		kl.podManager.AddPod(pod)
 
 		if kubepod.IsMirrorPod(pod) {
@@ -2000,6 +2098,7 @@ func (kl *Kubelet) HandlePodAdditions(pods []*v1.Pod) {
 			activePods := kl.filterOutTerminatedPods(existingPods)
 
 			// Check if we can admit the pod; if not, reject it.
+			// 检测我们是否能接受pod,否则删除它
 			if ok, reason, message := kl.canAdmitPod(activePods, pod); !ok {
 				kl.rejectPod(pod, reason, message)
 				continue
@@ -2146,6 +2245,7 @@ func (kl *Kubelet) GetConfiguration() kubeletconfiginternal.KubeletConfiguration
 }
 
 // BirthCry sends an event that the kubelet has started up.
+// BirthCry发送一个event，告知kubelet已经启动了
 func (kl *Kubelet) BirthCry() {
 	// Make an event that kubelet restarted.
 	kl.recorder.Eventf(kl.nodeRef, v1.EventTypeNormal, events.StartingKubelet, "Starting kubelet.")

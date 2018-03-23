@@ -43,6 +43,7 @@ func die(err error) {
 
 func main() {
 	// construct KubeletFlags object and register command line flags mapping
+	// kubeletFlags保存本节点独有，不能共享的配置信息
 	kubeletFlags := options.NewKubeletFlags()
 	kubeletFlags.AddFlags(pflag.CommandLine)
 
@@ -74,6 +75,8 @@ func main() {
 	}
 	// bootstrap the kubelet config controller, app.BootstrapKubeletConfigController will check
 	// feature gates and only turn on relevant parts of the controller
+	// 启动kubelet config controller, app.BootstrapKubeletConfigController会检测feature gate
+	// 并且只开启controller的相关部分
 	kubeletConfig, kubeletConfigController, err := app.BootstrapKubeletConfigController(
 		defaultConfig, kubeletFlags.InitConfigDir, kubeletFlags.DynamicConfigDir)
 	if err != nil {
@@ -81,21 +84,25 @@ func main() {
 	}
 
 	// construct a KubeletServer from kubeletFlags and kubeletConfig
+	// 根据kubeletFlags和kubeletConfig构建kubeletServer
 	kubeletServer := &options.KubeletServer{
 		KubeletFlags:         *kubeletFlags,
 		KubeletConfiguration: *kubeletConfig,
 	}
 
 	// use kubeletServer to construct the default KubeletDeps
+	// 用kubeletServer去创建默认的KubeletDeps
 	kubeletDeps, err := app.UnsecuredDependencies(kubeletServer)
 	if err != nil {
 		die(err)
 	}
 
 	// add the kubelet config controller to kubeletDeps
+	// 将kubelet config controller加入kubeletDeps
 	kubeletDeps.KubeletConfigController = kubeletConfigController
 
 	// start the experimental docker shim, if enabled
+	// 启动还处于试验阶段的docker shim，如果需要的话
 	if kubeletFlags.ExperimentalDockershim {
 		if err := app.RunDockershim(kubeletFlags, kubeletConfig); err != nil {
 			die(err)
@@ -103,6 +110,7 @@ func main() {
 	}
 
 	// run the kubelet
+	// 调用cmd/kubelet/app/server.go的Run函数
 	if err := app.Run(kubeletServer, kubeletDeps); err != nil {
 		die(err)
 	}

@@ -55,9 +55,11 @@ type KubeletConfiguration struct {
 	PodManifestPath string
 	// syncFrequency is the max period between synchronizing running
 	// containers and config
+	// syncFrequency是同步正在运行的容器和它的配置的最大时间间隔
 	SyncFrequency metav1.Duration
 	// fileCheckFrequency is the duration between checking config files for
 	// new data
+	// fileCheckFrequency是检查配置文件是否包含新数据的时间间隔
 	FileCheckFrequency metav1.Duration
 	// httpCheckFrequency is the duration between checking http for new data
 	HTTPCheckFrequency metav1.Duration
@@ -91,6 +93,7 @@ type KubeletConfiguration struct {
 	Authorization KubeletAuthorization
 	// allowPrivileged enables containers to request privileged mode.
 	// Defaults to false.
+	// allowPrivileged能够让容器请求privileged mode，默认为false
 	AllowPrivileged bool
 	// hostNetworkSources is a comma-separated list of sources from which the
 	// Kubelet allows pods to use of host network. Defaults to "*". Valid
@@ -111,6 +114,7 @@ type KubeletConfiguration struct {
 	RegistryBurst int32
 	// eventRecordQPS is the maximum event creations per second. If 0, there
 	// is no limit enforced.
+	// eventRecordQPS是每秒产生event的最大次数，如果是0，则没有限制
 	EventRecordQPS int32
 	// eventBurst is the maximum size of a bursty event records, temporarily
 	// allows event records to burst to this number, while still not exceeding
@@ -138,6 +142,8 @@ type KubeletConfiguration struct {
 	// clusterDNS is a list of IP address for a cluster DNS server.  If set,
 	// kubelet will configure all containers to use this for DNS resolution
 	// instead of the host's DNS servers
+	// clusterDNS是集群DNS服务器的一系列IP地址
+	// 如果配置了该字段的话，kubelet会配置所有容器都使用该DNS resolution，而不是主机的DNS server
 	ClusterDNS []string
 	// streamingConnectionIdleTimeout is the maximum time a streaming connection
 	// can be idle before the connection is automatically closed.
@@ -145,6 +151,7 @@ type KubeletConfiguration struct {
 	// nodeStatusUpdateFrequency is the frequency that kubelet posts node
 	// status to master. Note: be cautious when changing the constant, it
 	// must work with nodeMonitorGracePeriod in nodecontroller.
+	// nodeStatusUpdateFrequency是kubelet向master汇报节点状态的频率
 	NodeStatusUpdateFrequency metav1.Duration
 	// imageMinimumGCAge is the minimum age for an unused image before it is
 	// garbage collected.
@@ -196,9 +203,12 @@ type KubeletConfiguration struct {
 	// because promiscous-bridge assumes the existence of a container bridge named cbr0.
 	HairpinMode string
 	// maxPods is the number of pods that can run on this Kubelet.
+	// maxPods是该kubelet能运行的最大的pod数目
 	MaxPods int32
 	// The CIDR to use for pod IP addresses, only used in standalone mode.
 	// In cluster mode, this is obtained from the master.
+	// pod IP地址的CIDR，只有在standalone模式的时候使用
+	// 在集群模式下从master获取
 	PodCIDR string
 	// ResolverConfig is the resolver configuration file used as the basis
 	// for the container DNS resolution configuration.
@@ -211,6 +221,7 @@ type KubeletConfiguration struct {
 	// contentType is contentType of requests sent to apiserver.
 	ContentType string
 	// kubeAPIQPS is the QPS to use while talking with kubernetes apiserver
+	// kubeAPIQPS是和kubernetes apiserver交互的QPS
 	KubeAPIQPS int32
 	// kubeAPIBurst is the burst to allow while talking with kubernetes
 	// apiserver
@@ -261,8 +272,10 @@ type KubeletConfiguration struct {
 	// Values must be within the range [0, 31]. Must be different from IPTablesMasqueradeBit
 	IPTablesDropBit int32
 	// featureGates is a map of feature names to bools that enable or disable alpha/experimental features.
+	// featureGates是一个feature name和bool之间的映射能够决定开启或者关闭alpha或者experimental feature
 	FeatureGates map[string]bool
 	// Tells the Kubelet to fail to start if swap is enabled on the node.
+	// 告诉kubelet不要启动，如果本节点的swap是开启的话
 	FailSwapOn bool
 
 	/* following flags are meant for Node Allocatable */

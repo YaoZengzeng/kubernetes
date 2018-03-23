@@ -80,6 +80,8 @@ func (m *kubeGenericRuntimeManager) PullImage(image kubecontainer.ImageSpec, pul
 
 // GetImageRef gets the reference (digest or ID) of the image which has already been in
 // the local storage. It returns ("", nil) if the image isn't in the local storage.
+// GetImageRef获取那些已经在本地存储的镜像的reference(digest或者ID)
+// 如果不存在，则返回nil
 func (m *kubeGenericRuntimeManager) GetImageRef(image kubecontainer.ImageSpec) (string, error) {
 	status, err := m.imageService.ImageStatus(&runtimeapi.ImageSpec{Image: image.Image})
 	if err != nil {
@@ -94,6 +96,7 @@ func (m *kubeGenericRuntimeManager) GetImageRef(image kubecontainer.ImageSpec) (
 	if len(status.RepoDigests) > 0 {
 		imageRef = status.RepoDigests[0]
 	}
+	// 如果不包含RepoDigest，则返回ID，否则返回第一个RepoDigests[0]
 	return imageRef, nil
 }
 

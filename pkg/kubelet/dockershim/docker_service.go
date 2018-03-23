@@ -591,10 +591,13 @@ func (l LegacyLogProvider) GetContainerLogTail(uid kubetypes.UID, name, namespac
 }
 
 // criSupportedLogDrivers are log drivers supported by native CRI integration.
+// criSupportedLogDrivers是被native CRI integration原生支持的log drivers
 var criSupportedLogDrivers = []string{"json-file"}
 
 // IsCRISupportedLogDriver checks whether the logging driver used by docker is
 // suppoted by native CRI integration.
+// IsCRISupportedLogDriver检测docker的logging driver是否被native CRI integration
+// 原生支持
 func (d *dockerService) IsCRISupportedLogDriver() (bool, error) {
 	info, err := d.client.Info()
 	if err != nil {

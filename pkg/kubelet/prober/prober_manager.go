@@ -36,9 +36,13 @@ import (
 // manager use the cached probe results to set the appropriate Ready state in the PodStatus when
 // requested (UpdatePodStatus). Updating probe parameters is not currently supported.
 // TODO: Move liveness probing out of the runtime, to here.
+// Probe Manager负责探测pod，它会为每个设置了probe(AddPod)的容器创建一个probe worker
+// 这个worker会定期探测它负责的容器并且缓存结果
+// manager利用这些缓存的探测结果在被请求的时候设置PodStatus(UpdatePodStatus)
 type Manager interface {
 	// AddPod creates new probe workers for every container probe. This should be called for every
 	// pod created.
+	// AddPod为每个container probe创建一个新的probe worker，每个创建的pod都应该调用
 	AddPod(pod *v1.Pod)
 
 	// RemovePod handles cleaning up the removed pod state, including terminating probe workers and
@@ -67,12 +71,15 @@ type manager struct {
 	statusManager status.Manager
 
 	// readinessManager manages the results of readiness probes
+	// readinessManager管理readiness probes的结果
 	readinessManager results.Manager
 
 	// livenessManager manages the results of liveness probes
+	// livenessManager管理liveness probes的结果
 	livenessManager results.Manager
 
 	// prober executes the probe actions.
+	// prober执行probe操作
 	prober *prober
 }
 
@@ -135,6 +142,8 @@ func (m *manager) AddPod(pod *v1.Pod) {
 	for _, c := range pod.Spec.Containers {
 		key.containerName = c.Name
 
+		// 如果定义了ReadinessProbe或者LivenessProbe
+		// 则创建一个worker
 		if c.ReadinessProbe != nil {
 			key.probeType = readiness
 			if _, ok := m.workers[key]; ok {
@@ -239,6 +248,10 @@ func (m *manager) workerCount() int {
 	return len(m.workers)
 }
 
+// probeManager启动的时候，会启动一个goroutine定时读取readinessManager中的数据
+// 并调用statusManager去更新api server中的状态信息
+// 负责service的组件获得了这个状态，就能根据不同的值来确定是否需要更新endpoints的内容
+// 也就是service的请求能不能发送到这个pod
 func (m *manager) updateReadiness() {
 	update := <-m.readinessManager.Updates()
 

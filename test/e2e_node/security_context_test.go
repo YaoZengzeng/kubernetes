@@ -199,6 +199,7 @@ var _ = framework.KubeDescribe("Security Context", func() {
 	})
 
 	Context("when creating a pod in the host network namespace", func() {
+		// makeHostNetworkPod根据参数返回一个v1.Pod对象
 		makeHostNetworkPod := func(podName, image string, command []string, hostNetwork bool) *v1.Pod {
 			return &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
@@ -218,6 +219,7 @@ var _ = framework.KubeDescribe("Security Context", func() {
 			}
 		}
 		listListeningPortsCommand := []string{"sh", "-c", "netstat -ln"}
+		// createAndWaitHostNetworkPod根据参数创建一个pod，并等待它启动
 		createAndWaitHostNetworkPod := func(podName string, hostNetwork bool) {
 			podClient.Create(makeHostNetworkPod(podName,
 				busyboxImage,

@@ -81,7 +81,9 @@ func (m *kubeGenericRuntimeManager) recordContainerEvent(pod *v1.Pod, container 
 
 // startContainer starts a container and returns a message indicates why it is failed on error.
 // It starts the container through the following steps:
+// startContainer启动一个容器并且返回一个message表示为什么会失败，它按照如下顺序启动容器
 // * pull the image
+// 首先拉取镜像
 // * create the container
 // * start the container
 // * run the post start lifecycle hooks (if applicable)
