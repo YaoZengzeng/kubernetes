@@ -42,6 +42,7 @@ func main() {
 	flag.Parse()
 
 	// Build dependencies - ginkgo, kubelet and apiserver.
+	// 构建依赖 - ginkgo, kubelet以及apiserver
 	if *buildDependencies {
 		if err := builder.BuildGo(); err != nil {
 			glog.Fatalf("Failed to build the dependencies: %v", err)
@@ -74,6 +75,7 @@ func main() {
 
 func runCommand(name string, args ...string) error {
 	glog.Infof("Running command: %v %v", name, strings.Join(args, " "))
+	// 运行ginkgo
 	cmd := exec.Command("sudo", "sh", "-c", strings.Join(append([]string{name}, args...), " "))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

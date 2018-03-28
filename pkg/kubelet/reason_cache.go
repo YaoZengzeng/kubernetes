@@ -35,6 +35,8 @@ import (
 //      deleted.
 // TODO(random-liu): Use more reliable cache which could collect garbage of failed pod.
 // TODO(random-liu): Move reason cache to somewhere better.
+// ReasonCache将最新的启动失败的容器的原因存放在一个字符串里，通过键值<pod_UID>_<container_name>
+// 进行查找。
 type ReasonCache struct {
 	lock  sync.Mutex
 	cache *lru.Cache

@@ -26,6 +26,9 @@ import (
 // The references are used for reporting events such as creation,
 // failure, etc. This manager is thread-safe, no locks are necessary
 // for the caller.
+// RefManager管理容器的references
+// reference用来报告event，例如creation, failure等等
+// manager是thread-safe的，不需要lock
 type RefManager struct {
 	sync.RWMutex
 	containerIDToRef map[ContainerID]*v1.ObjectReference
@@ -38,6 +41,7 @@ func NewRefManager() *RefManager {
 }
 
 // SetRef stores a reference to a pod's container, associating it with the given container ID.
+// SetRef存储了到pod的container的reference，将它和给定的容器ID相关联
 func (c *RefManager) SetRef(id ContainerID, ref *v1.ObjectReference) {
 	c.Lock()
 	defer c.Unlock()

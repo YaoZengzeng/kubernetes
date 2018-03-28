@@ -181,6 +181,7 @@ type EndpointReconcilerConfig struct {
 }
 
 // Master contains state for a Kubernetes cluster master/api server.
+// Master包含了kubernetes集群的master/api server
 type Master struct {
 	GenericAPIServer *genericapiserver.GenericAPIServer
 

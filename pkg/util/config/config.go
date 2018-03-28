@@ -26,6 +26,9 @@ type Merger interface {
 	// Invoked when a change from a source is received.  May also function as an incremental
 	// merger if you wish to consume changes incrementally.  Must be reentrant when more than
 	// one source is defined.
+	// 当从一个source中收到一个change时会被调用
+	// 同时也可以作为一个incremental merger，如果你想要以增量的方式消费changes
+	// 在有多个source被定义的时候，必须是可重入的
 	Merge(source string, update interface{}) error
 }
 
@@ -38,6 +41,8 @@ func (f MergeFunc) Merge(source string, update interface{}) error {
 
 // Mux is a class for merging configuration from multiple sources.  Changes are
 // pushed via channels and sent to the merge function.
+// Mux用来从多个source合并配置
+// changes发送到channel中并接着传递给merge function
 type Mux struct {
 	// Invoked when an update is sent to a source.
 	merger Merger
@@ -68,10 +73,12 @@ func (m *Mux) Channel(source string) chan interface{} {
 	}
 	m.sourceLock.Lock()
 	defer m.sourceLock.Unlock()
+	// 获取已经存在的channel
 	channel, exists := m.sources[source]
 	if exists {
 		return channel
 	}
+	// 否则，创建一个并监听
 	newChannel := make(chan interface{})
 	m.sources[source] = newChannel
 	go wait.Until(func() { m.listen(source, newChannel) }, 0, wait.NeverStop)
@@ -80,6 +87,7 @@ func (m *Mux) Channel(source string) chan interface{} {
 
 func (m *Mux) listen(source string, listenChannel <-chan interface{}) {
 	for update := range listenChannel {
+		// 从listenChannel中不断获取update，并调用Merger进行合并
 		m.merger.Merge(source, update)
 	}
 }

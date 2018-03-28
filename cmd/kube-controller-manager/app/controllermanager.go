@@ -85,6 +85,10 @@ state of the cluster through the apiserver and makes changes attempting to move 
 current state towards the desired state. Examples of controllers that ship with
 Kubernetes today are the replication controller, endpoints controller, namespace
 controller, and serviceaccounts controller.`,
+// 在kubernetes中，一个controller就是一个control loop，监听apiserver中的关于集群的shared state
+// 并且通过改变来让集群从当前状态转变到目标状态
+// 通常的controller有replication controller，endpoints controller，namespace controller
+// 以及serviceaccounts controller
 		Run: func(cmd *cobra.Command, args []string) {
 		},
 	}
@@ -95,6 +99,8 @@ controller, and serviceaccounts controller.`,
 // ResyncPeriod returns a function which generates a duration each time it is
 // invoked; this is so that multiple controllers don't get into lock-step and all
 // hammer the apiserver with list requests simultaneously.
+// ResyncPeriod返回一个函数，它在每次调用的时候都会返回一个时间值
+// 从而多个controller不会同时访问apiserver
 func ResyncPeriod(s *options.CMServer) func() time.Duration {
 	return func() time.Duration {
 		factor := rand.Float64() + 1
@@ -103,6 +109,7 @@ func ResyncPeriod(s *options.CMServer) func() time.Duration {
 }
 
 // Run runs the CMServer.  This should never exit.
+// Run运行CMServer并且永不退出
 func Run(s *options.CMServer) error {
 	// To help debugging, immediately log version
 	glog.Infof("Version: %+v", version.Get())
@@ -116,13 +123,16 @@ func Run(s *options.CMServer) error {
 		glog.Errorf("unable to register configz: %s", err)
 	}
 
+	// 创建apiserver的client
 	kubeClient, leaderElectionClient, kubeconfig, err := createClients(s)
 	if err != nil {
 		return err
 	}
 
+	// 启动性能指标相关的http
 	go startHTTP(s)
 
+	// 创建event recorder
 	recorder := createRecorder(kubeClient)
 
 	run := func(stop <-chan struct{}) {
@@ -267,6 +277,9 @@ type ControllerContext struct {
 
 	// InformersStarted is closed after all of the controllers have been initialized and are running.  After this point it is safe,
 	// for an individual controller to start the shared informers. Before it is closed, they should not.
+	// InformersStarted在所有的controllers都已经初始化并且运行了之后会关闭
+	// 在这个时间点之后，单个的controller启动shared informers是安全的
+	// 在那之前，则不是这样的
 	InformersStarted chan struct{}
 }
 
@@ -302,6 +315,9 @@ func IsControllerEnabled(name string, disabledByDefaultControllers sets.String, 
 // InitFunc is used to launch a particular controller.  It may run additional "should I activate checks".
 // Any error returned will cause the controller process to `Fatal`
 // The bool indicates whether the controller was enabled.
+// InitFunc用于启动一个特定的controller
+// 任何返回的错误都会导致controller process进入`Fatal`的状态
+// 返回的bool表明controller是否使能
 type InitFunc func(ctx ControllerContext) (bool, error)
 
 func KnownControllers() []string {
@@ -311,6 +327,7 @@ func KnownControllers() []string {
 	// using a normal function.  The only known special case is the SA token controller which *must* be started
 	// first to ensure that the SA tokens for future controllers will exist.  Think very carefully before adding
 	// to this list.
+	// SA token controller必须先启动，从而保证future controller的SA都存在
 	ret.Insert(
 		saTokenControllerName,
 	)
@@ -331,6 +348,7 @@ const (
 // paired to their InitFunc.  This allows for structured downstream composition and subdivision.
 func NewControllerInitializers() map[string]InitFunc {
 	controllers := map[string]InitFunc{}
+	// 创建map，建立controller name和InitFunc的映射
 	controllers["endpoint"] = startEndpointController
 	controllers["replicationcontroller"] = startReplicationController
 	controllers["podgc"] = startPodGCController
@@ -421,6 +439,8 @@ func GetAvailableResources(clientBuilder controller.ControllerClientBuilder) (ma
 // CreateControllerContext creates a context struct containing references to resources needed by the
 // controllers such as the cloud provider and clientBuilder. rootClientBuilder is only used for
 // the shared-informers client and token controller.
+// CreateControllerContext创建一个context结构，包含了一个controller所需的各种资源的引用
+// 例如cloud provider以及clientBuilder
 func CreateControllerContext(s *options.CMServer, rootClientBuilder, clientBuilder controller.ControllerClientBuilder, stop <-chan struct{}) (ControllerContext, error) {
 	versionedClient := rootClientBuilder.ClientOrDie("shared-informers")
 	sharedInformers := informers.NewSharedInformerFactory(versionedClient, ResyncPeriod(s)())
@@ -472,6 +492,7 @@ func StartControllers(ctx ControllerContext, startSATokenController InitFunc, co
 		ctx.Cloud.Initialize(ctx.ClientBuilder)
 	}
 
+	// 遍历所有controllers进行初始化
 	for controllerName, initFn := range controllers {
 		if !ctx.IsControllerEnabled(controllerName) {
 			glog.Warningf("%q is disabled", controllerName)
@@ -481,6 +502,7 @@ func StartControllers(ctx ControllerContext, startSATokenController InitFunc, co
 		time.Sleep(wait.Jitter(ctx.Options.ControllerStartInterval.Duration, ControllerStartJitter))
 
 		glog.V(1).Infof("Starting %q", controllerName)
+		// 调用initFn进行初始化
 		started, err := initFn(ctx)
 		if err != nil {
 			glog.Errorf("Error starting %q", controllerName)

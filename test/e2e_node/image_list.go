@@ -103,6 +103,7 @@ func (rp *remotePuller) Pull(image string) ([]byte, error) {
 
 func getPuller() (puller, error) {
 	runtime := framework.TestContext.ContainerRuntime
+	// 根据runtime参数来决定使用哪种puller
 	switch runtime {
 	case "docker":
 		return &dockerPuller{}, nil

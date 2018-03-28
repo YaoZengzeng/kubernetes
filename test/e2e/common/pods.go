@@ -503,6 +503,7 @@ var _ = framework.KubeDescribe("Pods", func() {
 			Param("command", "/etc/resolv.conf")
 
 		url := req.URL()
+		// 用exec获取的URL来打开一个WebSocket
 		ws, err := framework.OpenWebSocketForURL(url, config, []string{"channel.k8s.io"})
 		if err != nil {
 			framework.Failf("Failed to open websocket to %s: %v", url.String(), err)
@@ -513,8 +514,10 @@ var _ = framework.KubeDescribe("Pods", func() {
 		Eventually(func() error {
 			for {
 				var msg []byte
+				// 从websocket中获取message
 				if err := websocket.Message.Receive(ws, &msg); err != nil {
 					if err == io.EOF {
+						// 获取了EOF
 						break
 					}
 					framework.Failf("Failed to read completely from websocket %s: %v", url.String(), err)
@@ -522,6 +525,7 @@ var _ = framework.KubeDescribe("Pods", func() {
 				if len(msg) == 0 {
 					continue
 				}
+				// 获取stdout
 				if msg[0] != 1 {
 					framework.Failf("Got message from server that didn't start with channel 1 (STDOUT): %v", msg)
 				}

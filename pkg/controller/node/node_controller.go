@@ -125,6 +125,7 @@ type nodeStatusData struct {
 }
 
 // Controller is the controller that manages node related cluster state.
+// Controller管理节点相关的集群状态的controller
 type Controller struct {
 	allocateNodeCIDRs bool
 	allocatorType     ipam.CIDRAllocatorType
@@ -150,13 +151,17 @@ type Controller struct {
 	//    The constant must be less than podEvictionTimeout.
 	// 2. nodeMonitorGracePeriod can't be too large for user experience - larger value takes
 	//    longer for user to see up-to-date node status.
+	// 如果controller没有在nodeMonitorGracePeriod时间内获取更新，则它会将NodeReady设置为ConditionUnknown
+	// Controller开始驱逐pod的时间是通过pod-eviction-timeout这个flag进行设置的
 	nodeMonitorGracePeriod time.Duration
 	// Value controlling Controller monitoring period, i.e. how often does Controller
 	// check node status posted from kubelet. This value should be lower than nodeMonitorGracePeriod.
 	// TODO: Change node status monitor to watch based.
+	// Controller检查从kubelet发送来的节点状态的时间间隔，这个值应该比nodeMonitorGracePeriod小
 	nodeMonitorPeriod time.Duration
 	// Value used if sync_nodes_status=False, only for node startup. When node
 	// is just created, e.g. cluster bootstrap or node creation, we give a longer grace period.
+	// 集群启动或者节点创建时，节点启动的时间段
 	nodeStartupGracePeriod time.Duration
 	// per Node map storing last observed Status together with a local time when it was observed.
 	nodeStatusMap map[string]nodeStatusData
@@ -552,6 +557,7 @@ func (nc *Controller) doNoExecuteTaintingPass() {
 }
 
 // Run starts an asynchronous loop that monitors the status of cluster nodes.
+// Run启动一个异步的循环，监视集群节点的状态
 func (nc *Controller) Run(stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 
@@ -563,6 +569,7 @@ func (nc *Controller) Run(stopCh <-chan struct{}) {
 	}
 
 	// Incorporate the results of node status pushed from kubelet to master.
+	// 合并从kubelet传输到master的节点状态
 	go wait.Until(func() {
 		if err := nc.monitorNodeStatus(); err != nil {
 			glog.Errorf("Error monitoring node status: %v", err)
@@ -616,9 +623,14 @@ func (nc *Controller) addPodEvictorForNewZone(node *v1.Node) {
 // monitorNodeStatus verifies node status are constantly updated by kubelet, and if not,
 // post "NodeReady==ConditionUnknown". It also evicts all pods if node is not ready or
 // not reachable for a long period of time.
+// monitorNodeStatus校验从kubelet发送而来的持续不断的节点状态
+// 如果发生问题的话，设置NodeReady==ConditionUnknown
+// 同时它也会驱逐所有的pod，如果node不再ready或者很长时间不再能访问
 func (nc *Controller) monitorNodeStatus() error {
 	// We are listing nodes from local cache as we can tolerate some small delays
 	// comparing to state from etcd and there is eventual consistency anyway.
+	// 我们从local cache中列出节点信息，因为我们能忍受一定程度的延时
+	// 只要最终能和etcd中的状态保持一致
 	nodes, err := nc.nodeLister.List(labels.Everything())
 	if err != nil {
 		return err
@@ -631,6 +643,7 @@ func (nc *Controller) monitorNodeStatus() error {
 
 	for i := range added {
 		glog.V(1).Infof("Controller observed a new Node: %#v", added[i].Name)
+		// Controller发现了一个新的节点
 		util.RecordNodeEvent(nc.recorder, added[i].Name, string(added[i].UID), v1.EventTypeNormal, "RegisteredNode", fmt.Sprintf("Registered Node %v in Controller", added[i].Name))
 		nc.knownNodeSet[added[i].Name] = added[i]
 		nc.addPodEvictorForNewZone(added[i])
@@ -643,7 +656,9 @@ func (nc *Controller) monitorNodeStatus() error {
 
 	for i := range deleted {
 		glog.V(1).Infof("Controller observed a Node deletion: %v", deleted[i].Name)
+		// Controller发现要删除节点
 		util.RecordNodeEvent(nc.recorder, deleted[i].Name, string(deleted[i].UID), v1.EventTypeNormal, "RemovingNode", fmt.Sprintf("Removing Node %v from Controller", deleted[i].Name))
+		// 从nc.knownNodeSet中删除
 		delete(nc.knownNodeSet, deleted[i].Name)
 	}
 

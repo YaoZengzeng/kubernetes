@@ -41,6 +41,7 @@ import (
 )
 
 // ControllerClientBuilder allows you to get clients and configs for controllers
+// ControllerClientBuilder能够让你获取controller的clients以及configs
 type ControllerClientBuilder interface {
 	Config(name string) (*restclient.Config, error)
 	ConfigOrDie(name string) *restclient.Config
@@ -53,6 +54,7 @@ type ControllerClientBuilder interface {
 // SimpleControllerClientBuilder returns a fixed client with different user agents
 type SimpleControllerClientBuilder struct {
 	// ClientConfig is a skeleton config to clone and use as the basis for each controller client
+	// ClientConfig可以作为各个controller client的基础
 	ClientConfig *restclient.Config
 }
 

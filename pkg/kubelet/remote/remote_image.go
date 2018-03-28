@@ -30,6 +30,7 @@ import (
 )
 
 // RemoteImageService is a gRPC implementation of internalapi.ImageManagerService.
+// RemoteImageService是internal.ImageManagerService的gRPC实现
 type RemoteImageService struct {
 	timeout     time.Duration
 	imageClient runtimeapi.ImageServiceClient
@@ -38,6 +39,7 @@ type RemoteImageService struct {
 // NewRemoteImageService creates a new internalapi.ImageManagerService.
 func NewRemoteImageService(endpoint string, connectionTimeout time.Duration) (internalapi.ImageManagerService, error) {
 	glog.V(3).Infof("Connecting to image service %s", endpoint)
+	// 连接远程的image端口
 	addr, dailer, err := util.GetAddressAndDialer(endpoint)
 	if err != nil {
 		return nil, err

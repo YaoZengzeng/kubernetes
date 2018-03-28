@@ -51,6 +51,7 @@ const systemOOMEvent = "SystemOOM"
 func (ow *realOOMWatcher) Start(ref *v1.ObjectReference) error {
 	request := events.Request{
 		EventType: map[cadvisorapi.EventType]bool{
+			// 指定要监听的事件类型
 			cadvisorapi.EventOom: true,
 		},
 		ContainerName:        "/",
@@ -64,6 +65,7 @@ func (ow *realOOMWatcher) Start(ref *v1.ObjectReference) error {
 	go func() {
 		defer runtime.HandleCrash()
 
+		// 从eventChannel获取oom event，并通过recorder报告
 		for event := range eventChannel.GetChannel() {
 			glog.V(2).Infof("Got sys oom event from cadvisor: %v", event)
 			ow.recorder.PastEventf(ref, metav1.Time{Time: event.Timestamp}, v1.EventTypeWarning, systemOOMEvent, "System OOM encountered")

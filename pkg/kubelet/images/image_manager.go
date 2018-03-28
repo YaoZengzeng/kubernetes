@@ -30,6 +30,7 @@ import (
 )
 
 // imageManager provides the functionalities for image pulling.
+// imageManagr提供了拉取镜像的功能
 type imageManager struct {
 	recorder     record.EventRecorder
 	imageService kubecontainer.ImageService
@@ -41,6 +42,7 @@ type imageManager struct {
 var _ ImageManager = &imageManager{}
 
 func NewImageManager(recorder record.EventRecorder, imageService kubecontainer.ImageService, imageBackOff *flowcontrol.Backoff, serialized bool, qps float32, burst int) ImageManager {
+	// 对镜像下载进行限制
 	imageService = throttleImagePulling(imageService, qps, burst)
 
 	var puller imagePuller

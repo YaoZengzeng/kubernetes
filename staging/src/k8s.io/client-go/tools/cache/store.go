@@ -27,10 +27,16 @@ import (
 // and update a store. A generic store is provided, which allows Reflector to be used
 // as a local caching system, and an LRU store, which allows Reflector to work like a
 // queue of items yet to be processed.
+// Store是一个通用的对象存储接口
+// Reflector知道怎么watch一个server并且update一个store
+// 一个generic store可以让reflector用来作为一个本地的缓存系统，而一个LRU store
+// 可以让reflector用来当前一个等待处理的队列
 //
 // Store makes no assumptions about stored object identity; it is the responsibility
 // of a Store implementation to provide a mechanism to correctly key objects and to
 // define the contract for obtaining objects by some arbitrary key type.
+// Store并且没有假设存储的对象的类型
+// 这是Store实现者的责任用来正确地key一个object并且定义协议从任意的key类型中获取对象
 type Store interface {
 	Add(obj interface{}) error
 	Update(obj interface{}) error
@@ -236,6 +242,7 @@ func NewStore(keyFunc KeyFunc) Store {
 }
 
 // NewIndexer returns an Indexer implemented simply with a map and a lock.
+// NewIndexer返回一个Indexer，简单地通过一个map和一个lock实现
 func NewIndexer(keyFunc KeyFunc, indexers Indexers) Indexer {
 	return &cache{
 		cacheStorage: NewThreadSafeStore(indexers, Indices{}),

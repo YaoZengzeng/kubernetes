@@ -338,6 +338,7 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.Dependencies) (err error) {
 	// if in standalone mode, indicate as much by setting all clients to nil
 	// 如果处于standalone mode，则将所有的clients都设置为nil
 	if standaloneMode {
+		// KubeClient, ExternalKubeClient, EventClient以及HeartbeatClient都是面向apiserver的client
 		kubeDeps.KubeClient = nil
 		kubeDeps.ExternalKubeClient = nil
 		kubeDeps.EventClient = nil
@@ -368,6 +369,7 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.Dependencies) (err error) {
 				}
 			}
 
+			// kubeClient和externalKubeClient有何区别
 			kubeClient, err = clientset.NewForConfig(clientConfig)
 			if err != nil {
 				glog.Warningf("New kubeClient from clientConfig error: %v", err)
@@ -436,6 +438,7 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.Dependencies) (err error) {
 	}
 
 	if kubeDeps.CAdvisorInterface == nil {
+		// 创建CAdvisorInterface
 		imageFsInfoProvider := cadvisor.NewImageFsInfoProvider(s.ContainerRuntime, s.RemoteRuntimeEndpoint)
 		kubeDeps.CAdvisorInterface, err = cadvisor.New(s.Address, uint(s.CAdvisorPort), imageFsInfoProvider, s.RootDirectory, cadvisor.UsingLegacyCadvisorStats(s.ContainerRuntime, s.RemoteRuntimeEndpoint))
 		if err != nil {
@@ -478,6 +481,7 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.Dependencies) (err error) {
 		kubeDeps.ContainerManager, err = cm.NewContainerManager(
 			kubeDeps.Mounter,
 			kubeDeps.CAdvisorInterface,
+			// node configuration
 			cm.NodeConfig{
 				RuntimeCgroupsName:    s.RuntimeCgroups,
 				SystemCgroupsName:     s.SystemCgroups,
@@ -509,6 +513,7 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.Dependencies) (err error) {
 		}
 	}
 
+	// kubelet要以uid为0来运行
 	if err := checkPermissions(); err != nil {
 		glog.Error(err)
 	}
@@ -630,6 +635,8 @@ func kubeconfigClientConfig(s *options.KubeletServer) (*restclient.Config, error
 // createClientConfig creates a client configuration from the command line arguments.
 // If --kubeconfig is explicitly set, it will be used. If it is not set but
 // --require-kubeconfig=true, we attempt to load the default kubeconfig file.
+// 如果显式指定了--kubeconfig，它就会被使用
+// 如果没有显式指定，但是--require-kubeconfig为true，则我们会去尝试加载kubeconfig文件
 func createClientConfig(s *options.KubeletServer) (*restclient.Config, error) {
 	// If --kubeconfig was not provided, it will have a default path set in cmd/kubelet/app/options/options.go.
 	// We only use that default path when --require-kubeconfig=true. The default path is temporary until --require-kubeconfig is removed.
@@ -646,6 +653,7 @@ func createClientConfig(s *options.KubeletServer) (*restclient.Config, error) {
 // This func is exported to support integration with third party kubelet extensions (e.g. kubernetes-mesos).
 // 本函数用于和其他第三方kubelet扩展集成
 func CreateAPIServerClientConfig(s *options.KubeletServer) (*restclient.Config, error) {
+	// 创建api server的客户端配置
 	clientConfig, err := createClientConfig(s)
 	if err != nil {
 		return nil, err
@@ -767,7 +775,7 @@ func RunKubelet(kubeFlags *options.KubeletFlags, kubeCfg *kubeletconfiginternal.
 
 	// NewMainKubelet should have set up a pod source config if one didn't exist
 	// when the builder was run. This is just a precaution.
-	// NewMainKubelet应该设置好一个pod source config，如果builder运行的时候还不存在的话
+	// NewMainKubelet应该设置好一个pod source config，如果builder运行的时候还不存在的话，则报错
 	if kubeDeps.PodConfig == nil {
 		return fmt.Errorf("failed to create kubelet, pod source config was nil")
 	}

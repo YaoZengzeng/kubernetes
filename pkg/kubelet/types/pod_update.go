@@ -53,6 +53,7 @@ const (
 	RESTORE
 
 	// These constants identify the sources of pods
+	// 以下这些常量包含了pod的source
 	// Updates from a file
 	FileSource = "file"
 	// Updates from querying a web page
@@ -70,10 +71,14 @@ const (
 // For setting the state of the system to a given state for this source configuration, set
 // Pods as desired and Op to SET, which will reset the system state to that specified in this
 // operation for this source channel. To remove all pods, set Pods to empty object and Op to SET.
+// 如果想要增加或者移除一个服务，可以发送一个size为1的array，并且将Op设置为ADD或者REMOVE
+// 如果想让这个source configuration设置到给定状态，那就按要求设置Pods，并且将Op设置为SET
+// 如果要移除所有的pod，将Pods设置为empty object并且将Op设置为SET
 //
 // Additionally, Pods should never be nil - it should always point to an empty slice. While
 // functionally similar, this helps our unit tests properly check that the correct PodUpdates
 // are generated.
+// Pods永远不能为nil，它应该指向一个empty slice
 type PodUpdate struct {
 	Pods   []*v1.Pod
 	Op     PodOperation

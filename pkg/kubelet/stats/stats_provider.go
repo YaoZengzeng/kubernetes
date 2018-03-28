@@ -32,6 +32,8 @@ import (
 
 // NewCRIStatsProvider returns a StatsProvider that provides the node stats
 // from cAdvisor and the container stats from CRI.
+// NewCRIStatsProvider返回一个StatsProvider，它通过cadvisor返回node数据，通过
+// CRI返回容器数据
 func NewCRIStatsProvider(
 	cadvisor cadvisor.Interface,
 	resourceAnalyzer stats.ResourceAnalyzer,

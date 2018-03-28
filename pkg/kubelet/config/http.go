@@ -55,6 +55,7 @@ func NewSourceURL(url string, header http.Header, nodeName types.NodeName, perio
 		client: &http.Client{Timeout: 10 * time.Second},
 	}
 	glog.V(1).Infof("Watching URL %s", url)
+	// 定期拉取镜像
 	go wait.Until(config.run, period, wait.NeverStop)
 }
 

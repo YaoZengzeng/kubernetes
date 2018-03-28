@@ -32,7 +32,9 @@ type imageFsInfoProvider struct {
 }
 
 // ImageFsInfoLabel returns the image fs label for the configured runtime.
+// ImageFsInfoLabel返回给定runtime的image fs label
 // For remote runtimes, it handles additional runtimes natively understood by cAdvisor.
+// 对于remote runtimes，它只处理cAdvisor知道的runtime
 func (i *imageFsInfoProvider) ImageFsInfoLabel() (string, error) {
 	switch i.runtime {
 	case "docker":

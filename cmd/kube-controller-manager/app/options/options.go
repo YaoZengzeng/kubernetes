@@ -58,6 +58,7 @@ type CMServer struct {
 }
 
 // NewCMServer creates a new CMServer with a default config.
+// NewCMServer使用默认配置创建一个新的CMServer
 func NewCMServer() *CMServer {
 	gcIgnoredResources := make([]componentconfig.GroupResource, 0, len(garbagecollector.DefaultIgnoredResources()))
 	for r := range garbagecollector.DefaultIgnoredResources() {

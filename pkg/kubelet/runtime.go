@@ -28,6 +28,7 @@ type runtimeState struct {
 	baseRuntimeSyncThreshold time.Duration
 	networkError             error
 	internalError            error
+	// runtimeState还保存cidr
 	cidr                     string
 	healthChecks             []*healthCheck
 }

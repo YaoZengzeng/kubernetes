@@ -34,6 +34,7 @@ const (
 )
 
 // PodLifecycleEvent is an event that reflects the change of the pod state.
+// PodLifecycleEvent是表示pod状态改变的事件
 type PodLifecycleEvent struct {
 	// The pod ID.
 	ID types.UID

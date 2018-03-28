@@ -165,6 +165,8 @@ func (kl *Kubelet) syncNetworkStatus() {
 	// we'll get runtime network status through cri directly.
 	// TODO: Remove this once we completely switch to cri integration.
 	if kl.networkPlugin != nil {
+		// 对于cri integration来说，网络状态会通过updateRuntimeUp上层
+		// 我们会直接通过cri获取网络状态
 		kl.runtimeState.setNetworkState(kl.networkPlugin.Status())
 	}
 }
@@ -182,6 +184,7 @@ func (kl *Kubelet) updatePodCIDR(cidr string) {
 	// kubelet -> network plugin
 	// cri runtime shims are responsible for their own network plugins
 	if kl.networkPlugin != nil {
+		// cri runtime shims负责它们自己的network plugins
 		details := make(map[string]interface{})
 		details[network.NET_PLUGIN_EVENT_POD_CIDR_CHANGE_DETAIL_CIDR] = cidr
 		kl.networkPlugin.Event(network.NET_PLUGIN_EVENT_POD_CIDR_CHANGE, details)

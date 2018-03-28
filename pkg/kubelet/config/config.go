@@ -54,6 +54,8 @@ const (
 // PodConfig is a configuration mux that merges many sources of pod configuration into a single
 // consistent structure, and then delivers incremental change notifications to listeners
 // in order.
+// PodConfig是一个配置信息的复用器，它将各种来源的pod configuration合并到一个单独的并且一直的结构中
+// 并且将incremental notifications按序传递给listener
 type PodConfig struct {
 	pods *podStorage
 	mux  *config.Mux
@@ -86,6 +88,7 @@ func NewPodConfig(mode PodConfigNotificationMode, recorder record.EventRecorder)
 func (c *PodConfig) Channel(source string) chan<- interface{} {
 	c.sourcesLock.Lock()
 	defer c.sourcesLock.Unlock()
+	// 将source加入c.sources中
 	c.sources.Insert(source)
 	return c.mux.Channel(source)
 }
@@ -114,6 +117,7 @@ func (c *PodConfig) Sync() {
 func (c *PodConfig) Restore(path string, updates chan<- interface{}) error {
 	var err error
 	if c.checkpointManager == nil {
+		// 创建checkpoint manager并从中读取pods
 		c.checkpointManager = checkpoint.NewCheckpointManager(path)
 		pods, err := c.checkpointManager.LoadPods()
 		if err == nil {
@@ -127,6 +131,9 @@ func (c *PodConfig) Restore(path string, updates chan<- interface{}) error {
 // to the channel are delivered in order.  Note that this object is an in-memory source of
 // "truth" and on creation contains zero entries.  Once all previously read sources are
 // available, then this object should be considered authoritative.
+// podStorage管理着当前pod state并且保证update按序传递给channel
+// 需要注意的是，这个对象是在内存中的，在创建的时候里面没有内容
+// 一旦所有read source都准备好，这个对象就能保证是权威的
 type podStorage struct {
 	podLock sync.RWMutex
 	// map of source name to pod uid to pod reference
@@ -135,10 +142,12 @@ type podStorage struct {
 
 	// ensures that updates are delivered in strict order
 	// on the updates channel
+	// 保证updates channel中的对象都是严格按序传递的
 	updateLock sync.Mutex
 	updates    chan<- kubetypes.PodUpdate
 
 	// contains the set of all sources that have sent at least one SET
+	// sourcesSeen包含了所有已经可读的source
 	sourcesSeenLock sync.RWMutex
 	sourcesSeen     sets.String
 

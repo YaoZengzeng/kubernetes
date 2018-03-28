@@ -56,6 +56,7 @@ func NewSourceFile(path string, nodeName types.NodeName, period time.Duration, u
 func new(path string, nodeName types.NodeName, period time.Duration, updates chan<- interface{}) *sourceFile {
 	send := func(objs []interface{}) {
 		var pods []*v1.Pod
+		// 将objs进行转换，并封装到pods中
 		for _, o := range objs {
 			pods = append(pods, o.(*v1.Pod))
 		}

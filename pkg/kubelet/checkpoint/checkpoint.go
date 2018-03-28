@@ -101,6 +101,7 @@ func (fcp *fileCheckPointManager) getPodPath(pod *v1.Pod) string {
 }
 
 // LoadPods Loads All Checkpoints from disk
+// 从磁盘中读取所有的checkpoints
 func (fcp *fileCheckPointManager) LoadPods() ([]*v1.Pod, error) {
 	checkpoints := make([]*v1.Pod, 0)
 	files, err := ioutil.ReadDir(fcp.path)

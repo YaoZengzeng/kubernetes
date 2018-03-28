@@ -133,6 +133,7 @@ type containerManagerImpl struct {
 	// Interface for QoS cgroup management
 	qosContainerManager QOSContainerManager
 	// Interface for exporting and allocating devices reported by device plugins.
+	// 用于暴露和分配由device plugins指定的devices的接口
 	devicePluginManager deviceplugin.Manager
 	// Interface for CPU affinity management.
 	// 用于CPU亲和性管理的接口
@@ -200,6 +201,7 @@ func validateSystemRequirements(mountUtil mount.Interface) (features, error) {
 // Takes the absolute name of the specified containers.
 // Empty container name disables use of the specified container.
 func NewContainerManager(mountUtil mount.Interface, cadvisorInterface cadvisor.Interface, nodeConfig NodeConfig, failSwapOn bool, devicePluginEnabled bool, recorder record.EventRecorder) (ContainerManager, error) {
+	// GetCgroupSubsystems()返回已挂载的cgroup信息
 	subsystems, err := GetCgroupSubsystems()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get mounted cgroup subsystems: %v", err)
@@ -224,6 +226,9 @@ func NewContainerManager(mountUtil mount.Interface, cadvisorInterface cadvisor.I
 	// It is safe to invoke `MachineInfo` on cAdvisor before logically initializing cAdvisor here because
 	// machine info is computed and cached once as part of cAdvisor object creation.
 	// But `RootFsInfo` and `ImagesFsInfo` are not available at this moment so they will be called later during manager starts
+	// 在这里调用cAdvisor的`MachineInfo`是安全的，虽然逻辑上cAdvisor还未初始化
+	// 因为在cAdvisor对象创建的时候machine info就已经被创建并且缓存了
+	// 但是此时`RootFsInfo`和`ImageFsInfo`还不能获取，因此他们就会在manager启动之后被调用
 	machineInfo, err := cadvisorInterface.MachineInfo()
 	if err != nil {
 		return nil, err

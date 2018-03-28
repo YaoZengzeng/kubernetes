@@ -29,23 +29,31 @@ import (
 // individual entries may be slightly newer than the global timestamp. If a pod
 // has no states known by the runtime, Cache returns an empty PodStatus object
 // with ID populated.
+// Cache保存了pods的PodStatus，它代表了在容器运行时所有可见的pods/containers
+// 所有的cache entries都比global timestamp更新，或一样新，有个别的entries可能会比
+// global timestamp更新，如果runtime不知道pod的存在，Cache就返回一个空的PodStatus对象
+// 其中仅仅保存了ID
 //
 // Cache provides two methods to retrive the PodStatus: the non-blocking Get()
 // and the blocking GetNewerThan() method. The component responsible for
 // populating the cache is expected to call Delete() to explicitly free the
 // cache entries.
 type Cache interface {
+	// Get是非阻塞的
 	Get(types.UID) (*PodStatus, error)
 	Set(types.UID, *PodStatus, error, time.Time)
 	// GetNewerThan is a blocking call that only returns the status
 	// when it is newer than the given time.
+	// GetNewerThan是阻塞的，只返回比给定时间更新的status	
 	GetNewerThan(types.UID, time.Time) (*PodStatus, error)
 	Delete(types.UID)
 	UpdateTime(time.Time)
 }
 
+// data表示pod的状态信息
 type data struct {
 	// Status of the pod.
+	// pod的状态
 	status *PodStatus
 	// Error got when trying to inspect the pod.
 	err error
@@ -68,6 +76,7 @@ type cache struct {
 	// cache content is at the least newer than this timestamp. Note that the
 	// timestamp is nil after initialization, and will only become non-nil when
 	// it is ready to serve the cached statuses.
+	// global timestamp用来表示缓存的数据有多新，所有缓存的内容都至少要新过这个timestamp
 	timestamp *time.Time
 	// Map that stores the subscriber records.
 	subscribers map[types.UID][]*subRecord

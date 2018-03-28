@@ -203,11 +203,14 @@ func RunSpecs(t GinkgoTestingT, description string) bool {
 //RunSpecs() with this method.
 func RunSpecsWithDefaultAndCustomReporters(t GinkgoTestingT, description string, specReporters []Reporter) bool {
 	specReporters = append([]Reporter{buildDefaultReporter()}, specReporters...)
+	// 使用Ginkgo的default reporter和custom reporter
 	return RunSpecsWithCustomReporters(t, description, specReporters)
 }
 
 //To run your tests with your custom reporter(s) (and *not* Ginkgo's default reporter), replace
 //RunSpecs() with this method.  Note that parallel tests will not work correctly without the default reporter
+//用custom reporter而不是Ginkgo的默认的reporter，则使用该方法而不是RunSpecs()
+//如果没有默认的reporter，则并行测试不能正确运行
 func RunSpecsWithCustomReporters(t GinkgoTestingT, description string, specReporters []Reporter) bool {
 	writer := GinkgoWriter.(*writer.Writer)
 	writer.SetStream(config.DefaultReporterConfig.Verbose)

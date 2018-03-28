@@ -33,6 +33,7 @@ import (
 )
 
 // RemoteRuntimeService is a gRPC implementation of internalapi.RuntimeService.
+// RemoteRuntimeService是internalapi.RuntimeService的gRPC实现
 type RemoteRuntimeService struct {
 	timeout       time.Duration
 	runtimeClient runtimeapi.RuntimeServiceClient
@@ -41,6 +42,7 @@ type RemoteRuntimeService struct {
 // NewRemoteRuntimeService creates a new internalapi.RuntimeService.
 func NewRemoteRuntimeService(endpoint string, connectionTimeout time.Duration) (internalapi.RuntimeService, error) {
 	glog.Infof("Connecting to runtime service %s", endpoint)
+	// 连接远程的endpoint
 	addr, dailer, err := util.GetAddressAndDialer(endpoint)
 	if err != nil {
 		return nil, err
@@ -53,6 +55,7 @@ func NewRemoteRuntimeService(endpoint string, connectionTimeout time.Duration) (
 
 	return &RemoteRuntimeService{
 		timeout:       connectionTimeout,
+		// 创建runtimeClient，其中包含了runtime相关的所有接口
 		runtimeClient: runtimeapi.NewRuntimeServiceClient(conn),
 	}, nil
 }

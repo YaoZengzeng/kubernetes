@@ -73,6 +73,8 @@ type ResourceCollector struct {
 
 // NewResourceCollector creates a resource collector object which collects
 // resource usage periodically from Cadvisor
+// NewResourceCollector创建一个resource collector对象用来从Cadvisor	周期性
+// 地收集资源利用率
 func NewResourceCollector(interval time.Duration) *ResourceCollector {
 	buffers := make(map[string][]*framework.ContainerResourceUsage)
 	return &ResourceCollector{

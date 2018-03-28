@@ -51,14 +51,17 @@ const (
 )
 
 // Configurer is used for setting up DNS resolver configuration when launching pods.
+// Configurer用于在启动pods时，设置DNS resolver配置
 type Configurer struct {
 	recorder record.EventRecorder
 	nodeRef  *v1.ObjectReference
 	nodeIP   net.IP
 
 	// If non-nil, use this for container DNS server.
+	// 非空，则设置为容器的DNS server
 	clusterDNS []net.IP
 	// If non-empty, use this for container DNS search.
+	// 非空，则设置为DNS search
 	ClusterDomain string
 	// The path to the DNS resolver configuration file used as the base to generate
 	// the container's DNS resolver configuration file. This can be used in
@@ -67,6 +70,7 @@ type Configurer struct {
 }
 
 // NewConfigurer returns a DNS configurer for launching pods.
+// NewConfigurer返回一个DNS configurer用于启动pods
 func NewConfigurer(recorder record.EventRecorder, nodeRef *v1.ObjectReference, nodeIP net.IP, clusterDNS []net.IP, clusterDomain, resolverConfig string) *Configurer {
 	return &Configurer{
 		recorder:       recorder,

@@ -107,6 +107,8 @@ type podWorkers struct {
 
 	// Tracks all running per-pod goroutines - per-pod goroutine will be
 	// processing updates received through its corresponding channel.
+	// 追踪所有正在运行的per-pod goroutines
+	// per-pod goroutine会处理通过相应管道获取的update
 	podUpdates map[types.UID]chan UpdatePodOptions
 	// Track the current state of per-pod goroutines.
 	// Currently all update request for a given pod coming when another

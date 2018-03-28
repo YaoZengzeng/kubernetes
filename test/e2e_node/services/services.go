@@ -45,6 +45,7 @@ type E2EServices struct {
 // NewE2EServices returns a new E2EServices instance.
 func NewE2EServices(monitorParent bool) *E2EServices {
 	return &E2EServices{
+		// monitorParent决定是否子进程是否watch并且和当前进程一起die
 		monitorParent: monitorParent,
 		// Special log files that need to be collected for additional debugging.
 		logs: getLogFiles(),
@@ -71,6 +72,7 @@ func (e *E2EServices) Start() error {
 			return fmt.Errorf("failed to start kubelet: %v", err)
 		}
 	}
+	// 启动internal service
 	e.services, err = e.startInternalServices()
 	return err
 }

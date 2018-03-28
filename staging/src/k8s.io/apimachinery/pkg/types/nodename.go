@@ -30,6 +30,7 @@ package types
 //   However, some components allow the user to pass in a --hostname-override flag,
 //   which will override this in most places. In the absence of anything more meaningful,
 //   kubelet will use Hostname as the Node.Name when it creates the Node.
+//	 没有特殊配置的话，kubelet在创建Node时，会使用Hostname作为Node.Name
 //
 // * The cloudproviders have the own names: GCE has InstanceName, AWS has InstanceId.
 //

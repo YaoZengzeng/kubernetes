@@ -109,6 +109,7 @@ func NewEndpointController(podInformer coreinformers.PodInformer, serviceInforme
 }
 
 // EndpointController manages selector-based service endpoints.
+// EndpointController管理基于selector的service endpoints
 type EndpointController struct {
 	client clientset.Interface
 
@@ -146,6 +147,8 @@ type EndpointController struct {
 
 // Run will not return until stopCh is closed. workers determines how many
 // endpoints will be handled in parallel.
+// Run直到stopCh被关闭的时候才返回
+// workers决定了有多少个endpoint可以同时处理
 func (e *EndpointController) Run(workers int, stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 	defer e.queue.ShutDown()

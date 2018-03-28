@@ -33,6 +33,7 @@ import (
 )
 
 // ServerRunOptions contains the options while running a generic api server.
+// ServerRunOptions包含了运行一个通用的api server所需的选项
 type ServerRunOptions struct {
 	AdvertiseAddress net.IP
 

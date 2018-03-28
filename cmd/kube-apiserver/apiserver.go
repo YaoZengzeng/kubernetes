@@ -39,6 +39,7 @@ import (
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
+	// 配置apiserver运行选项
 	s := options.NewServerRunOptions()
 	s.AddFlags(pflag.CommandLine)
 
@@ -46,6 +47,7 @@ func main() {
 	logs.InitLogs()
 	defer logs.FlushLogs()
 
+	// 如果指定了--version，打印版本信息并退出
 	verflag.PrintAndExitIfRequested()
 
 	stopCh := server.SetupSignalHandler()

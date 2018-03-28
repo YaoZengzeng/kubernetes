@@ -107,8 +107,10 @@ type LeaderElectionConfig struct {
 //
 // possible future callbacks:
 //  * OnChallenge()
+// LeaderCallbacks是一些回调函数，它们会在LeaderElector特定的lifecycle events被处罚
 type LeaderCallbacks struct {
 	// OnStartedLeading is called when a LeaderElector client starts leading
+	// 当一个LeaderElector client开始leading的时候会被调用
 	OnStartedLeading func(stop <-chan struct{})
 	// OnStoppedLeading is called when a LeaderElector client stops leading
 	OnStoppedLeading func()
@@ -149,6 +151,8 @@ func (le *LeaderElector) Run() {
 
 // RunOrDie starts a client with the provided config or panics if the config
 // fails to validate.
+// RunOrDie根据给定的配置启动一个client或者panic
+// 如果config检查失败的话
 func RunOrDie(lec LeaderElectionConfig) {
 	le, err := NewLeaderElector(lec)
 	if err != nil {

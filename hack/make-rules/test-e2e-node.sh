@@ -36,6 +36,7 @@ test_args=${TEST_ARGS:-""}
 system_spec_name=${SYSTEM_SPEC_NAME:-}
 
 # Parse the flags to pass to ginkgo
+# 将flag的各个参数传递给ginkgo
 ginkgoflags=""
 if [[ $parallelism > 1 ]]; then
   ginkgoflags="$ginkgoflags -nodes=$parallelism "
@@ -54,12 +55,14 @@ if [[ $run_until_failure != "" ]]; then
 fi
 
 # Setup the directory to copy test artifacts (logs, junit.xml, etc) from remote host to local host
+# 创建目录用于拷贝从远程复制到本地的test artifacts
 if [ ! -d "${artifacts}" ]; then
   echo "Creating artifacts directory at ${artifacts}"
   mkdir -p ${artifacts}
 fi
 echo "Test artifacts will be written to ${artifacts}"
 
+# 在远程执行的话
 if [ $remote = true ] ; then
   # The following options are only valid in remote run.
   images=${IMAGES:-""}
@@ -141,6 +144,7 @@ if [ $remote = true ] ; then
   exit $?
 
 else
+  # 在本地执行的话
   # Refresh sudo credentials for local run
   if ! ping -c 1 -q metadata.google.internal &> /dev/null; then
     echo "Updating sudo credentials"
@@ -149,9 +153,11 @@ else
 
   # Do not use any network plugin by default. User could override the flags with
   # test_args.
+  # 默认不适用任何网络插件，用户可以用test_args覆盖这个flag
   test_args='--kubelet-flags="--network-plugin= --cni-bin-dir=" '$test_args
 
   # Runtime flags
+  # 运行时的flag
   test_args='--kubelet-flags="--container-runtime='$runtime'" '$test_args
   if [[ $runtime == "remote" ]] ; then
       if [[ ! -z $container_runtime_endpoint ]] ; then

@@ -178,6 +178,7 @@ type SyncHandler interface {
 type Option func(*Kubelet)
 
 // Bootstrap is a bootstrapping interface for kubelet, targets the initialization protocol
+// Bootstrap是一个kubelet的bootstrapping interface，用于初始化
 type Bootstrap interface {
 	GetConfiguration() kubeletconfiginternal.KubeletConfiguration
 	BirthCry()
@@ -189,7 +190,7 @@ type Bootstrap interface {
 }
 
 // Builder creates and initializes a Kubelet instance
-// Builder创建并且初始化一个Kubelet实例
+// Builder创建并且初始化一个Kubelet实例，其实是一个Bootstrap接口
 type Builder func(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	kubeDeps *Dependencies,
 	crOptions *config.ContainerRuntimeOptions,
@@ -247,6 +248,7 @@ type Dependencies struct {
 	//                Options to add additional node conditions that are updated as part of the
 	//                Kubelet lifecycle (see https://github.com/kubernetes/kubernetes/pull/21521).
 	//                We should think about providing more explicit ways of doing these things.
+	// ContainerRuntimeOptions是一个函数数组，我们可以用它对kubelet做任何事
 	ContainerRuntimeOptions []kubecontainer.Option
 	Options                 []Option
 
@@ -477,6 +479,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 		KernelMemcgNotification:  experimentalKernelMemcgNotification,
 	}
 
+	// 使用reflector把ListWatch得到的服务信息实时同步到serviceIndexer中
 	serviceIndexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
 	if kubeDeps.KubeClient != nil {
 		serviceLW := cache.NewListWatchFromClient(kubeDeps.KubeClient.CoreV1().RESTClient(), "services", metav1.NamespaceAll, fields.Everything())
@@ -485,6 +488,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	}
 	serviceLister := corelisters.NewServiceLister(serviceIndexer)
 
+	// 使用reflector把ListWatch得到的节点信息实时同步到nodeIndexer中
 	nodeIndexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
 	if kubeDeps.KubeClient != nil {
 		fieldSelector := fields.Set{api.ObjectNameField: string(nodeName)}.AsSelector()
@@ -520,6 +524,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	httpClient := &http.Client{}
 	parsedNodeIP := net.ParseIP(nodeIP)
 
+	// PodConfig并没有直接包含在Kubelet对象中
 	klet := &Kubelet{
 		hostname:                       hostname,
 		nodeName:                       nodeName,
@@ -531,6 +536,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 		registerNode:                   registerNode,
 		registerWithTaints:             registerWithTaints,
 		registerSchedulable:            registerSchedulable,
+		// 创建dnsConfigurer
 		dnsConfigurer:                  dns.NewConfigurer(kubeDeps.Recorder, nodeRef, parsedNodeIP, clusterDNS, kubeCfg.ClusterDomain, kubeCfg.ResolverConfig),
 		serviceLister:                  serviceLister,
 		nodeInfo:                       nodeInfo,
@@ -568,10 +574,12 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 		keepTerminatedPodVolumes:                keepTerminatedPodVolumes,
 	}
 
+	// 创建secret manager
 	secretManager := secret.NewCachingSecretManager(
 		kubeDeps.KubeClient, secret.GetObjectTTLFromNodeFunc(klet.GetNode))
 	klet.secretManager = secretManager
 
+	// 创建configmap manager
 	configMapManager := configmap.NewCachingConfigMapManager(
 		kubeDeps.KubeClient, configmap.GetObjectTTLFromNodeFunc(klet.GetNode))
 	klet.configMapManager = configMapManager
@@ -617,6 +625,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	}
 
 	// TODO: These need to become arguments to a standalone docker shim.
+	// 这些应该作为传递给standalone docker shim的参数
 	pluginSettings := dockershim.NetworkPluginSettings{
 		HairpinMode:       hairpinMode,
 		NonMasqueradeCIDR: nonMasqueradeCIDR,
@@ -626,6 +635,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 		MTU:               int(crOptions.NetworkPluginMTU),
 	}
 
+	// ResourceAnalyzer提供了关于节点资源损耗的数据
 	klet.resourceAnalyzer = serverstats.NewResourceAnalyzer(klet, kubeCfg.VolumeStatsAggPeriod.Duration)
 
 	// Remote runtime shim just cannot talk back to kubelet, so it doesn't
@@ -673,6 +683,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 				remoteRuntimeEndpoint,
 				remoteImageEndpoint)
 			glog.V(2).Infof("Starting the GRPC server for the docker CRI shim.")
+			// 启动docker CRI shim的GRPC server
 			server := dockerremote.NewDockerServer(remoteRuntimeEndpoint, ds)
 			if err := server.Start(); err != nil {
 				return nil, err
@@ -725,9 +736,12 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 		if err != nil {
 			return nil, err
 		}
+		// containerRuntime和runner都满足了CRI的所有接口
 		klet.containerRuntime = runtime
 		klet.runner = runtime
 
+		// 如果container stats是使用cadvisor返回容器数据，则返回true
+		// 通过CRI返回容器数据则返回false
 		if cadvisor.UsingLegacyCadvisorStats(containerRuntime, remoteRuntimeEndpoint) {
 			klet.StatsProvider = stats.NewCadvisorStatsProvider(
 				klet.cadvisor,
@@ -784,7 +798,9 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 			klet.containerRuntime)
 	}
 
+	// 创建通用的Pod Lifecycle Event Generator
 	klet.pleg = pleg.NewGenericPLEG(klet.containerRuntime, plegChannelCapacity, plegRelistPeriod, klet.podCache, clock.RealClock{})
+	// maxWaitForContainerRuntime是等待容器运行时启动的时间
 	klet.runtimeState = newRuntimeState(maxWaitForContainerRuntime)
 	klet.runtimeState.addHealthCheck("PLEG", klet.pleg.Healthy)
 	klet.updatePodCIDR(kubeCfg.PodCIDR)
@@ -876,6 +892,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 		experimentalCheckNodeCapabilitiesBeforeMount,
 		keepTerminatedPodVolumes)
 
+	// 创建runtime cache
 	runtimeCache, err := kubecontainer.NewRuntimeCache(klet.containerRuntime)
 	if err != nil {
 		return nil, err
@@ -1296,11 +1313,14 @@ func (kl *Kubelet) setupDataDirs() error {
 }
 
 // StartGarbageCollection starts garbage collection threads.
+// StartGarbageCollection启动GC线程
 func (kl *Kubelet) StartGarbageCollection() {
 	loggedContainerGCFailure := false
+	// 启动goroutine，开始container的GC
 	go wait.Until(func() {
 		if err := kl.containerGC.GarbageCollect(); err != nil {
 			glog.Errorf("Container garbage collection failed: %v", err)
+			// container的GC失败，发送ContainerGCFailed事件
 			kl.recorder.Eventf(kl.nodeRef, v1.EventTypeWarning, events.ContainerGCFailed, err.Error())
 			loggedContainerGCFailure = true
 		} else {
@@ -1315,11 +1335,13 @@ func (kl *Kubelet) StartGarbageCollection() {
 	}, ContainerGCPeriod, wait.NeverStop)
 
 	prevImageGCFailed := false
+	// 启动goroutine，开始image的GC
 	go wait.Until(func() {
 		if err := kl.imageManager.GarbageCollect(); err != nil {
 			if prevImageGCFailed {
 				glog.Errorf("Image garbage collection failed multiple times in a row: %v", err)
 				// Only create an event for repeated failures
+				// 只在重复的失败之后才发送ImageGCFailed事件
 				kl.recorder.Eventf(kl.nodeRef, v1.EventTypeWarning, events.ImageGCFailed, err.Error())
 			} else {
 				glog.Errorf("Image garbage collection failed once. Stats initialization may not have completed yet: %v", err)
@@ -1395,13 +1417,16 @@ func (kl *Kubelet) initializeModules() error {
 }
 
 // initializeRuntimeDependentModules will initialize internal modules that require the container runtime to be up.
+// initializeRuntimeDependentModules会初始化那些需要等待容器运行时开始运行之后才能运行的模块
 func (kl *Kubelet) initializeRuntimeDependentModules() {
+	// 启动cadvisor
 	if err := kl.cadvisor.Start(); err != nil {
 		// Fail kubelet and rely on the babysitter to retry starting kubelet.
 		// TODO(random-liu): Add backoff logic in the babysitter
 		glog.Fatalf("Failed to start cAdvisor %v", err)
 	}
 	// eviction manager must start after cadvisor because it needs to know if the container runtime has a dedicated imagefs
+	// eviction manager必须在cadvisor启动之后才能启动，因为它需要知道容器运行时是否有自己的imagefs
 	kl.evictionManager.Start(kl.cadvisor, kl.GetActivePods, kl.podResourcesAreReclaimed, kl.containerManager, evictionMonitoringPeriod)
 }
 
@@ -2186,6 +2211,9 @@ func (kl *Kubelet) LatestLoopEntryTime() time.Time {
 // the runtime dependent modules when the container runtime first comes up,
 // and returns an error if the status check fails.  If the status check is OK,
 // update the container runtime uptime in the kubelet runtimeState.
+// updateRuntimeUp调用容器的runtime status回调函数，在容器运行时第一次启动时
+// 初始化运行时相关的模块，并且返回错误，如果status检查失败的话
+// 如果status检查成功，则更新kubelet runtimeState的容器运行时的uptime
 func (kl *Kubelet) updateRuntimeUp() {
 	s, err := kl.containerRuntime.Status()
 	if err != nil {
@@ -2248,6 +2276,7 @@ func (kl *Kubelet) GetConfiguration() kubeletconfiginternal.KubeletConfiguration
 // BirthCry发送一个event，告知kubelet已经启动了
 func (kl *Kubelet) BirthCry() {
 	// Make an event that kubelet restarted.
+	// 发送StartingKubelet事件
 	kl.recorder.Eventf(kl.nodeRef, v1.EventTypeNormal, events.StartingKubelet, "Starting kubelet.")
 }
 

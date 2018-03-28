@@ -84,6 +84,8 @@ const rootfs = "/rootfs"
 func TestE2eNode(t *testing.T) {
 	if *runServicesMode {
 		// If run-services-mode is specified, only run services in current process.
+		// 如果指定了run-services-mode，只在当前进程运行services
+		// 启动apiserver和namespace controller
 		services.RunE2EServices()
 		return
 	}
@@ -94,6 +96,7 @@ func TestE2eNode(t *testing.T) {
 	}
 	if *systemValidateMode {
 		// If system-validate-mode is specified, only run system validation in current process.
+		// 如果指定了system-validate-mode，则只在当前进程运行system validation
 		spec := &system.DefaultSysSpec
 		if *systemSpecFile != "" {
 			var err error
@@ -117,6 +120,7 @@ func TestE2eNode(t *testing.T) {
 		return
 	}
 	// If run-services-mode is not specified, run test.
+	// 如果没有指定run-services-mode，那就运行test
 	rand.Seed(time.Now().UTC().UnixNano())
 	RegisterFailHandler(Fail)
 	reporters := []Reporter{}
@@ -153,9 +157,11 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	// We should mask locksmithd when provisioning the machine.
 	maskLocksmithdOnCoreos()
 
+	// 如果startServices为true，则启动本地的node service
 	if *startServices {
 		// If the services are expected to stop after test, they should monitor the test process.
 		// If the services are expected to keep running after test, they should not monitor the test process.
+		// stopServices决定是否在测试结束后停止services，是的话，就需要对它进行监控
 		e2es = services.NewE2EServices(*stopServices)
 		Expect(e2es.Start()).To(Succeed(), "should be able to start node services.")
 		glog.Infof("Node services started.  Running tests...")
@@ -221,16 +227,20 @@ func waitForNodeReady() {
 	const (
 		// nodeReadyTimeout is the time to wait for node to become ready.
 		nodeReadyTimeout = 2 * time.Minute
-		// nodeReadyPollInterval is the interval to check node ready.
+		// nodeReadyPollInterval is the interval to check node ready
+		// 每秒检测一次，node是否ready
 		nodeReadyPollInterval = 1 * time.Second
 	)
+	// 获取api server的client
 	client, err := getAPIServerClient()
 	Expect(err).NotTo(HaveOccurred(), "should be able to get apiserver client.")
 	Eventually(func() error {
+		// 获取node信息
 		node, err := getNode(client)
 		if err != nil {
 			return fmt.Errorf("failed to get node: %v", err)
 		}
+		// 判断node是否ready
 		if !nodeutil.IsNodeReady(node) {
 			return fmt.Errorf("node is not ready: %+v", node)
 		}
@@ -241,6 +251,7 @@ func waitForNodeReady() {
 // updateTestContext updates the test context with the node name.
 // TODO(random-liu): Using dynamic kubelet configuration feature to
 // update test context with node configuration.
+// updateTestContext根据node name更新test context
 func updateTestContext() error {
 	client, err := getAPIServerClient()
 	if err != nil {
@@ -255,6 +266,8 @@ func updateTestContext() error {
 	// Update test context with current kubelet configuration.
 	// This assumes all tests which dynamically change kubelet configuration
 	// must: 1) run in serial; 2) restore kubelet configuration after test.
+	// 用当前的kubelet配置更新test context
+	// 这假设所有动态修改kubelet配置的测试都：1）串行执行 2）在测试之后恢复kubelet配置
 	kubeletCfg, err := getCurrentKubeletConfig()
 	if err != nil {
 		return fmt.Errorf("failed to get kubelet configuration: %v", err)

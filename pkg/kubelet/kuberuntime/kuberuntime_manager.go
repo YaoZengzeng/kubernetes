@@ -135,6 +135,7 @@ type LegacyLogProvider interface {
 }
 
 // NewKubeGenericRuntimeManager creates a new kubeGenericRuntimeManager
+// NewKubeGenericRuntimeManager创建一个新的kubeGenericRuntimeManager
 func NewKubeGenericRuntimeManager(
 	recorder record.EventRecorder,
 	livenessManager proberesults.Manager,
@@ -196,13 +197,14 @@ func NewKubeGenericRuntimeManager(
 	// If the container logs directory does not exist, create it.
 	// TODO: create podLogsRootDirectory at kubelet.go when kubelet is refactored to
 	// new runtime interface
+	// 创建podLogsRootDirectory(/var/log/pods)
 	if _, err := osInterface.Stat(podLogsRootDirectory); os.IsNotExist(err) {
 		if err := osInterface.MkdirAll(podLogsRootDirectory, 0755); err != nil {
 			glog.Errorf("Failed to create directory %q: %v", podLogsRootDirectory, err)
 		}
 	}
 
-	// 创建image manager
+	// 创建image manager，可以设置其对镜像下载是否限流以及是并行还是串行对镜像进行下载
 	kubeRuntimeManager.imagePuller = images.NewImageManager(
 		kubecontainer.FilterEventRecorder(recorder),
 		kubeRuntimeManager,
@@ -935,6 +937,7 @@ func (m *kubeGenericRuntimeManager) UpdatePodCIDR(podCIDR string) error {
 	// TODO(#35531): do we really want to write a method on this manager for each
 	// field of the config?
 	glog.Infof("updating runtime config through cri with podcidr %v", podCIDR)
+	// 调用CRI接口UpdateRuntimeConfig更新pod的CIDR
 	return m.runtimeService.UpdateRuntimeConfig(
 		&runtimeapi.RuntimeConfig{
 			NetworkConfig: &runtimeapi.NetworkConfig{

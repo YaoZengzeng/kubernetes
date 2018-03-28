@@ -185,6 +185,7 @@ func (l *libcontainerAdapter) adaptName(cgroupName CgroupName, outputToCgroupFs 
 }
 
 // CgroupSubsystems holds information about the mounted cgroup subsystems
+// CgroupSubsystems保存了已挂载的cgroup子系统的信息
 type CgroupSubsystems struct {
 	// Cgroup subsystem mounts.
 	// e.g.: "/sys/fs/cgroup/cpu" -> ["cpu", "cpuacct"]
@@ -199,6 +200,9 @@ type CgroupSubsystems struct {
 // Its a stateless object which can be used to
 // update,create or delete any number of cgroups
 // It uses the Libcontainer raw fs cgroup manager for cgroup management.
+// cgroupManagerImpl实现了CgroupManager这个接口
+// 它是一个无状态的对象，可以被用来更新，创建或者删除任何数目的cgroups
+// 它使用Libcontainer的raw fs cgroup manager来管理cgroup
 type cgroupManagerImpl struct {
 	// subsystems holds information about all the
 	// mounted cgroup subsystems on the node

@@ -26,6 +26,8 @@ import (
 
 // WorkQueue allows queuing items with a timestamp. An item is
 // considered ready to process if the timestamp has expired.
+// WorkQueue允许将一个伴有timestamp的item加入队列
+// 当timestamp耗尽的时候，item就认为可以处理了
 type WorkQueue interface {
 	// GetWork dequeues and returns all ready items.
 	GetWork() []types.UID

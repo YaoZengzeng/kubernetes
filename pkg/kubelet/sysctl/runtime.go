@@ -45,6 +45,7 @@ var _ lifecycle.PodAdmitHandler = &runtimeAdmitHandler{}
 
 // NewRuntimeAdmitHandler returns a sysctlRuntimeAdmitHandler which checks whether
 // the given runtime support sysctls.
+// NewRuntimeAdmitHandler返回一个sysctlRuntimeAdmitHandler用来检查一个给定的运行时是否支持sysctls
 func NewRuntimeAdmitHandler(runtime container.Runtime) (*runtimeAdmitHandler, error) {
 	switch runtime.Type() {
 	case dockerTypeName:

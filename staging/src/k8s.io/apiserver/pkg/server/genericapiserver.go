@@ -264,6 +264,8 @@ func (s *GenericAPIServer) PrepareRun() preparedGenericAPIServer {
 
 // Run spawns the secure http server. It only returns if stopCh is closed
 // or the secure port cannot be listened on initially.
+// Run产生一个安全的http server，它只在stopCh被关闭或者安全端口在初始化的时候不能监听才
+// 返回
 func (s preparedGenericAPIServer) Run(stopCh <-chan struct{}) error {
 	// Register audit backend preShutdownHook.
 	if s.AuditBackend != nil {

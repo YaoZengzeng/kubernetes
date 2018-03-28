@@ -35,6 +35,8 @@ import (
 // periodic listing to discover container changes. It should be used
 // as temporary replacement for container runtimes do not support a proper
 // event generator yet.
+// GenericPLEG是一个最为简单的generic PLEG，仅仅只依赖于定期地list来获取容器的变化
+// 它应该是一个暂时的替代方案，作为那些不支持event generator的容器运行时
 //
 // Note that GenericPLEG assumes that a container would not be created,
 // terminated, and garbage collected within one relist period. If such an
@@ -133,6 +135,7 @@ func (g *GenericPLEG) Start() {
 func (g *GenericPLEG) Healthy() (bool, error) {
 	relistTime := g.getRelistTime()
 	elapsed := g.clock.Since(relistTime)
+	// relistThreshold为3分钟
 	if elapsed > relistThreshold {
 		return false, fmt.Errorf("pleg was last seen active %v ago; threshold is %v", elapsed, relistThreshold)
 	}

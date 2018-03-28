@@ -95,6 +95,10 @@ func NewNamespaceKeyedIndexerAndReflector(lw ListerWatcher, expectedType interfa
 // is nil. If resyncPeriod is non-zero, then lists will be executed after every
 // resyncPeriod, so that you can use reflectors to periodically process everything as
 // well as incrementally processing the things that change.
+// NewReflector创建一个新的Reflector对象，对于给定的资源，它能够保持给定的store和server的内容保持一致
+// Reflector保证只将类型为expectedType的对象放入store中，除非expectedType为nil
+// 如果resyncPeriod非零，那么lists就会每resyncPeriod运行一次，这样我们就能用reflectors定期处理所有事情
+// 并且增量式地处理那些改变的事
 func NewReflector(lw ListerWatcher, expectedType interface{}, store Store, resyncPeriod time.Duration) *Reflector {
 	return NewNamedReflector(getDefaultReflectorName(internalPackages...), lw, expectedType, store, resyncPeriod)
 }

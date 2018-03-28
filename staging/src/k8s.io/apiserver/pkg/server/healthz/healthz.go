@@ -35,6 +35,7 @@ type HealthzChecker interface {
 var defaultHealthz = sync.Once{}
 
 // DefaultHealthz installs the default healthz check to the http.DefaultServeMux.
+// DefaultHealthz注册默认的healthz检查到http.DefaultServeMux内
 func DefaultHealthz(checks ...HealthzChecker) {
 	defaultHealthz.Do(func() {
 		InstallHandler(http.DefaultServeMux, checks...)

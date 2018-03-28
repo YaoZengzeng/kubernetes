@@ -21,6 +21,7 @@ import (
 )
 
 // ResourceAnalyzer provides statistics on node resource consumption
+// ResourceAnalyzer提供了关于节点资源损耗的数据
 type ResourceAnalyzer interface {
 	Start()
 

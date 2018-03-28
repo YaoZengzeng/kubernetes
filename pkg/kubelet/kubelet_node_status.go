@@ -60,7 +60,10 @@ const (
 // registerWithAPIServer registers the node with the cluster master. It is safe
 // to call multiple times, but not concurrently (kl.registrationCompleted is
 // not locked).
+// registerWithAPIServer向集群的master注册节点
+// 调用多次是安全的，但是不能同时调用，因为kl.registrationCompleted不会被lock
 func (kl *Kubelet) registerWithAPIServer() {
+	// 如果已经注册完成了，就直接返回
 	if kl.registrationCompleted {
 		return
 	}
@@ -70,9 +73,11 @@ func (kl *Kubelet) registerWithAPIServer() {
 		time.Sleep(step)
 		step = step * 2
 		if step >= 7*time.Second {
+			// 最长休眠7秒钟
 			step = 7 * time.Second
 		}
 
+		// initialNode为kubelet构建v1.Node对象
 		node, err := kl.initialNode()
 		if err != nil {
 			glog.Errorf("Unable to construct v1.Node object for kubelet: %v", err)
@@ -96,6 +101,7 @@ func (kl *Kubelet) registerWithAPIServer() {
 // persistent volumes for the node.  If a node of the same name exists but has
 // a different externalID value, it attempts to delete that node so that a
 // later attempt can recreate it.
+// tryRegisterWithAPIServer会尝试向apiserver注册给定的节点，返还一个布尔值，表示是否注册成功
 func (kl *Kubelet) tryRegisterWithAPIServer(node *v1.Node) bool {
 	_, err := kl.kubeClient.CoreV1().Nodes().Create(node)
 	if err == nil {
@@ -123,6 +129,7 @@ func (kl *Kubelet) tryRegisterWithAPIServer(node *v1.Node) bool {
 		return false
 	}
 
+	// 如果节点已经存在，并且有着相同的externalID
 	if existingNode.Spec.ExternalID == node.Spec.ExternalID {
 		glog.Infof("Node %s was previously registered", kl.nodeName)
 
@@ -146,6 +153,7 @@ func (kl *Kubelet) tryRegisterWithAPIServer(node *v1.Node) bool {
 		"Previously node %q had externalID %q; now it is %q; will delete and recreate.",
 		kl.nodeName, node.Spec.ExternalID, existingNode.Spec.ExternalID,
 	)
+	// 如果节点已存在，并且没有相同的external ID，则把旧节点删除
 	if err := kl.kubeClient.CoreV1().Nodes().Delete(node.Name, nil); err != nil {
 		glog.Errorf("Unable to register node %q with API server: error deleting old node: %v", kl.nodeName, err)
 	} else {
@@ -218,6 +226,8 @@ func (kl *Kubelet) reconcileCMADAnnotationWithExistingNode(node, existingNode *v
 
 // initialNode constructs the initial v1.Node for this Kubelet, incorporating node
 // labels, information from the cloud provider, and Kubelet configuration.
+// initialNode为kubelet构建初始的v1.Node，其中包含了node labels, 从cloud provider中获取的信息
+// 以及Kubelet的配置
 func (kl *Kubelet) initialNode() (*v1.Node, error) {
 	node := &v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
@@ -265,6 +275,7 @@ func (kl *Kubelet) initialNode() (*v1.Node, error) {
 		})
 	}
 
+	// 创建node.Annotations
 	if kl.enableControllerAttachDetach {
 		if node.Annotations == nil {
 			node.Annotations = make(map[string]string)
@@ -355,6 +366,7 @@ func (kl *Kubelet) initialNode() (*v1.Node, error) {
 			}
 		}
 	}
+	// 设置node status
 	kl.setNodeStatus(node)
 
 	return node, nil
@@ -363,12 +375,16 @@ func (kl *Kubelet) initialNode() (*v1.Node, error) {
 // syncNodeStatus should be called periodically from a goroutine.
 // It synchronizes node status to master, registering the kubelet first if
 // necessary.
+// syncNodeStatus需要在一个goroutine中阶段性地被调用
+// 它将节点状态同步到master，如果有必要的话，在一开始先注册kubelet
 func (kl *Kubelet) syncNodeStatus() {
+	// 如果没有api server的client，就直接返回
 	if kl.kubeClient == nil || kl.heartbeatClient == nil {
 		return
 	}
 	if kl.registerNode {
 		// This will exit immediately if it doesn't need to do anything.
+		// 如果这个函数什么都不需要做的话，它就会立即返回
 		kl.registerWithAPIServer()
 	}
 	if err := kl.updateNodeStatus(); err != nil {
@@ -378,6 +394,7 @@ func (kl *Kubelet) syncNodeStatus() {
 
 // updateNodeStatus updates node status to master with retries.
 func (kl *Kubelet) updateNodeStatus() error {
+	// 重复尝试同步节点状态最多nodeStatusUpdateRetry次
 	for i := 0; i < nodeStatusUpdateRetry; i++ {
 		if err := kl.tryUpdateNodeStatus(i); err != nil {
 			glog.Errorf("Error updating node status, will retry: %v", err)
@@ -415,6 +432,7 @@ func (kl *Kubelet) tryUpdateNodeStatus(tryNumber int) error {
 
 	kl.setNodeStatus(node)
 	// Patch the current status on the API server
+	// 将当期状态添加到apiserver中
 	updatedNode, err := nodeutil.PatchNodeStatus(kl.heartbeatClient, types.NodeName(kl.nodeName), originalNode, node)
 	if err != nil {
 		return err
@@ -966,6 +984,7 @@ func (kl *Kubelet) setNodeVolumesInUseStatus(node *v1.Node) {
 
 // setNodeStatus fills in the Status fields of the given Node, overwriting
 // any fields that are currently set.
+// setNodeStatus填充给定node的Status字段，并且会覆盖已经设置的那些字段
 // TODO(madhusudancs): Simplify the logic for setting node conditions and
 // refactor the node status condition code out to a different file.
 func (kl *Kubelet) setNodeStatus(node *v1.Node) {
@@ -978,8 +997,10 @@ func (kl *Kubelet) setNodeStatus(node *v1.Node) {
 
 // defaultNodeStatusFuncs is a factory that generates the default set of
 // setNodeStatus funcs
+// defaultNodeStatusFuncs是一个能够生成默认的setNodeStatus函数集合的factory
 func (kl *Kubelet) defaultNodeStatusFuncs() []func(*v1.Node) error {
 	// initial set of node status update handlers, can be modified by Option's
+	// 直接将要调用的函数封装到WithoutError里，并且不返还错误
 	withoutError := func(f func(*v1.Node)) func(*v1.Node) error {
 		return func(n *v1.Node) error {
 			f(n)

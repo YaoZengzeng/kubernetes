@@ -46,6 +46,8 @@ func NewRuntimeCache(getter podsGetter) (RuntimeCache, error) {
 // before updating the pods, so the timestamp is at most as new as the pods
 // (and can be slightly older). The timestamp always moves forward. Callers are
 // expected not to modify the pods returned from GetPods.
+// runtimeCache缓存了一系列的pods，它在更新pod之前记录了一个timestamp(cacheTime)
+// 调用者不应该修改GetPods返回的pods
 type runtimeCache struct {
 	sync.Mutex
 	// The underlying container runtime used to update the cache.

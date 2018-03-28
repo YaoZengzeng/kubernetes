@@ -44,6 +44,8 @@ const (
 // ReplicationManager is responsible for synchronizing ReplicationController objects stored
 // in the system with actual running pods.
 // It is actually just a wrapper around ReplicaSetController.
+// ReplicationManager负责同步存储在系统中的ReplicationController对象以及真正在运行的pods
+// 事实上，它只是ReplicaSetController的一个wrapper
 type ReplicationManager struct {
 	replicaset.ReplicaSetController
 }

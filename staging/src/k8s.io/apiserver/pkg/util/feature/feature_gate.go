@@ -74,6 +74,7 @@ const (
 
 // FeatureGate parses and stores flag gates for known features from
 // a string like feature1=true,feature2=false,...
+// FeatureGate从feature1=true,feature2=false这样的字符串里面解析并且存储已知的flag gates
 type FeatureGate interface {
 	// AddFlag adds a flag for setting global feature gates to the specified FlagSet.
 	AddFlag(fs *pflag.FlagSet)

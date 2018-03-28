@@ -45,6 +45,7 @@ func main() {
 	logs.InitLogs()
 	defer logs.FlushLogs()
 
+	// 如果传递了-version，则打印version信息并退出
 	verflag.PrintAndExitIfRequested()
 
 	if err := app.Run(s); err != nil {

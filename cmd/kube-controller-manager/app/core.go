@@ -214,6 +214,7 @@ func startVolumeExpandController(ctx ControllerContext) (bool, error) {
 }
 
 func startEndpointController(ctx ControllerContext) (bool, error) {
+	// 创建endpoint controller
 	go endpointcontroller.NewEndpointController(
 		ctx.InformerFactory.Core().V1().Pods(),
 		ctx.InformerFactory.Core().V1().Services(),
@@ -224,6 +225,7 @@ func startEndpointController(ctx ControllerContext) (bool, error) {
 }
 
 func startReplicationController(ctx ControllerContext) (bool, error) {
+	// 启动一个新的replication manager
 	go replicationcontroller.NewReplicationManager(
 		ctx.InformerFactory.Core().V1().Pods(),
 		ctx.InformerFactory.Core().V1().ReplicationControllers(),
