@@ -415,6 +415,7 @@ type DeviceInfo struct {
 }
 
 // RunContainerOptions specify the options which are necessary for running containers
+// RunContainerOptions指定了运行容器必须的options
 type RunContainerOptions struct {
 	// The environment variables list.
 	Envs []EnvVar

@@ -24,6 +24,7 @@ import (
 )
 
 // Indexer is a storage interface that lets you list objects using multiple indexing functions
+// Indexer是一个storage interface，它能够让你用多个indexing function列举对象
 type Indexer interface {
 	Store
 	// Retrieve list of objects that match on the named indexing function
@@ -69,6 +70,7 @@ const (
 )
 
 // MetaNamespaceIndexFunc is a default index function that indexes based on an object's namespace
+// MetaNamespaceIndexFunc是一个默认的index function，它的index是一个对象的namepace
 func MetaNamespaceIndexFunc(obj interface{}) ([]string, error) {
 	meta, err := meta.Accessor(obj)
 	if err != nil {

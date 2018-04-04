@@ -1034,6 +1034,7 @@ type Kubelet struct {
 	// masterServiceNamespace is the namespace that the master service is exposed in.
 	masterServiceNamespace string
 	// serviceLister knows how to list services
+	// serviceLister知道怎么list services
 	serviceLister serviceLister
 	// nodeInfo knows how to get information about the node for this kubelet.
 	nodeInfo predicates.NodeInfo

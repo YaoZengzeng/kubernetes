@@ -58,6 +58,7 @@ func NewProxyServer(o *Options) (*ProxyServer, error) {
 	return newProxyServer(o.config, o.CleanupAndExit, o.CleanupIPVS, o.scheme, o.master)
 }
 
+// 创建一个新的proxy server
 func newProxyServer(
 	config *proxyconfigapi.KubeProxyConfiguration,
 	cleanupAndExit bool,
@@ -130,11 +131,13 @@ func newProxyServer(
 	}
 
 	var proxier proxy.ProxyProvider
+	// 创建service和endpoint的handler
 	var serviceEventHandler proxyconfig.ServiceHandler
 	var endpointsEventHandler proxyconfig.EndpointsHandler
 
 	proxyMode := getProxyMode(string(config.Mode), iptInterface, ipsetInterface, iptables.LinuxKernelCompatTester{})
 	if proxyMode == proxyModeIPTables {
+		// 使用iptables proxier
 		glog.V(0).Info("Using iptables Proxier.")
 		nodeIP := net.ParseIP(config.BindAddress)
 		if nodeIP.Equal(net.IPv4zero) || nodeIP.Equal(net.IPv6zero) {
@@ -207,6 +210,7 @@ func newProxyServer(
 		userspace.CleanupLeftovers(iptInterface)
 		iptables.CleanupLeftovers(iptInterface)
 	} else {
+		// 创建一个userspace的Proxier
 		glog.V(0).Info("Using userspace Proxier.")
 		// This is a proxy.LoadBalancer which NewProxier needs but has methods we don't need for
 		// our config.EndpointsConfigHandler.

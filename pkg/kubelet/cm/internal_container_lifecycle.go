@@ -24,6 +24,7 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/cm/cpumanager"
 )
 
+// 在容器启动前，容器停止前以及容器停止后的一些接口
 type InternalContainerLifecycle interface {
 	PreStartContainer(pod *v1.Pod, container *v1.Container, containerID string) error
 	PreStopContainer(containerID string) error

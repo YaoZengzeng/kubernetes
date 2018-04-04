@@ -94,8 +94,10 @@ type Options struct {
 	// WriteConfigTo is the path where the default configuration will be written.
 	WriteConfigTo string
 	// CleanupAndExit, when true, makes the proxy server clean up iptables rules, then exit.
+	// 当CleanupAndExit为true时，先让proxy server清除iptables规则，再退出
 	CleanupAndExit bool
 	// CleanupIPVS, when true, makes the proxy server clean up ipvs rules before running.
+	// 当CleanupIPVS为true时，先让proxy server在运行之前先清除ipvs规则
 	CleanupIPVS bool
 	// config is the proxy server's configuration object.
 	config *kubeproxyconfig.KubeProxyConfiguration
@@ -218,6 +220,7 @@ func (o *Options) Run() error {
 		return o.writeConfigFile()
 	}
 
+	// 创建新的proxyServer
 	proxyServer, err := NewProxyServer(o)
 	if err != nil {
 		return err
@@ -331,10 +334,12 @@ Service cluster IPs and ports are currently found through Docker-links-compatibl
 environment variables specifying ports opened by the service proxy. There is an optional
 addon that provides cluster DNS for these cluster IPs. The user must create a service
 with the apiserver API to configure the proxy.`,
+// Service cluster IP以及port现在通过Docker-links-compatible的环境变量指定service proxy代开的port
 		Run: func(cmd *cobra.Command, args []string) {
 			verflag.PrintAndExitIfRequested()
 			cmdutil.CheckErr(opts.Complete())
 			cmdutil.CheckErr(opts.Validate(args))
+			// 最后调用opts.Run()启动kube-proxy
 			cmdutil.CheckErr(opts.Run())
 		},
 	}
@@ -355,6 +360,8 @@ with the apiserver API to configure the proxy.`,
 
 // ProxyServer represents all the parameters required to start the Kubernetes proxy server. All
 // fields are required.
+// ProxyServer代表了启动一个kubernetes proxy server所需的所有参数
+// 所有字段都是必须的
 type ProxyServer struct {
 	Client                 clientset.Interface
 	EventClient            v1core.EventsGetter
@@ -382,6 +389,7 @@ type ProxyServer struct {
 }
 
 // createClients creates a kube client and an event client from the given config and masterOverride.
+// createClients根据给定的config以及masterOverride创建一个kube client以及一个event client
 // TODO remove masterOverride when CLI flags are removed.
 func createClients(config kubeproxyconfig.ClientConnectionConfiguration, masterOverride string) (clientset.Interface, v1core.EventsGetter, error) {
 	var kubeConfig *rest.Config
@@ -425,6 +433,7 @@ func (s *ProxyServer) Run() error {
 	// To help debugging, immediately log version
 	glog.Infof("Version: %+v", version.Get())
 	// remove iptables rules and exit
+	// 如果设置了CleanupAndExit则清除iptables之后再退出
 	if s.CleanupAndExit {
 		encounteredError := userspace.CleanupLeftovers(s.IptInterface)
 		encounteredError = iptables.CleanupLeftovers(s.IptInterface) || encounteredError
@@ -438,6 +447,7 @@ func (s *ProxyServer) Run() error {
 	// TODO(vmarmol): Use container config for this.
 	var oomAdjuster *oom.OOMAdjuster
 	if s.OOMScoreAdj != nil {
+		// 设置OOMScoreAdjuster
 		oomAdjuster = oom.NewOOMAdjuster()
 		if err := oomAdjuster.ApplyOOMScoreAdj(0, int(*s.OOMScoreAdj)); err != nil {
 			glog.V(2).Info(err)
@@ -454,15 +464,18 @@ func (s *ProxyServer) Run() error {
 	}
 
 	if s.Broadcaster != nil && s.EventClient != nil {
+		// 创建event client，进行汇报工作
 		s.Broadcaster.StartRecordingToSink(&v1core.EventSinkImpl{Interface: s.EventClient.Events("")})
 	}
 
 	// Start up a healthz server if requested
 	if s.HealthzServer != nil {
+		// 创建并启动healthz server
 		s.HealthzServer.Run()
 	}
 
 	// Start up a metrics server if requested
+	// 如果需要的话，启动metrics server
 	if len(s.MetricsBindAddress) > 0 {
 		mux := http.NewServeMux()
 		healthz.InstallHandler(mux)
@@ -531,6 +544,9 @@ func (s *ProxyServer) Run() error {
 	// Note: RegisterHandler() calls need to happen before creation of Sources because sources
 	// only notify on changes, and the initial update (on process start) may be lost if no handlers
 	// are registered yet.
+	// 创建config(用于监听Services以及Endpoints)
+	// RegisterHandler()必须在sources创建之前被调用
+	// 因为source只通知changes，而initial update会丢失，如果没有handler被注册的话
 	serviceConfig := config.NewServiceConfig(informerFactory.Core().InternalVersion().Services(), s.ConfigSyncPeriod)
 	serviceConfig.RegisterEventHandler(s.ServiceEventHandler)
 	go serviceConfig.Run(wait.NeverStop)
@@ -541,6 +557,8 @@ func (s *ProxyServer) Run() error {
 
 	// This has to start after the calls to NewServiceConfig and NewEndpointsConfig because those
 	// functions must configure their shared informer event handlers first.
+	// 这必须在NewServiceConfig以及NewEndpointsConfig之后被调用
+	// 因为这些函数必须先配置自己的shared informer event handlers
 	go informerFactory.Start(wait.NeverStop)
 
 	// Birth Cry after the birth is successful
@@ -552,6 +570,7 @@ func (s *ProxyServer) Run() error {
 }
 
 func (s *ProxyServer) birthCry() {
+	// 表明kube-proxy诞生
 	s.Recorder.Eventf(s.NodeRef, api.EventTypeNormal, "Starting", "Starting kube-proxy.")
 }
 

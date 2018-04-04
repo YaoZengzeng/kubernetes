@@ -311,6 +311,7 @@ func downwardAPIVolumePodForSimpleTest(name string, filePath string) *v1.Pod {
 
 func downwardAPIVolumeForContainerResources(name string, filePath string) *v1.Pod {
 	pod := downwardAPIVolumeBasePod(name, nil, nil)
+	// 创建client-container
 	pod.Spec.Containers = downwardAPIVolumeBaseContainers("client-container", filePath)
 	return pod
 }
@@ -326,6 +327,7 @@ func downwardAPIVolumeBaseContainers(name, filePath string) []v1.Container {
 		{
 			Name:    name,
 			Image:   mountImage,
+			// 测试filePath中是否包含所需内容
 			Command: []string{"/mounttest", "--file_content=" + filePath},
 			Resources: v1.ResourceRequirements{
 				Requests: v1.ResourceList{
@@ -400,7 +402,11 @@ func downwardAPIVolumeBasePod(name string, labels, annotations map[string]string
 				{
 					Name: "podinfo",
 					VolumeSource: v1.VolumeSource{
+						// 创建DownwardAPI Volume
 						DownwardAPI: &v1.DownwardAPIVolumeSource{
+							// 分别获取pod的name
+							// 以及client-container容器的limits.cpu, requests.cpu
+							// limits.memory以及request.memory
 							Items: []v1.DownwardAPIVolumeFile{
 								{
 									Path: "podname",

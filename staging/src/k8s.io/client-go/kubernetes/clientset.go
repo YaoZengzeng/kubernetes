@@ -117,6 +117,8 @@ type Interface interface {
 
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
+// Clientset包含了各个group的client
+// 每个group在一个Clientset里都包含一个版本
 type Clientset struct {
 	*discovery.DiscoveryClient
 	admissionregistrationV1alpha1 *admissionregistrationv1alpha1.AdmissionregistrationV1alpha1Client
@@ -394,6 +396,7 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 }
 
 // NewForConfig creates a new Clientset for the given config.
+// NewForConfig对给定的config创建一个新的Clientset
 func NewForConfig(c *rest.Config) (*Clientset, error) {
 	configShallowCopy := *c
 	if configShallowCopy.RateLimiter == nil && configShallowCopy.QPS > 0 {

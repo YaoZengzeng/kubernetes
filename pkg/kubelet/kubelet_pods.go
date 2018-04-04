@@ -164,6 +164,7 @@ func (kl *Kubelet) makeBlockVolumes(pod *v1.Pod, container *v1.Container, podVol
 }
 
 // makeMounts determines the mount points for the given container.
+// makeMounts确定给定容器的mount points
 func makeMounts(pod *v1.Pod, podDir string, container *v1.Container, hostName, hostDomain, podIP string, podVolumes kubecontainer.VolumeMap, mounter mountutil.Interface) ([]kubecontainer.Mount, func(), error) {
 	// Kubernetes only mounts on /etc/hosts if:
 	// - container is not an infrastructure (pause) container
@@ -171,6 +172,7 @@ func makeMounts(pod *v1.Pod, podDir string, container *v1.Container, hostName, h
 	// - OS is not Windows
 	// Kubernetes will not mount /etc/hosts if:
 	// - when the Pod sandbox is being created, its IP is still unknown. Hence, PodIP will not have been set.
+	// 如果podIP不为空且操作系统不为windows，则挂载/etc/hosts
 	mountEtcHostsFile := len(podIP) > 0 && runtime.GOOS != "windows"
 	glog.V(3).Infof("container: %v/%v/%v podIP: %q creating hosts mount: %v", pod.Namespace, pod.Name, container.Name, podIP, mountEtcHostsFile)
 	mounts := []kubecontainer.Mount{}
@@ -452,6 +454,8 @@ func (kl *Kubelet) GetPodCgroupParent(pod *v1.Pod) string {
 
 // GenerateRunContainerOptions generates the RunContainerOptions, which can be used by
 // the container runtime to set parameters for launching a container.
+// GenerateRunContainerOptions创建RunContainerOptions，容器运行时可以用它
+// 来为启动容器设置参数
 func (kl *Kubelet) GenerateRunContainerOptions(pod *v1.Pod, container *v1.Container, podIP string) (*kubecontainer.RunContainerOptions, func(), error) {
 	opts, err := kl.containerManager.GetResources(pod, container)
 	if err != nil {
@@ -466,6 +470,7 @@ func (kl *Kubelet) GenerateRunContainerOptions(pod *v1.Pod, container *v1.Contai
 	}
 	opts.Hostname = hostname
 	podName := volumehelper.GetUniquePodName(pod)
+	// 获取容器的volumes
 	volumes := kl.volumeManager.GetMountedVolumesForPod(podName)
 
 	opts.PortMappings = kubecontainer.MakePortMappings(container)
@@ -486,12 +491,14 @@ func (kl *Kubelet) GenerateRunContainerOptions(pod *v1.Pod, container *v1.Contai
 		opts.Devices = append(opts.Devices, blkVolumes...)
 	}
 
+	// 创建mounts
 	mounts, cleanupAction, err := makeMounts(pod, kl.getPodDir(pod.UID), container, hostname, hostDomainName, podIP, volumes, kl.mounter)
 	if err != nil {
 		return nil, cleanupAction, err
 	}
 	opts.Mounts = append(opts.Mounts, mounts...)
 
+	// 创建环境变量
 	envs, err := kl.makeEnvironmentVariables(pod, container, podIP)
 	if err != nil {
 		return nil, cleanupAction, err
@@ -521,6 +528,7 @@ var masterServices = sets.NewString("kubernetes")
 
 // getServiceEnvVarMap makes a map[string]string of env vars for services a
 // pod in namespace ns should see.
+// getServiceEnvVarMap根据在namespace ns中可见的services创建一个map[string]string
 func (kl *Kubelet) getServiceEnvVarMap(ns string) (map[string]string, error) {
 	var (
 		serviceMap = make(map[string]*v1.Service)
@@ -529,10 +537,13 @@ func (kl *Kubelet) getServiceEnvVarMap(ns string) (map[string]string, error) {
 
 	// Get all service resources from the master (via a cache),
 	// and populate them into service environment variables.
+	// 从master中获取所有的service resources（通过cache）
+	// 并且将它们传播到service环境变量中
 	if kl.serviceLister == nil {
 		// Kubelets without masters (e.g. plain GCE ContainerVM) don't set env vars.
 		return m, nil
 	}
+	// 通过serviceLister获取所有的servies
 	services, err := kl.serviceLister.List(labels.Everything())
 	if err != nil {
 		return m, fmt.Errorf("failed to list services when setting up env vars")
@@ -555,6 +566,8 @@ func (kl *Kubelet) getServiceEnvVarMap(ns string) (map[string]string, error) {
 		case ns:
 			serviceMap[serviceName] = service
 		case kl.masterServiceNamespace:
+			// 如果在master service中有这个service name
+			// 则将其加入serviceMap
 			if masterServices.Has(serviceName) {
 				if _, exists := serviceMap[serviceName]; !exists {
 					serviceMap[serviceName] = service
@@ -575,6 +588,7 @@ func (kl *Kubelet) getServiceEnvVarMap(ns string) (map[string]string, error) {
 }
 
 // Make the environment variables for a pod in the given namespace.
+// 为给定的namespace内的pod创建环境变量
 func (kl *Kubelet) makeEnvironmentVariables(pod *v1.Pod, container *v1.Container, podIP string) ([]kubecontainer.EnvVar, error) {
 	var result []kubecontainer.EnvVar
 	// Note:  These are added to the docker Config, but are not included in the checksum computed

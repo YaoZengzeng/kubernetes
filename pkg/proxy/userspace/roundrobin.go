@@ -52,6 +52,7 @@ type affinityPolicy struct {
 }
 
 // LoadBalancerRR is a round-robin load balancer.
+// LoadBalancerRR是一个round-robin load balancer
 type LoadBalancerRR struct {
 	lock     sync.RWMutex
 	services map[proxy.ServicePortName]*balancerState
@@ -61,7 +62,9 @@ type LoadBalancerRR struct {
 var _ LoadBalancer = &LoadBalancerRR{}
 
 type balancerState struct {
+	// endpoints是一系列"ip:port"形式的字符串
 	endpoints []string // a list of "ip:port" style strings
+	// endpoints当前的index
 	index     int      // current index into endpoints
 	affinity  affinityPolicy
 }
@@ -200,6 +203,8 @@ func isValidEndpoint(hpp *hostPortPair) bool {
 func flattenValidEndpoints(endpoints []hostPortPair) []string {
 	// Convert Endpoint objects into strings for easier use later.  Ignore
 	// the protocol field - we'll get that from the Service objects.
+	// 将Endpoint对象转化为strings，方便以后使用
+	// 忽略protocol域，我们会从Service对象得到它
 	var result []string
 	for i := range endpoints {
 		hpp := &endpoints[i]
@@ -245,6 +250,7 @@ func (lb *LoadBalancerRR) updateAffinityMap(svcPort proxy.ServicePortName, newEn
 
 // buildPortsToEndpointsMap builds a map of portname -> all ip:ports for that
 // portname. Expode Endpoints.Subsets[*] into this structure.
+// buildPortsToEndpointsMap构建了一个portname到所有该portname的ip:ports映射
 func buildPortsToEndpointsMap(endpoints *api.Endpoints) map[string][]hostPortPair {
 	portsToEndpoints := map[string][]hostPortPair{}
 	for i := range endpoints.Subsets {
@@ -253,6 +259,7 @@ func buildPortsToEndpointsMap(endpoints *api.Endpoints) map[string][]hostPortPai
 			port := &ss.Ports[i]
 			for i := range ss.Addresses {
 				addr := &ss.Addresses[i]
+				// 从port.Name映射到一系列的hostPortPair
 				portsToEndpoints[port.Name] = append(portsToEndpoints[port.Name], hostPortPair{addr.IP, int(port.Port)})
 				// Ignore the protocol field - we'll get that from the Service objects.
 			}
@@ -269,6 +276,7 @@ func (lb *LoadBalancerRR) OnEndpointsAdd(endpoints *api.Endpoints) {
 
 	for portname := range portsToEndpoints {
 		svcPort := proxy.ServicePortName{NamespacedName: types.NamespacedName{Namespace: endpoints.Namespace, Name: endpoints.Name}, Port: portname}
+		// 将hostPortPair转换成字符串切片
 		newEndpoints := flattenValidEndpoints(portsToEndpoints[portname])
 		state, exists := lb.services[svcPort]
 

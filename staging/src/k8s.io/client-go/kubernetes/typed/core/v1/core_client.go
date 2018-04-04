@@ -44,6 +44,7 @@ type CoreV1Interface interface {
 }
 
 // CoreV1Client is used to interact with features provided by the  group.
+// CoreV1Client用于和group提供的feature进行交互
 type CoreV1Client struct {
 	restClient rest.Interface
 }
@@ -60,6 +61,7 @@ func (c *CoreV1Client) Endpoints(namespace string) EndpointsInterface {
 	return newEndpoints(c, namespace)
 }
 
+// 提供Events的接口
 func (c *CoreV1Client) Events(namespace string) EventInterface {
 	return newEvents(c, namespace)
 }
@@ -113,6 +115,7 @@ func (c *CoreV1Client) ServiceAccounts(namespace string) ServiceAccountInterface
 }
 
 // NewForConfig creates a new CoreV1Client for the given config.
+// NewForConfig根据给定的配置创建一个新的CoreV1Client
 func NewForConfig(c *rest.Config) (*CoreV1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {

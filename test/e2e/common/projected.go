@@ -1155,6 +1155,7 @@ func doProjectedSecretE2EWithoutMapping(f *framework.Framework, defaultMode *int
 
 	By(fmt.Sprintf("Creating projection with secret that has name %s", secret.Name))
 	var err error
+	// 创建测试用的secret
 	if secret, err = f.ClientSet.CoreV1().Secrets(f.Namespace.Name).Create(secret); err != nil {
 		framework.Failf("unable to create test secret %s: %v", secret.Name, err)
 	}
@@ -1190,6 +1191,7 @@ func doProjectedSecretE2EWithoutMapping(f *framework.Framework, defaultMode *int
 					Args: []string{
 						"--file_content=/etc/projected-secret-volume/data-1",
 						"--file_mode=/etc/projected-secret-volume/data-1"},
+					// 创建容器的volume mount
 					VolumeMounts: []v1.VolumeMount{
 						{
 							Name:      volumeName,

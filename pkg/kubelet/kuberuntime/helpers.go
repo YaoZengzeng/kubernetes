@@ -206,6 +206,7 @@ func getStableKey(pod *v1.Pod, container *v1.Container) string {
 }
 
 // buildContainerLogsPath builds log path for container relative to pod logs directory.
+// buildContainerLogsPath根据pod logs directory创建了容器的log path
 func buildContainerLogsPath(containerName string, restartCount int) string {
 	return fmt.Sprintf("%s_%d.log", containerName, restartCount)
 }

@@ -1467,6 +1467,7 @@ func waitForPodNotFoundInNamespace(c clientset.Interface, podName, ns string, ti
 }
 
 // waitForPodSuccessInNamespaceTimeout returns nil if the pod reached state success, or an error if it reached failure or ran too long.
+// waitForPodSuccessInNamespaceTimeout返回nil，如果pod到达success的状态，或者返回一个error，如果到达了failure状态或者运行了太长时间
 func waitForPodSuccessInNamespaceTimeout(c clientset.Interface, podName string, namespace string, timeout time.Duration) error {
 	return WaitForPodCondition(c, namespace, podName, "success or failure", timeout, func(pod *v1.Pod) (bool, error) {
 		if pod.Spec.RestartPolicy == v1.RestartPolicyAlways {
@@ -2191,6 +2192,7 @@ func (f *Framework) testContainerOutputMatcher(scenarioName string,
 	expectedOutput []string,
 	matcher func(string, ...interface{}) gomegatypes.GomegaMatcher) {
 	By(fmt.Sprintf("Creating a pod to test %v", scenarioName))
+	// 针对的容器的范围必须在pod.Spec.Containers内
 	if containerIndex < 0 || containerIndex >= len(pod.Spec.Containers) {
 		Failf("Invalid container index: %d", containerIndex)
 	}

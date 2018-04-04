@@ -42,6 +42,8 @@ import (
 	imageutils "k8s.io/kubernetes/test/utils/image"
 )
 
+ALL PASSED
+
 var (
 	buildBackOffDuration = time.Minute
 	syncLoopFrequency    = 10 * time.Second

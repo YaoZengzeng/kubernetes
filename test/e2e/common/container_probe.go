@@ -40,6 +40,8 @@ const (
 	defaultObservationTimeout = time.Minute * 2
 )
 
+ALL PASSED
+
 var _ = framework.KubeDescribe("Probing container", func() {
 	f := framework.NewDefaultFramework("container-probe")
 	var podClient *framework.PodClient

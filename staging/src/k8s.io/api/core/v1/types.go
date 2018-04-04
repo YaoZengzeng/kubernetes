@@ -4392,6 +4392,7 @@ type ServiceProxyOptions struct {
 }
 
 // ObjectReference contains enough information to let you inspect or modify the referred object.
+// ObjectReference包含了足够的信息能让你检查或者修改引用的对象
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type ObjectReference struct {
 	// Kind of the referent.

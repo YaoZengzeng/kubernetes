@@ -32,6 +32,7 @@ type EventsGetter interface {
 }
 
 // EventInterface has methods to work with Event resources.
+// EventInterface提供了和Event资源进行交互的接口
 type EventInterface interface {
 	Create(*v1.Event) (*v1.Event, error)
 	Update(*v1.Event) (*v1.Event, error)

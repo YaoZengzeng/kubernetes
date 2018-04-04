@@ -91,15 +91,18 @@ type kubeGenericRuntimeManager struct {
 	runner kubecontainer.HandlerRunner
 
 	// RuntimeHelper that wraps kubelet to generate runtime container options.
+	// RuntimeHelper对kubelet进行封装用于产生runtime container options
 	runtimeHelper kubecontainer.RuntimeHelper
 
 	// Health check results.
+	// 健康检查
 	livenessManager proberesults.Manager
 
 	// If true, enforce container cpu limits with CFS quota support
 	cpuCFSQuota bool
 
 	// wrapped image puller.
+	// 对image puller进行封装
 	imagePuller images.ImageManager
 
 	// gRPC service clients

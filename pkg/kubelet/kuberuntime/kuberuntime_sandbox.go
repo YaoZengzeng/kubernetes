@@ -89,6 +89,7 @@ func (m *kubeGenericRuntimeManager) generatePodSandboxConfig(pod *v1.Pod, attemp
 		podSandboxConfig.Hostname = hostname
 	}
 
+	// 创建默认的logdir
 	logDir := buildPodLogsDirectory(pod.UID)
 	podSandboxConfig.LogDirectory = logDir
 

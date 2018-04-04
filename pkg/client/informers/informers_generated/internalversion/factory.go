@@ -57,6 +57,7 @@ type sharedInformerFactory struct {
 }
 
 // NewSharedInformerFactory constructs a new instance of sharedInformerFactory
+// NewSharedInformerFactory创建一个sharedInformerFactory新的实例
 func NewSharedInformerFactory(client internalclientset.Interface, defaultResync time.Duration) SharedInformerFactory {
 	return NewFilteredSharedInformerFactory(client, defaultResync, v1.NamespaceAll, nil)
 }
@@ -64,6 +65,8 @@ func NewSharedInformerFactory(client internalclientset.Interface, defaultResync 
 // NewFilteredSharedInformerFactory constructs a new instance of sharedInformerFactory.
 // Listers obtained via this SharedInformerFactory will be subject to the same filters
 // as specified here.
+// NewFilteredSharedInformerFactory创建一个新的sharedInformerFactory的实例
+// 通过这个SharedInformerFactory获取的Lister也同样会遵循这里的filter
 func NewFilteredSharedInformerFactory(client internalclientset.Interface, defaultResync time.Duration, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) SharedInformerFactory {
 	return &sharedInformerFactory{
 		client:           client,
@@ -76,6 +79,7 @@ func NewFilteredSharedInformerFactory(client internalclientset.Interface, defaul
 }
 
 // Start initializes all requested informers.
+// 启动初始化所有请求的informers
 func (f *sharedInformerFactory) Start(stopCh <-chan struct{}) {
 	f.lock.Lock()
 	defer f.lock.Unlock()

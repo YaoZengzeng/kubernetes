@@ -28,6 +28,7 @@ import (
 // PodLister helps list Pods.
 type PodLister interface {
 	// List lists all Pods in the indexer.
+	// List用于罗列indexer中所有的Pods
 	List(selector labels.Selector) (ret []*v1.Pod, err error)
 	// Pods returns an object that can list and get Pods.
 	Pods(namespace string) PodNamespaceLister

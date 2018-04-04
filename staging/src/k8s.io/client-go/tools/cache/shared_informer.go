@@ -103,6 +103,7 @@ const (
 
 // WaitForCacheSync waits for caches to populate.  It returns true if it was successful, false
 // if the controller should shutdown
+// WaitForCacheSync等待cache被填充，成功则返回true，返回false则关闭controller
 func WaitForCacheSync(stopCh <-chan struct{}, cacheSyncs ...InformerSynced) bool {
 	err := wait.PollUntil(syncedPollPeriod,
 		func() (bool, error) {

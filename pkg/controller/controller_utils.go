@@ -436,6 +436,7 @@ func (r RealControllerRevisionControl) PatchControllerRevision(namespace, name s
 
 // PodControlInterface is an interface that knows how to add or delete pods
 // created as an interface to allow testing.
+// PodControlInterface是一个接口，它知道如何增加或者删除pods
 type PodControlInterface interface {
 	// CreatePods creates new pods according to the spec.
 	CreatePods(namespace string, template *v1.PodTemplateSpec, object runtime.Object) error
@@ -1015,6 +1016,8 @@ func PatchNodeTaints(c clientset.Interface, nodeName string, oldNode *v1.Node, n
 // WaitForCacheSync is a wrapper around cache.WaitForCacheSync that generates log messages
 // indicating that the controller identified by controllerName is waiting for syncs, followed by
 // either a successful or failed sync.
+// WaitForCacheSync是cache.WaitForCacheSync的一个封装，它用来产生log message表明由controllerName标识的
+// controller已经开始等待同步了
 func WaitForCacheSync(controllerName string, stopCh <-chan struct{}, cacheSyncs ...cache.InformerSynced) bool {
 	glog.Infof("Waiting for caches to sync for %s controller", controllerName)
 

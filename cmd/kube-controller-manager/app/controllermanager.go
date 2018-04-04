@@ -155,12 +155,14 @@ func Run(s *options.CMServer) error {
 		} else {
 			clientBuilder = rootClientBuilder
 		}
+		// 创建controller context
 		ctx, err := CreateControllerContext(s, rootClientBuilder, clientBuilder, stop)
 		if err != nil {
 			glog.Fatalf("error building controller context: %v", err)
 		}
 		saTokenControllerInitFunc := serviceAccountTokenControllerStarter{rootClientBuilder: rootClientBuilder}.startServiceAccountTokenController
 
+		// 启动各个controller
 		if err := StartControllers(ctx, saTokenControllerInitFunc, NewControllerInitializers()); err != nil {
 			glog.Fatalf("error starting controllers: %v", err)
 		}

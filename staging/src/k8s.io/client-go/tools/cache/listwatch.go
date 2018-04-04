@@ -58,6 +58,7 @@ type ListWatch struct {
 }
 
 // Getter interface knows how to access Get method from RESTClient.
+// Getter接口知道如何访问RESTClient的Get方法
 type Getter interface {
 	Get() *restclient.Request
 }

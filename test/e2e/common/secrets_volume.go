@@ -359,6 +359,7 @@ var _ = Describe("[sig-storage] Secrets", func() {
 	})
 })
 
+// 在namespace里创建名字为name的secret
 func secretForTest(namespace, name string) *v1.Secret {
 	return &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{

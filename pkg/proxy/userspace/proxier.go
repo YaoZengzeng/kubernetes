@@ -47,6 +47,7 @@ type portal struct {
 }
 
 // ServiceInfo contains information and state for a particular proxied service
+// ServiceInfo包含了特定的proxied service的信息和状态
 type ServiceInfo struct {
 	// Timeout is the read/write timeout (used for UDP connections)
 	Timeout time.Duration
@@ -153,6 +154,12 @@ func IsProxyLocked(err error) bool {
 // if iptables fails to update or acquire the initial lock. Once a proxier is
 // created, it will keep iptables up to date in the background and will not
 // terminate if a particular iptables call fails.
+// NewProxier会返回一个新的Proxier，给定一个LoadBalancer以及一个监听的地址
+// 根据iptables的逻辑，通常假设一台机器上只有一个Proxier
+// 如果ListenIP非法（loop地址）或者iptables由于更新或者获取initial lock时失败，proxier
+// 就不会启动成功
+// 一旦一个proxier创建成功，它就会在幕后保持iptables最新并且不会因为一个特定的iptables
+// fail而导致结束
 func NewProxier(loadBalancer LoadBalancer, listenIP net.IP, iptables iptables.Interface, exec utilexec.Interface, pr utilnet.PortRange, syncPeriod, minSyncPeriod, udpIdleTimeout time.Duration) (*Proxier, error) {
 	return NewCustomProxier(loadBalancer, listenIP, iptables, exec, pr, syncPeriod, minSyncPeriod, udpIdleTimeout, newProxySocket)
 }
@@ -161,6 +168,7 @@ func NewProxier(loadBalancer LoadBalancer, listenIP net.IP, iptables iptables.In
 // for the given LoadBalancer and address.  The new proxier is constructed using
 // the ProxySocket constructor provided, however, instead of constructing the
 // default ProxySockets.
+// 新的proxier由提供的ProxySocket constructor构建而成，而不是通过默认的ProxySockets
 func NewCustomProxier(loadBalancer LoadBalancer, listenIP net.IP, iptables iptables.Interface, exec utilexec.Interface, pr utilnet.PortRange, syncPeriod, minSyncPeriod, udpIdleTimeout time.Duration, makeProxySocket ProxySocketFunc) (*Proxier, error) {
 	if listenIP.Equal(localhostIPv4) || listenIP.Equal(localhostIPv6) {
 		return nil, ErrProxyOnLocalhost
@@ -204,6 +212,7 @@ func createProxier(loadBalancer LoadBalancer, listenIP net.IP, iptables iptables
 	}
 	return &Proxier{
 		loadBalancer: loadBalancer,
+		// 创建service map
 		serviceMap:   make(map[proxy.ServicePortName]*ServiceInfo),
 		portMap:      make(map[portMapKey]*portMapValue),
 		syncPeriod:   syncPeriod,
@@ -288,6 +297,7 @@ func CleanupLeftovers(ipt iptables.Interface) (encounteredError bool) {
 }
 
 // Sync is called to immediately synchronize the proxier state to iptables
+// Sync用于马上将proxier的状态同步到iptables中
 func (proxier *Proxier) Sync() {
 	if err := iptablesInit(proxier.iptables); err != nil {
 		glog.Errorf("Failed to ensure iptables: %v", err)
@@ -846,6 +856,7 @@ var iptablesHostNodePortChain iptables.Chain = "KUBE-NODEPORT-HOST"
 var iptablesNonLocalNodePortChain iptables.Chain = "KUBE-NODEPORT-NON-LOCAL"
 
 // Ensure that the iptables infrastructure we use is set up.  This can safely be called periodically.
+// 确保我们使用的iptables已经设置好，本函数可以安全地被阶段性调用
 func iptablesInit(ipt iptables.Interface) error {
 	// TODO: There is almost certainly room for optimization here.  E.g. If
 	// we knew the service-cluster-ip-range CIDR we could fast-track outbound packets not

@@ -322,6 +322,7 @@ func (cm *containerManagerImpl) NewPodContainerManager() PodContainerManager {
 }
 
 func (cm *containerManagerImpl) InternalContainerLifecycle() InternalContainerLifecycle {
+	// 仅仅只是将container manager中的cupManager包含其中
 	return &internalContainerLifecycleImpl{cm.cpuManager}
 }
 

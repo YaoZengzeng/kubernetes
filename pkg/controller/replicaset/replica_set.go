@@ -72,10 +72,14 @@ const (
 
 // ReplicaSetController is responsible for synchronizing ReplicaSet objects stored
 // in the system with actual running pods.
+// ReplicaSetController负责同步系统中存储的ReplicaSet对象和真实运行的pods
 type ReplicaSetController struct {
 	// GroupVersionKind indicates the controller type.
 	// Different instances of this struct may handle different GVKs.
 	// For example, this struct can be used (with adapters) to handle ReplicationController.
+	// GroupVersionKind表明了controller类型
+	// 这个结构不同的instance可能会处理不同的GVKs
+	// 比如，这个struct可以用于处理ReplicationController
 	schema.GroupVersionKind
 
 	kubeClient clientset.Interface
@@ -85,18 +89,23 @@ type ReplicaSetController struct {
 	// It resumes normal action after observing the watch events for them.
 	burstReplicas int
 	// To allow injection of syncReplicaSet for testing.
+	// 允许注入syncReplicaSet用于测试
 	syncHandler func(rsKey string) error
 
 	// A TTLCache of pod creates/deletes each rc expects to see.
 	expectations *controller.UIDTrackingControllerExpectations
 
 	// A store of ReplicaSets, populated by the shared informer passed to NewReplicaSetController
+	// 存储ReplicaSets，通过传输给NewReplicaSetController的shared informer进行填充
 	rsLister extensionslisters.ReplicaSetLister
 	// rsListerSynced returns true if the pod store has been synced at least once.
 	// Added as a member to the struct to allow injection for testing.
+	// InformerSynced是一个函数用于确认一个informer是否已经同步了
+	// 这对于确定缓存是否同步是很有用的
 	rsListerSynced cache.InformerSynced
 
 	// A store of pods, populated by the shared informer passed to NewReplicaSetController
+	// 存储pods,通过传输给NewReplicaSetController的shared informer进行填充
 	podLister corelisters.PodLister
 	// podListerSynced returns true if the pod store has been synced at least once.
 	// Added as a member to the struct to allow injection for testing.
@@ -124,6 +133,9 @@ func NewReplicaSetController(rsInformer extensionsinformers.ReplicaSetInformer, 
 
 // NewBaseController is the implementation of NewReplicaSetController with additional injected
 // parameters so that it can also serve as the implementation of NewReplicationController.
+// NewBaseController是NewReplicaSetController的实现并且有着额外的参数注入
+// 从而它也能作为NewReplicationController的实现
+// podController仅仅是对kubeClient以及recorder的封装
 func NewBaseController(rsInformer extensionsinformers.ReplicaSetInformer, podInformer coreinformers.PodInformer, kubeClient clientset.Interface, burstReplicas int,
 	gvk schema.GroupVersionKind, metricOwnerName, queueName string, podControl controller.PodControlInterface) *ReplicaSetController {
 	if kubeClient != nil && kubeClient.CoreV1().RESTClient().GetRateLimiter() != nil {
@@ -409,12 +421,14 @@ func (rsc *ReplicaSetController) deletePod(obj interface{}) {
 }
 
 // obj could be an *extensions.ReplicaSet, or a DeletionFinalStateUnknown marker item.
+// obj可能是一个*extensions.ReplicaSet或者是一个标记为DeletionFinalStateUnknown标记的item
 func (rsc *ReplicaSetController) enqueueReplicaSet(obj interface{}) {
 	key, err := controller.KeyFunc(obj)
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %+v: %v", obj, err))
 		return
 	}
+	// 将key加入到队列中
 	rsc.queue.Add(key)
 }
 
@@ -430,6 +444,8 @@ func (rsc *ReplicaSetController) enqueueReplicaSetAfter(obj interface{}, after t
 
 // worker runs a worker thread that just dequeues items, processes them, and marks them done.
 // It enforces that the syncHandler is never invoked concurrently with the same key.
+// worker会运行一个worker thread从队列里面取出item，处理它们，并且标记它们已经完成
+// 它要syncHandler不会同时处理同一个key
 func (rsc *ReplicaSetController) worker() {
 	for rsc.processNextWorkItem() {
 	}
@@ -576,6 +592,7 @@ func (rsc *ReplicaSetController) syncReplicaSet(key string) error {
 		glog.V(4).Infof("Finished syncing %v %q (%v)", rsc.Kind, key, time.Since(startTime))
 	}()
 
+	// key中包含了namespace和name
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		return err
@@ -599,6 +616,7 @@ func (rsc *ReplicaSetController) syncReplicaSet(key string) error {
 
 	// list all pods to include the pods that don't match the rs`s selector
 	// anymore but has the stale controller ref.
+	// 列举所有的pods，包含那些不再符合rs的selector但是有着stale controller ref的selector
 	// TODO: Do the List and Filter in a single pass, or use an index.
 	allPods, err := rsc.podLister.Pods(rs.Namespace).List(labels.Everything())
 	if err != nil {

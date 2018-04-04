@@ -29,6 +29,8 @@ import (
 // FromServices builds environment variables that a container is started with,
 // which tell the container where to find the services it may need, which are
 // provided as an argument.
+// FromServices构建容器启动所需的环境变量
+// 它会告诉容器从哪里去找所需的services，它会通过参数的形式提供
 func FromServices(services []*v1.Service) []v1.EnvVar {
 	var result []v1.EnvVar
 	for i := range services {
@@ -37,6 +39,8 @@ func FromServices(services []*v1.Service) []v1.EnvVar {
 		// ignore services where ClusterIP is "None" or empty
 		// the services passed to this method should be pre-filtered
 		// only services that have the cluster IP set should be included here
+		// 忽略ClusterIP为"None"或者为空，传输给这个方法的services需要经过预先删选
+		// 只有包含Cluster IP的service才能包含
 		if !v1helper.IsServiceIPSet(service) {
 			continue
 		}

@@ -29,11 +29,15 @@ type ProxyProvider interface {
 	// SyncLoop runs periodic work.
 	// This is expected to run as a goroutine or as the main loop of the app.
 	// It does not return.
+	// SyncLoop阶段性地进行工作
+	// 它期望在一个goroutine或者作为一个app的main loop，它并不退出
 	SyncLoop()
 }
 
 // ServicePortName carries a namespace + name + portname.  This is the unique
 // identfier for a load-balanced service.
+// ServicePortName包含了一个namespace + name + portname
+// 这对于一个load-balanced服务是一个独特的标识符
 type ServicePortName struct {
 	types.NamespacedName
 	Port string

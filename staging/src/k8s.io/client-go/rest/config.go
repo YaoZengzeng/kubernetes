@@ -46,11 +46,14 @@ const (
 
 // Config holds the common attributes that can be passed to a Kubernetes client on
 // initialization.
+// Config包含了能够传递给Kubernetes客户端进行初始化的公共配置
 type Config struct {
 	// Host must be a host string, a host:port pair, or a URL to the base of the apiserver.
 	// If a URL is given then the (optional) Path of that URL represents a prefix that must
 	// be appended to all request URIs used to access the apiserver. This allows a frontend
 	// proxy to easily relocate all of the apiserver endpoints.
+	// Host必须是一个host字符串，一个host:port对，或者是一个apiserver base所在的URL
+	// 如果给的是一个URL，则每个访问apiserver的URI请求都要添加这样一个前缀
 	Host string
 	// APIPath is a sub-path that points to an API root.
 	APIPath string
@@ -73,9 +76,11 @@ type Config struct {
 
 	// CacheDir is the directory where we'll store HTTP cached responses.
 	// If set to empty string, no caching mechanism will be used.
+	// CacheDir是一个目录，用于缓存HTTP response
 	CacheDir string
 
 	// Impersonate is the configuration that RESTClient will use for impersonation.
+	// 用于模拟的配置
 	Impersonate ImpersonationConfig
 
 	// Server requires plugin-specified authentication.
@@ -88,6 +93,7 @@ type Config struct {
 	TLSClientConfig
 
 	// UserAgent is an optional field that specifies the caller of this request.
+	// UserAgent是一个可选项用于表示请求的caller
 	UserAgent string
 
 	// Transport may be used for custom HTTP behavior. This attribute may not

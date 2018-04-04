@@ -353,6 +353,7 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.Dependencies) (err error) {
 		var externalKubeClient clientset.Interface
 
 		// 创建api server的client端配置
+		// 各个client的配置都基于它
 		clientConfig, err := CreateAPIServerClientConfig(s)
 
 		var clientCertificateManager certificate.Manager
@@ -651,6 +652,8 @@ func createClientConfig(s *options.KubeletServer) (*restclient.Config, error) {
 // CreateAPIServerClientConfig generates a client.Config from command line flags
 // via createClientConfig and then injects chaos into the configuration via addChaosToClientConfig.
 // This func is exported to support integration with third party kubelet extensions (e.g. kubernetes-mesos).
+// CreateAPIServerClientConfig通过createClientConfig从命令行的flag创建一个client.Config
+// 并且通过addChaosToClientConfig在configuration中注入chaos
 // 本函数用于和其他第三方kubelet扩展集成
 func CreateAPIServerClientConfig(s *options.KubeletServer) (*restclient.Config, error) {
 	// 创建api server的客户端配置

@@ -26,10 +26,13 @@ import (
 )
 
 // ServiceLister helps list Services.
+// ServiceLister用于帮助列举Services
 type ServiceLister interface {
 	// List lists all Services in the indexer.
+	// Lisr列举indexer中所有的Services
 	List(selector labels.Selector) (ret []*v1.Service, err error)
 	// Services returns an object that can list and get Services.
+	// Services返回一个对象，它可以list并且get Services
 	Services(namespace string) ServiceNamespaceLister
 	ServiceListerExpansion
 }
@@ -40,6 +43,7 @@ type serviceLister struct {
 }
 
 // NewServiceLister returns a new ServiceLister.
+// NewServiceLister返回一个新的ServiceLister
 func NewServiceLister(indexer cache.Indexer) ServiceLister {
 	return &serviceLister{indexer: indexer}
 }

@@ -76,6 +76,8 @@ type ExplicitKey string
 // keys for API objects which implement meta.Interface.
 // The key uses the format <namespace>/<name> unless <namespace> is empty, then
 // it's just <name>.
+// MetaNamespaceKeyFunc是一个方便的默认KeyFunc，它知道怎么为一个实现了meta.Interface的
+// API对象创建keys
 //
 // TODO: replace key-as-string with a key-as-struct so that this
 // packing/unpacking won't be necessary.

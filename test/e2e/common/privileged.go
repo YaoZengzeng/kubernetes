@@ -26,6 +26,8 @@ import (
 	"k8s.io/kubernetes/test/e2e/framework"
 )
 
+ALL PASSED
+
 type PrivilegedPodTestConfig struct {
 	f *framework.Framework
 
@@ -92,6 +94,7 @@ func (c *PrivilegedPodTestConfig) createPodsSpec() *v1.Pod {
 					Name:            c.privilegedContainer,
 					Image:           busyboxImage,
 					ImagePullPolicy: v1.PullIfNotPresent,
+					// 设置本容器为privileged
 					SecurityContext: &v1.SecurityContext{Privileged: &isPrivileged},
 					Command:         []string{"/bin/sleep", "10000"},
 				},
@@ -99,6 +102,7 @@ func (c *PrivilegedPodTestConfig) createPodsSpec() *v1.Pod {
 					Name:            c.notPrivilegedContainer,
 					Image:           busyboxImage,
 					ImagePullPolicy: v1.PullIfNotPresent,
+					// 设置本容器为non privileged
 					SecurityContext: &v1.SecurityContext{Privileged: &notPrivileged},
 					Command:         []string{"/bin/sleep", "10000"},
 				},

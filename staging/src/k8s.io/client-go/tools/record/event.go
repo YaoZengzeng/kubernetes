@@ -91,6 +91,7 @@ type EventBroadcaster interface {
 
 	// StartRecordingToSink starts sending events received from this EventBroadcaster to the given
 	// sink. The return value can be ignored or used to stop recording, if desired.
+	// StartRecoringToSink开始将从EventBroadcaster收到的event发送到给定的sink
 	StartRecordingToSink(sink EventSink) watch.Interface
 
 	// StartLogging starts sending events received from this EventBroadcaster to the given logging
@@ -120,6 +121,8 @@ type eventBroadcasterImpl struct {
 
 // StartRecordingToSink starts sending events received from the specified eventBroadcaster to the given sink.
 // The return value can be ignored or used to stop recording, if desired.
+// StartRecordingToSink开始发送从给定的eventBroadcaster中收到的event发送到给定的sink
+// 返回值可以被忽略或者用于停止recording
 // TODO: make me an object with parameterizable queue length and retry interval
 func (eventBroadcaster *eventBroadcasterImpl) StartRecordingToSink(sink EventSink) watch.Interface {
 	// The default math/rand package functions aren't thread safe, so create a
@@ -135,6 +138,8 @@ func (eventBroadcaster *eventBroadcasterImpl) StartRecordingToSink(sink EventSin
 func recordToSink(sink EventSink, event *v1.Event, eventCorrelator *EventCorrelator, randGen *rand.Rand, sleepDuration time.Duration) {
 	// Make a copy before modification, because there could be multiple listeners.
 	// Events are safe to copy like this.
+	// 在对event进行修改之前先拷贝，因为可能有多个listener
+	// 这样的拷贝方式对于Event是安全的
 	eventCopy := *event
 	event = &eventCopy
 	result, err := eventCorrelator.EventCorrelate(event)
@@ -146,16 +151,19 @@ func recordToSink(sink EventSink, event *v1.Event, eventCorrelator *EventCorrela
 	}
 	tries := 0
 	for {
+		// 根据result.Event.Count是否大于1来确定是否更新一个已经存在的event
 		if recordEvent(sink, result.Event, result.Patch, result.Event.Count > 1, eventCorrelator) {
 			break
 		}
 		tries++
+		// 每个event最多尝试maxTriesPerEvent，即12次
 		if tries >= maxTriesPerEvent {
 			glog.Errorf("Unable to write event '%#v' (retry limit exceeded!)", event)
 			break
 		}
 		// Randomize the first sleep so that various clients won't all be
 		// synced up if the master goes down.
+		// 初始化第一次睡觉时间，这样各个client就不会同时进行同步，当master挂掉的时候
 		if tries == 1 {
 			time.Sleep(time.Duration(float64(sleepDuration) * randGen.Float64()))
 		} else {
@@ -185,10 +193,12 @@ func recordEvent(sink EventSink, event *v1.Event, patch []byte, updateExistingEv
 	var newEvent *v1.Event
 	var err error
 	if updateExistingEvent {
+		// 如果是更新一个已经存在的event，则用patch进行更新
 		newEvent, err = sink.Patch(event, patch)
 	}
 	// Update can fail because the event may have been removed and it no longer exists.
 	// Update可能会失败，因为event可能被移除了
+	// 则创建一个新的event
 	if !updateExistingEvent || (updateExistingEvent && isKeyNotFoundError(err)) {
 		// Making sure that ResourceVersion is empty on creation
 		// 在创建的时候，确保ResourceVersion为空
@@ -197,12 +207,15 @@ func recordEvent(sink EventSink, event *v1.Event, patch []byte, updateExistingEv
 	}
 	if err == nil {
 		// we need to update our event correlator with the server returned state to handle name/resourceversion
+		// 我们需要用server返回的state更新event correlator用来处理name或者resourceversion
 		eventCorrelator.UpdateState(newEvent)
 		return true
 	}
 
 	// If we can't contact the server, then hold everything while we keep trying.
 	// Otherwise, something about the event is malformed and we should abandon it.
+	// 如果我们不能和server进行交互，则我们保持所有数据并且继续尝试
+	// 否则，和event相关的一些东西已经异常了，我们需要避免它
 	switch err.(type) {
 	case *restclient.RequestConstructionError:
 		// We will construct the request the same next time, so don't keep trying.
@@ -221,6 +234,7 @@ func recordEvent(sink EventSink, event *v1.Event, patch []byte, updateExistingEv
 	default:
 		// This case includes actual http transport errors. Go ahead and retry.
 	}
+	// 写入event失败
 	glog.Errorf("Unable to write event: '%v' (may retry after sleeping)", err)
 	return false
 }
@@ -237,6 +251,7 @@ func (eventBroadcaster *eventBroadcasterImpl) StartLogging(logf func(format stri
 
 // StartEventWatcher starts sending events received from this EventBroadcaster to the given event handler function.
 // The return value can be ignored or used to stop recording, if desired.
+// StartEventWatcher开始发送从EventBroadcaster收集来的event到给定的event handler函数
 func (eventBroadcaster *eventBroadcasterImpl) StartEventWatcher(eventHandler func(*v1.Event)) watch.Interface {
 	// 调用获取watcher，可以从中获取eventBroadcaster获取的各种事件
 	watcher := eventBroadcaster.Watch()

@@ -53,6 +53,8 @@ func (r *randomAllocator) Release(_ int) {
 // newPortAllocator builds PortAllocator for a given PortRange. If the PortRange is empty
 // then a random port allocator is returned; otherwise, a new range-based allocator
 // is returned.
+// newPortAllocator为给定的PortRange返回一个PortAllocator
+// 如果PortRange为空的话，就返回一个随机的port allocator
 func newPortAllocator(r net.PortRange) PortAllocator {
 	if r.Base == 0 {
 		return &randomAllocator{}

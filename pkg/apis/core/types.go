@@ -3222,12 +3222,14 @@ type ServiceAccountList struct {
 //       Ports: [{"name": "a", "port": 93}, {"name": "b", "port": 76}]
 //     },
 //  ]
+// Endpoints是一系列的endpoints集合，它实现了一个具体的service
 type Endpoints struct {
 	metav1.TypeMeta
 	// +optional
 	metav1.ObjectMeta
 
 	// The set of all endpoints is the union of all subsets.
+	// 所有的endpoints是所有subsets的联合
 	Subsets []EndpointSubset
 }
 
@@ -3248,6 +3250,7 @@ type EndpointSubset struct {
 }
 
 // EndpointAddress is a tuple that describes single IP address.
+// EndpointAddress是一个描述单个IP地址的tuple
 type EndpointAddress struct {
 	// The IP of this endpoint.
 	// IPv6 is also accepted but not fully supported on all platforms. Also, certain
@@ -3266,6 +3269,7 @@ type EndpointAddress struct {
 }
 
 // EndpointPort is a tuple that describes a single port.
+// EndpointPort是一个描述单个port的tuple
 type EndpointPort struct {
 	// The name of this port (corresponds to ServicePort.Name).  Optional
 	// if only one port is defined.  Must be a DNS_LABEL.

@@ -109,6 +109,7 @@ func (m *kubeGenericRuntimeManager) startContainer(podSandboxID string, podSandb
 		restartCount = containerStatus.RestartCount + 1
 	}
 
+	// 创建container config
 	containerConfig, cleanupAction, err := m.generateContainerConfig(container, pod, restartCount, podIP, imageRef)
 	if cleanupAction != nil {
 		defer cleanupAction()
@@ -118,6 +119,7 @@ func (m *kubeGenericRuntimeManager) startContainer(podSandboxID string, podSandb
 		return grpc.ErrorDesc(err), ErrCreateContainerConfig
 	}
 
+	// 调用底层容器运行时创建容器
 	containerID, err := m.runtimeService.CreateContainer(podSandboxID, containerConfig, podSandboxConfig)
 	if err != nil {
 		m.recordContainerEvent(pod, container, containerID, v1.EventTypeWarning, events.FailedToCreateContainer, "Error: %v", grpc.ErrorDesc(err))
@@ -128,6 +130,7 @@ func (m *kubeGenericRuntimeManager) startContainer(podSandboxID string, podSandb
 		m.recorder.Eventf(ref, v1.EventTypeWarning, events.FailedToStartContainer, "Internal PreStartContainer hook failed: %v", err)
 		return "Internal PreStartContainer hook failed", err
 	}
+	// 生成create container的事件
 	m.recordContainerEvent(pod, container, containerID, v1.EventTypeNormal, events.CreatedContainer, "Created container")
 
 	if ref != nil {
@@ -138,6 +141,7 @@ func (m *kubeGenericRuntimeManager) startContainer(podSandboxID string, podSandb
 	}
 
 	// Step 3: start the container.
+	// 调用底层容器运行时启动容器
 	err = m.runtimeService.StartContainer(containerID)
 	if err != nil {
 		m.recordContainerEvent(pod, container, containerID, v1.EventTypeWarning, events.FailedToStartContainer, "Error: %v", grpc.ErrorDesc(err))
@@ -147,6 +151,7 @@ func (m *kubeGenericRuntimeManager) startContainer(podSandboxID string, podSandb
 
 	// Symlink container logs to the legacy container log location for cluster logging
 	// support.
+	// 软链接container log到legacy container log，用于支持cluster logging
 	// TODO(random-liu): Remove this after cluster logging supports CRI container log path.
 	containerMeta := containerConfig.GetMetadata()
 	sandboxMeta := podSandboxConfig.GetMetadata()
@@ -179,6 +184,7 @@ func (m *kubeGenericRuntimeManager) startContainer(podSandboxID string, podSandb
 }
 
 // generateContainerConfig generates container config for kubelet runtime v1.
+// generateContainerConfig为kubelet runtime v1创建container config
 func (m *kubeGenericRuntimeManager) generateContainerConfig(container *v1.Container, pod *v1.Pod, restartCount int, podIP, imageRef string) (*runtimeapi.ContainerConfig, func(), error) {
 	opts, cleanupAction, err := m.runtimeHelper.GenerateRunContainerOptions(pod, container, podIP)
 	if err != nil {
@@ -196,8 +202,10 @@ func (m *kubeGenericRuntimeManager) generateContainerConfig(container *v1.Contai
 	}
 
 	command, args := kubecontainer.ExpandContainerCommandAndArgs(container, opts.Envs)
+	// 创建container log path
 	containerLogsPath := buildContainerLogsPath(container.Name, restartCount)
 	restartCountUint32 := uint32(restartCount)
+	// 创建container config
 	config := &runtimeapi.ContainerConfig{
 		Metadata: &runtimeapi.ContainerMetadata{
 			Name:    container.Name,
@@ -211,6 +219,7 @@ func (m *kubeGenericRuntimeManager) generateContainerConfig(container *v1.Contai
 		Annotations: newContainerAnnotations(container, pod, restartCount),
 		Devices:     makeDevices(opts),
 		Mounts:      m.makeMounts(opts, container),
+		// 设置容器的log path
 		LogPath:     containerLogsPath,
 		Stdin:       container.Stdin,
 		StdinOnce:   container.StdinOnce,

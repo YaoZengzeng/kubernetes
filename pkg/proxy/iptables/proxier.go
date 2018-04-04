@@ -102,6 +102,8 @@ type KernelCompatTester interface {
 // the iptables version and for the existence of kernel features. It may return
 // an error if it fails to get the iptables version without error, in which
 // case it will also return false.
+// 检测能否使用iptables作为proxier
+// 主要是检查iptables的版本以及已有的kernel feature
 func CanUseIPTablesProxier(iptver IPTablesVersioner, kcompat KernelCompatTester) (bool, error) {
 	minVersion, err := utilversion.ParseGeneric(iptablesMinVersion)
 	if err != nil {
@@ -367,6 +369,7 @@ func (em proxyEndpointsMap) unmerge(other proxyEndpointsMap) {
 
 // Proxier is an iptables based proxy for connections between a localhost:lport
 // and services that provide the actual backends.
+// Proxier是一个基于iptables的proxy，用于连接localhost:lport以及services
 type Proxier struct {
 	// endpointsChanges and serviceChanges contains all changes to endpoints and
 	// services that happened since iptables was synced. For a single object,
@@ -664,6 +667,7 @@ func (proxier *Proxier) isInitialized() bool {
 
 func (proxier *Proxier) OnServiceAdd(service *api.Service) {
 	namespacedName := types.NamespacedName{Namespace: service.Namespace, Name: service.Name}
+	// 调用update进行更新
 	if proxier.serviceChanges.update(&namespacedName, nil, service) && proxier.isInitialized() {
 		proxier.syncRunner.Run()
 	}
@@ -671,6 +675,7 @@ func (proxier *Proxier) OnServiceAdd(service *api.Service) {
 
 func (proxier *Proxier) OnServiceUpdate(oldService, service *api.Service) {
 	namespacedName := types.NamespacedName{Namespace: service.Namespace, Name: service.Name}
+	// 调用update进行更新
 	if proxier.serviceChanges.update(&namespacedName, oldService, service) && proxier.isInitialized() {
 		proxier.syncRunner.Run()
 	}

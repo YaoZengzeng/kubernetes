@@ -32,6 +32,7 @@ import (
 
 // ServiceInformer provides access to a shared informer and lister for
 // Services.
+// ServiceInformer为Services提供了一个shared informer以及lister
 type ServiceInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() internalversion.ServiceLister
