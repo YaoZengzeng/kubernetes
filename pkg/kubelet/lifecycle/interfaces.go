@@ -20,14 +20,18 @@ import "k8s.io/api/core/v1"
 
 // PodAdmitAttributes is the context for a pod admission decision.
 // The member fields of this struct should never be mutated.
+// PodAdmitAttributes包含了做出一个pod admission decision的上下文
+// 这个结构中的成员结构不能随意改变
 type PodAdmitAttributes struct {
 	// the pod to evaluate for admission
 	Pod *v1.Pod
 	// all pods bound to the kubelet excluding the pod being evaluated
+	// 除了被评估的pod以外，所有和kubelet绑定的pod
 	OtherPods []*v1.Pod
 }
 
 // PodAdmitResult provides the result of a pod admission decision.
+// PodAdmitResult提供了一个pod admission decision的结果
 type PodAdmitResult struct {
 	// if true, the pod should be admitted.
 	Admit bool
@@ -38,22 +42,29 @@ type PodAdmitResult struct {
 }
 
 // PodAdmitHandler is notified during pod admission.
+// PodAdmitHandler在pod admission才被调用
 type PodAdmitHandler interface {
 	// Admit evaluates if a pod can be admitted.
+	// Admit评估一个pod是否能被admitted
 	Admit(attrs *PodAdmitAttributes) PodAdmitResult
 }
 
 // PodAdmitTarget maintains a list of handlers to invoke.
+// PodAdmitTarget维护了一系列要被调用的handlers
 type PodAdmitTarget interface {
 	// AddPodAdmitHandler adds the specified handler.
 	AddPodAdmitHandler(a PodAdmitHandler)
 }
 
 // PodSyncLoopHandler is invoked during each sync loop iteration.
+// PodSyncLoopHandler在每个sync loop iteration被调用
 type PodSyncLoopHandler interface {
 	// ShouldSync returns true if the pod needs to be synced.
 	// This operation must return immediately as its called for each pod.
 	// The provided pod should never be modified.
+	// ShouldSync返回true，如果pod需要被sync的话
+	// 这个操作必须马上返回，因为它会被每个pod所调用
+	// 提供的pod不能被修改
 	ShouldSync(pod *v1.Pod) bool
 }
 
@@ -64,6 +75,7 @@ type PodSyncLoopTarget interface {
 }
 
 // ShouldEvictResponse provides the result of a should evict request.
+// ShouldEvictResponse提供了一个需要被evict的request的result
 type ShouldEvictResponse struct {
 	// if true, the pod should be evicted.
 	Evict bool
@@ -74,6 +86,7 @@ type ShouldEvictResponse struct {
 }
 
 // PodSyncHandler is invoked during each sync pod operation.
+// PodSyncHandler在每次同步pod的时候被调用
 type PodSyncHandler interface {
 	// ShouldEvict is invoked during each sync pod operation to determine
 	// if the pod should be evicted from the kubelet.  If so, the pod status
@@ -81,6 +94,11 @@ type PodSyncHandler interface {
 	// and the pod is immediately killed.
 	// This operation must return immediately as its called for each sync pod.
 	// The provided pod should never be modified.
+	// ShouldEvict在每次sync pod操作中被调用，用于确定pod是否需要从kubelet中驱逐出去
+	// 如果是的话，pod status会被更新并且标记它的phase为因为指定的reason和message而fail
+	// 并且pod会马上被kill
+	// 本操作必须马上被移除，因为它会被每个同步的pod所调用
+	// 提供的pod不能被修改
 	ShouldEvict(pod *v1.Pod) ShouldEvictResponse
 }
 

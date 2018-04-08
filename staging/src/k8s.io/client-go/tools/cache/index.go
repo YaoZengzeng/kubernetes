@@ -44,6 +44,7 @@ type Indexer interface {
 }
 
 // IndexFunc knows how to provide an indexed value for an object.
+// IndexFunc知道如果为一个object提供indexed value
 type IndexFunc func(obj interface{}) ([]string, error)
 
 // IndexFuncToKeyFuncAdapter adapts an indexFunc to a keyFunc.  This is only useful if your index function returns
@@ -80,10 +81,13 @@ func MetaNamespaceIndexFunc(obj interface{}) ([]string, error) {
 }
 
 // Index maps the indexed value to a set of keys in the store that match on that value
+// Index将indexed value映射到store中的一系列匹配该value的keys
 type Index map[string]sets.String
 
 // Indexers maps a name to a IndexFunc
+// Indexers将一个name映射到一个IndexFunc
 type Indexers map[string]IndexFunc
 
 // Indices maps a name to an Index
+// Indices将一个name映射到一个Index
 type Indices map[string]Index

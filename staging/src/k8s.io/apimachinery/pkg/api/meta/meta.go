@@ -69,6 +69,7 @@ func CommonAccessor(obj interface{}) (metav1.Common, error) {
 
 // ListAccessor returns a List interface for the provided object or an error if the object does
 // not provide List.
+// ListAccessor为给定的对象返回一个List接口，或者一个error，如果对象不提供List
 // IMPORTANT: Objects are NOT a superset of lists. Do not use this check to determine whether an
 // object *is* a List.
 // TODO: return bool instead of error
@@ -101,6 +102,10 @@ var errNotObject = fmt.Errorf("object does not implement the Object interfaces")
 // obj must be a pointer to an API type. An error is returned if the minimum
 // required fields are missing. Fields that are not required return the default
 // value and are a no-op if set.
+// Accessor根据任意的object pointer返回meta.Interface
+// obj必须是一个指向API类型的指针
+// 如果obj连最少需要的fields都不满足的话，则返回error
+// 那些不需要的fields返回默认值以及no-op
 // TODO: return bool instead of error
 func Accessor(obj interface{}) (metav1.Object, error) {
 	switch t := obj.(type) {

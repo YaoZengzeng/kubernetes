@@ -44,6 +44,8 @@ import (
 //
 // kubelet - used by VolumeHost methods to expose kubelet specific parameters
 // plugins - used to initialize volumePluginMgr
+// kubelet被VolumeHost的方法所用，用于暴露kubelet特定的参数
+// plugins用于初始化volumePluginMgr
 func NewInitializedVolumePluginMgr(
 	kubelet *Kubelet,
 	secretManager secret.Manager,

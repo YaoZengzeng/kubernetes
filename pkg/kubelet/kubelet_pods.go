@@ -880,6 +880,7 @@ func (kl *Kubelet) makePodDataDirs(pod *v1.Pod) error {
 
 // getPullSecretsForPod inspects the Pod and retrieves the referenced pull
 // secrets.
+// getPullSecretesForPod检测pod并且获取其中引用的pull secrets
 func (kl *Kubelet) getPullSecretsForPod(pod *v1.Pod) []v1.Secret {
 	pullSecrets := []v1.Secret{}
 
@@ -897,13 +898,17 @@ func (kl *Kubelet) getPullSecretsForPod(pod *v1.Pod) []v1.Secret {
 }
 
 // podIsTerminated returns true if pod is in the terminated state ("Failed" or "Succeeded").
+// podIsTerminated返回true，如果pod处于terminated状态（"Failed"或者"Succeeded"）
 func (kl *Kubelet) podIsTerminated(pod *v1.Pod) bool {
 	// Check the cached pod status which was set after the last sync.
+	// 检查上次sync之后缓存的pod status
 	status, ok := kl.statusManager.GetPodStatus(pod.UID)
 	if !ok {
 		// If there is no cached status, use the status from the
 		// apiserver. This is useful if kubelet has recently been
 		// restarted.
+		// 如果没有缓存的status，则使用从apiserver获取的apiserver
+		// 这对于刚刚重启的kubelet是很有用的
 		status = pod.Status
 	}
 	return status.Phase == v1.PodFailed || status.Phase == v1.PodSucceeded || (pod.DeletionTimestamp != nil && notRunning(status.ContainerStatuses))
@@ -1379,6 +1384,7 @@ func GetPhase(spec *v1.PodSpec, info []v1.ContainerStatus) v1.PodPhase {
 
 // generateAPIPodStatus creates the final API pod status for a pod, given the
 // internal pod status.
+// generateAPIPodStatus根据给定的内部的pod status, 为一个pod创建最终的API pod status
 func (kl *Kubelet) generateAPIPodStatus(pod *v1.Pod, podStatus *kubecontainer.PodStatus) v1.PodStatus {
 	glog.V(3).Infof("Generating status for %q", format.Pod(pod))
 

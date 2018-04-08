@@ -55,12 +55,15 @@ type Visitor func(name string) (shouldContinue bool)
 // referenced by the pod spec. If visitor returns false, visiting is short-circuited.
 // Transitive references (e.g. pod -> pvc -> pv -> secret) are not visited.
 // Returns true if visiting completed, false if visiting was short-circuited.
+// VisitPodSecretNames用pod spec引用的secrets的名字，调用visitor函数
 func VisitPodSecretNames(pod *v1.Pod, visitor Visitor) bool {
+	// 遍历pod的image pull secrets
 	for _, reference := range pod.Spec.ImagePullSecrets {
 		if !visitor(reference.Name) {
 			return false
 		}
 	}
+	// 遍历容器中的secret
 	for i := range pod.Spec.InitContainers {
 		if !visitContainerSecretNames(&pod.Spec.InitContainers[i], visitor) {
 			return false
@@ -73,6 +76,7 @@ func VisitPodSecretNames(pod *v1.Pod, visitor Visitor) bool {
 	}
 	var source *v1.VolumeSource
 
+	// 遍历pod的volumes
 	for i := range pod.Spec.Volumes {
 		source = &pod.Spec.Volumes[i].VolumeSource
 		switch {

@@ -36,6 +36,7 @@ type podsGetter interface {
 }
 
 // NewRuntimeCache creates a container runtime cache.
+// NewRuntimeCache创建一个容器运行时的cache
 func NewRuntimeCache(getter podsGetter) (RuntimeCache, error) {
 	return &runtimeCache{
 		getter: getter,
@@ -51,8 +52,10 @@ func NewRuntimeCache(getter podsGetter) (RuntimeCache, error) {
 type runtimeCache struct {
 	sync.Mutex
 	// The underlying container runtime used to update the cache.
+	// 底层的容器运行时用于更新cache
 	getter podsGetter
 	// Last time when cache was updated.
+	// cache上一次更新的时间
 	cacheTime time.Time
 	// The content of the cache.
 	pods []*Pod
@@ -60,6 +63,8 @@ type runtimeCache struct {
 
 // GetPods returns the cached pods if they are not outdated; otherwise, it
 // retrieves the latest pods and return them.
+// GetPods返回缓存的pods，如果它们没有过期的话
+// 佛足额获取最新的pods并返回它们
 func (r *runtimeCache) GetPods() ([]*Pod, error) {
 	r.Lock()
 	defer r.Unlock()
@@ -90,8 +95,10 @@ func (r *runtimeCache) updateCache() error {
 }
 
 // getPodsWithTimestamp records a timestamp and retrieves pods from the getter.
+// getPodsWithTimestamp记录一个timestamp并且从getter中获取pods
 func (r *runtimeCache) getPodsWithTimestamp() ([]*Pod, time.Time, error) {
 	// Always record the timestamp before getting the pods to avoid stale pods.
+	// 总是在获取pods之前记录timestamp，从而避免stale pods
 	timestamp := time.Now()
 	pods, err := r.getter.GetPods(false)
 	return pods, timestamp, err

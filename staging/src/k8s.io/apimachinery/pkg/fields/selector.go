@@ -445,6 +445,7 @@ func parseSelector(selector string, fn TransformFunc) (Selector, error) {
 
 // OneTermEqualSelector returns an object that matches objects where one field/field equals one value.
 // Cannot return an error.
+// OneTermEqualSelector返回一个Selector，要求它的一个field和一个value相等
 func OneTermEqualSelector(k, v string) Selector {
 	return &hasTerm{field: k, value: v}
 }

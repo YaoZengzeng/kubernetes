@@ -94,7 +94,9 @@ type Reservation struct {
 }
 
 // A pod UID which has been translated/resolved to the representation known to kubelets.
+// 一个通过转换/解析，从而能被kubelet识别的pod的UID
 type ResolvedPodUID types.UID
 
 // A pod UID for a mirror pod.
+// mirror pod的pod UID
 type MirrorPodUID types.UID

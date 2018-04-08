@@ -84,6 +84,8 @@ type DynamicPluginProber interface {
 
 // VolumePlugin is an interface to volume plugins that can be used on a
 // kubernetes node (e.g. by kubelet) to instantiate and manage volumes.
+// VolumePlugin是一个kubernetes node可以使用的初始化和管理volumes的volume plugin
+// 接口
 type VolumePlugin interface {
 	// Init initializes the plugin.  This will be called exactly once
 	// before any New* calls are made - implementations of plugins may
@@ -229,6 +231,7 @@ type BlockVolumePlugin interface {
 }
 
 // VolumeHost is an interface that plugins can use to access the kubelet.
+// VolumeHost是插件可以用于访问kubelet的接口
 type VolumeHost interface {
 	// GetPluginDir returns the absolute path to a directory under which
 	// a given plugin may store data.  This directory might not actually
@@ -309,6 +312,7 @@ type VolumeHost interface {
 }
 
 // VolumePluginMgr tracks registered plugins.
+// VolumePluginMgr追踪注册的plugins
 type VolumePluginMgr struct {
 	mutex         sync.Mutex
 	plugins       map[string]VolumePlugin
@@ -409,6 +413,8 @@ func NewSpecFromPersistentVolume(pv *v1.PersistentVolume, readOnly bool) *Spec {
 // InitPlugins initializes each plugin.  All plugins must have unique names.
 // This must be called exactly once before any New* methods are called on any
 // plugins.
+// InitPlugins初始化每个plugin, 所有的plugin都要有唯一的名字
+// 本函数必须在任何plugins调用任何的New*方法前被恰好被调用一次
 func (pm *VolumePluginMgr) InitPlugins(plugins []VolumePlugin, prober DynamicPluginProber, host VolumeHost) error {
 	pm.mutex.Lock()
 	defer pm.mutex.Unlock()

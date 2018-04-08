@@ -35,6 +35,7 @@ import (
 )
 
 // PodConfigNotificationMode describes how changes are sent to the update channel.
+// PodConfigNotificationMode描述了如何将change传送到update channel
 type PodConfigNotificationMode int
 
 const (
@@ -43,11 +44,15 @@ const (
 	PodConfigNotificationUnknown = iota
 	// PodConfigNotificationSnapshot delivers the full configuration as a SET whenever
 	// any change occurs.
+	// PodConfigNotificationSnapshot在任何change发生的时候都调用full configuration的SET
 	PodConfigNotificationSnapshot
 	// PodConfigNotificationSnapshotAndUpdates delivers an UPDATE and DELETE message whenever pods are
 	// changed, and a SET message if there are any additions or removals.
+	// PodConfigNotificationSnapshotAndUpdates在pods发生改变的时候传输UPDATE以及DELETE信息
+	// 并且在有任何增加或者删除的时候传送SET信息
 	PodConfigNotificationSnapshotAndUpdates
 	// PodConfigNotificationIncremental delivers ADD, UPDATE, DELETE, REMOVE, RECONCILE to the update channel.
+	// PodConfigNotificationIncremental将ADD, UPDATE, DELETE, REMOVE, RECONCILE传送到update channel中
 	PodConfigNotificationIncremental
 )
 
@@ -64,6 +69,7 @@ type PodConfig struct {
 	updates chan kubetypes.PodUpdate
 
 	// contains the list of all configured sources
+	// 包含了所有配置好的sources的列表
 	sourcesLock       sync.Mutex
 	sources           sets.String
 	checkpointManager checkpoint.Manager
@@ -72,10 +78,12 @@ type PodConfig struct {
 // NewPodConfig creates an object that can merge many configuration sources into a stream
 // of normalized updates to a pod configuration.
 func NewPodConfig(mode PodConfigNotificationMode, recorder record.EventRecorder) *PodConfig {
+	// 创建一个PodUpate的channel
 	updates := make(chan kubetypes.PodUpdate, 50)
 	storage := newPodStorage(updates, mode, recorder)
 	podConfig := &PodConfig{
 		pods:    storage,
+		// 传输给NewMux的是PodStorage
 		mux:     config.NewMux(storage),
 		updates: updates,
 		sources: sets.String{},
@@ -85,6 +93,8 @@ func NewPodConfig(mode PodConfigNotificationMode, recorder record.EventRecorder)
 
 // Channel creates or returns a config source channel.  The channel
 // only accepts PodUpdates
+// Channel创建或者返回一个config source channel
+// channel值接收PodUpdates
 func (c *PodConfig) Channel(source string) chan<- interface{} {
 	c.sourcesLock.Lock()
 	defer c.sourcesLock.Unlock()
@@ -137,6 +147,7 @@ func (c *PodConfig) Restore(path string, updates chan<- interface{}) error {
 type podStorage struct {
 	podLock sync.RWMutex
 	// map of source name to pod uid to pod reference
+	// 通过source的名字引用到pod uid到pod reference的map
 	pods map[string]map[types.UID]*v1.Pod
 	mode PodConfigNotificationMode
 
@@ -157,9 +168,11 @@ type podStorage struct {
 
 // TODO: PodConfigNotificationMode could be handled by a listener to the updates channel
 // in the future, especially with multiple listeners.
+// TODO: PodConfigNotificationMode以后可以由updates channel的listener进行处理，特别是有多个listener的时候
 // TODO: allow initialization of the current state of the store with snapshotted version.
 func newPodStorage(updates chan<- kubetypes.PodUpdate, mode PodConfigNotificationMode, recorder record.EventRecorder) *podStorage {
 	return &podStorage{
+		// pods能从source的名字映射到属于它的pod的UID到对应Pod的索引
 		pods:        make(map[string]map[types.UID]*v1.Pod),
 		mode:        mode,
 		updates:     updates,
@@ -171,6 +184,9 @@ func newPodStorage(updates chan<- kubetypes.PodUpdate, mode PodConfigNotificatio
 // Merge normalizes a set of incoming changes from different sources into a map of all Pods
 // and ensures that redundant changes are filtered out, and then pushes zero or more minimal
 // updates onto the update channel.  Ensures that updates are delivered in order.
+// Merge规格化一系列从各个sources获取的changes并存入所有pods的map中，并且确保所有的冗余的changes都被过滤掉
+// 并且push零或者最小的update数目到update channel中
+// 确保所有的updates都按序发送
 func (s *podStorage) Merge(source string, change interface{}) error {
 	s.updateLock.Lock()
 	defer s.updateLock.Unlock()
@@ -244,6 +260,7 @@ func (s *podStorage) merge(source string, change interface{}) (adds, updates, de
 	reconcilePods := []*v1.Pod{}
 	restorePods := []*v1.Pod{}
 
+	// pods为指定source已经缓存的pods
 	pods := s.pods[source]
 	if pods == nil {
 		pods = make(map[types.UID]*v1.Pod)
@@ -252,16 +269,23 @@ func (s *podStorage) merge(source string, change interface{}) (adds, updates, de
 	// updatePodFunc is the local function which updates the pod cache *oldPods* with new pods *newPods*.
 	// After updated, new pod will be stored in the pod cache *pods*.
 	// Notice that *pods* and *oldPods* could be the same cache.
+	// updatePodFunc是一个本地函数，它用newPods更新oldPods
+	// 在更新之后，新的pod会被存储到pods中
+	// 注意，pods和oldPods可以是同一个cache
 	updatePodsFunc := func(newPods []*v1.Pod, oldPods, pods map[types.UID]*v1.Pod) {
+		// 过滤掉有名字冲突的pods
 		filtered := filterInvalidPods(newPods, source, s.recorder)
 		for _, ref := range filtered {
 			// Annotate the pod with the source before any comparison.
+			// 在比较之前先用source对pod进行注释
 			if ref.Annotations == nil {
 				ref.Annotations = make(map[string]string)
 			}
 			ref.Annotations[kubetypes.ConfigSourceAnnotationKey] = source
+			// 检查pod是否已经存在
 			if existing, found := oldPods[ref.UID]; found {
 				pods[ref.UID] = existing
+				// 再分析应该对pod怎么处理
 				needUpdate, needReconcile, needGracefulDelete := checkAndUpdatePod(existing, ref)
 				if needUpdate {
 					updatePods = append(updatePods, existing)
@@ -278,6 +302,7 @@ func (s *podStorage) merge(source string, change interface{}) (adds, updates, de
 		}
 	}
 
+	// 获取change的操作类型
 	update := change.(kubetypes.PodUpdate)
 	switch update.Op {
 	case kubetypes.ADD, kubetypes.UPDATE, kubetypes.DELETE:
@@ -291,6 +316,7 @@ func (s *podStorage) merge(source string, change interface{}) (adds, updates, de
 		updatePodsFunc(update.Pods, pods, pods)
 
 	case kubetypes.REMOVE:
+		// 类型为REMOVE则直接从source中移除
 		glog.V(4).Infof("Removing pods from source %s : %v", source, update.Pods)
 		for _, value := range update.Pods {
 			if existing, found := pods[value.UID]; found {
@@ -325,6 +351,7 @@ func (s *podStorage) merge(source string, change interface{}) (adds, updates, de
 
 	s.pods[source] = pods
 
+	// copyPods()对pods进行深拷贝
 	adds = &kubetypes.PodUpdate{Op: kubetypes.ADD, Pods: copyPods(addPods), Source: source}
 	updates = &kubetypes.PodUpdate{Op: kubetypes.UPDATE, Pods: copyPods(updatePods), Source: source}
 	deletes = &kubetypes.PodUpdate{Op: kubetypes.DELETE, Pods: copyPods(deletePods), Source: source}

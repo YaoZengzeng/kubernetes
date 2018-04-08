@@ -38,6 +38,7 @@ import (
 type ActivePodsFunc func() []*v1.Pod
 
 // Manages the containers running on a machine.
+// 管理运行在一台机器上的容器
 type ContainerManager interface {
 	// Runs the container manager's housekeeping.
 	// - Ensures that the Docker daemon is in a container.
@@ -56,6 +57,8 @@ type ContainerManager interface {
 
 	// NewPodContainerManager is a factory method which returns a podContainerManager object
 	// Returns a noop implementation if qos cgroup hierarchy is not enabled
+	// NewPodContainerManager是一个工厂方法，它会返回一个podContainerManager对象
+	// 如果qos cgroup hierarchy不是使能的话，就会返回一个noop implementation
 	NewPodContainerManager() PodContainerManager
 
 	// GetMountedSubsystems returns the mounted cgroup subsystems on the node

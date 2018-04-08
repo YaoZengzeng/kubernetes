@@ -37,6 +37,7 @@ type fsResourceAnalyzerInterface interface {
 }
 
 // fsResourceAnalyzer provides stats about fs resource usage
+// fsResourceAnalyzer提供了关于fs resource usage的数据
 type fsResourceAnalyzer struct {
 	statsProvider     StatsProvider
 	calcPeriod        time.Duration

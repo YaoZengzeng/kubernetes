@@ -34,6 +34,7 @@ import (
 // modifying objects stored by the indexers (if any) will *not* automatically lead
 // to a re-index. So it's not a good idea to directly modify the objects returned by
 // Get/List, in general.
+// 只有在caller将调用这些方法返回的items认为是read-only，List/Get方法才是线程安全的
 type ThreadSafeStore interface {
 	Add(key string, obj interface{})
 	Update(key string, obj interface{})

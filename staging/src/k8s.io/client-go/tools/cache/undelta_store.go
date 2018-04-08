@@ -23,6 +23,12 @@ package cache
 // It is thread-safe.  It guarantees that every change (Add, Update, Replace, Delete) results
 // in one call to PushFunc, but sometimes PushFunc may be called twice with the same values.
 // PushFunc should be thread safe.
+// UndeltaStore会监听incremental updates并且会在每次change的时候发送complete state
+// 它实现了Store这个接口，因此它能够从Reflector中获取mirrored objects流
+// 每当它收到任何完整的(Store.Replace)或者增量的改变(Store.Add, Store.Update以及Store.Delete)，它通过调用
+// PushFunc来传送complete state
+// 它是线程安全的，它保证每个change(Add, Update, Replace, Delete)都会导致一次对PushFunc的调用
+// 但是有时可能PushFunc会用相同的值调用两次
 type UndeltaStore struct {
 	Store
 	PushFunc func([]interface{})
@@ -78,6 +84,7 @@ func (u *UndeltaStore) Replace(list []interface{}, resourceVersion string) error
 func NewUndeltaStore(pushFunc func([]interface{}), keyFunc KeyFunc) *UndeltaStore {
 	return &UndeltaStore{
 		Store:    NewStore(keyFunc),
+		// 一般为自定义的send函数
 		PushFunc: pushFunc,
 	}
 }

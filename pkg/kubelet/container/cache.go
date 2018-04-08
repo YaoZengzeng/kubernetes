@@ -71,6 +71,7 @@ type cache struct {
 	// Lock which guards all internal data structures.
 	lock sync.RWMutex
 	// Map that stores the pod statuses.
+	// 用来存储pod status的Map
 	pods map[types.UID]*data
 	// A global timestamp represents how fresh the cached data is. All
 	// cache content is at the least newer than this timestamp. Note that the
@@ -79,6 +80,7 @@ type cache struct {
 	// global timestamp用来表示缓存的数据有多新，所有缓存的内容都至少要新过这个timestamp
 	timestamp *time.Time
 	// Map that stores the subscriber records.
+	// 存储subscriber records的map
 	subscribers map[types.UID][]*subRecord
 }
 
@@ -89,6 +91,7 @@ func NewCache() Cache {
 
 // Get returns the PodStatus for the pod; callers are expected not to
 // modify the objects returned.
+// Get返回pod的PodStatus，调用者不能修改返回的objects
 func (c *cache) Get(id types.UID) (*PodStatus, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -103,6 +106,7 @@ func (c *cache) GetNewerThan(id types.UID, minTime time.Time) (*PodStatus, error
 }
 
 // Set sets the PodStatus for the pod.
+// Set设置pod的PodStatus
 func (c *cache) Set(id types.UID, status *PodStatus, err error, timestamp time.Time) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -111,6 +115,7 @@ func (c *cache) Set(id types.UID, status *PodStatus, err error, timestamp time.T
 }
 
 // Delete removes the entry of the pod.
+// Delete移除pod的entry
 func (c *cache) Delete(id types.UID) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -119,11 +124,13 @@ func (c *cache) Delete(id types.UID) {
 
 //  UpdateTime modifies the global timestamp of the cache and notify
 //  subscribers if needed.
+//  UpdateTime修改cache的global timestamp，并且有需要的话，通知subscriber
 func (c *cache) UpdateTime(timestamp time.Time) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.timestamp = &timestamp
 	// Notify all the subscribers if the condition is met.
+	// 通知所有的subscriber
 	for id := range c.subscribers {
 		c.notify(id, *c.timestamp)
 	}

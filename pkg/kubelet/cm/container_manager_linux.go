@@ -308,6 +308,9 @@ func NewContainerManager(mountUtil mount.Interface, cadvisorInterface cadvisor.I
 // NewPodContainerManager is a factory method returns a PodContainerManager object
 // If qosCgroups are enabled then it returns the general pod container manager
 // otherwise it returns a no-op manager which essentially does nothing
+// NewPodContainerManager是一个工厂方法，它会返回一个PodContainerManager对象
+// 如果qosCgroups使能的话，它会返回一个general pod container manager
+// 否则返回一个no-op manager，它什么都不做
 func (cm *containerManagerImpl) NewPodContainerManager() PodContainerManager {
 	if cm.NodeConfig.CgroupsPerQOS {
 		return &podContainerManagerImpl{

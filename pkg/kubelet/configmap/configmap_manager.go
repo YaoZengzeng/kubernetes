@@ -241,6 +241,7 @@ func (s *configMapStore) Get(namespace, name string) (*v1.ConfigMap, error) {
 // - every GetConfigMap() call tries to fetch the value from local cache; if it is
 //   not there, invalidated or too old, we fetch it from apiserver and refresh the
 //   value in cache; otherwise it is just fetched from cache
+// cachingConfigMapManager缓存了对于registered pods所需的所有configmaps
 type cachingConfigMapManager struct {
 	configMapStore *configMapStore
 

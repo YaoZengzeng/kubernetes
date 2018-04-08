@@ -67,10 +67,12 @@ const (
 // SyncResult is the result of sync action.
 type SyncResult struct {
 	// The associated action of the result
+	// result相关的action
 	Action SyncAction
 	// The target of the action, now the target can only be:
 	//  * Container: Target should be container name
 	//  * Network: Target is useless now, we just set it as pod full name now
+	// action对应的target，现在target只能为Container或者Network
 	Target interface{}
 	// Brief error reason
 	Error error
@@ -79,6 +81,7 @@ type SyncResult struct {
 }
 
 // NewSyncResult generates new SyncResult with specific Action and Target
+// NewSyncResult用给定的Action和Target创建新的SyncResult
 func NewSyncResult(action SyncAction, target interface{}) *SyncResult {
 	return &SyncResult{Action: action, Target: target}
 }
@@ -89,6 +92,7 @@ func (r *SyncResult) Fail(err error, msg string) {
 }
 
 // PodSyncResult is the summary result of SyncPod() and KillPod()
+// PodSyncResult包含了SyncPod()和KillPod()的结果
 type PodSyncResult struct {
 	// Result of different sync actions
 	SyncResults []*SyncResult

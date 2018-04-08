@@ -45,6 +45,8 @@ type MirrorClient interface {
 // basicMirrorClient is a functional MirrorClient.  Mirror pods are stored in
 // the kubelet directly because they need to be in sync with the internal
 // pods.
+// basicMirrorClient是一个functional MirrorClient
+// Mirror pods直接存储在kubelet中，因为它们需要和internal pods同步
 type basicMirrorClient struct {
 	apiserverClient clientset.Interface
 }
@@ -59,14 +61,20 @@ func (mc *basicMirrorClient) CreateMirrorPod(pod *v1.Pod) error {
 		return nil
 	}
 	// Make a copy of the pod.
+	// 直接拷贝pod
 	copyPod := *pod
+	// 重置pod中的annotations
 	copyPod.Annotations = make(map[string]string)
 
 	for k, v := range pod.Annotations {
 		copyPod.Annotations[k] = v
 	}
+	// 每个static pod都有一个key为ConfigHashAnnotationKey
+	// 的annotations,hash就是它的value
 	hash := getPodHash(pod)
+	// 为mirror pod多增加一个annotation
 	copyPod.Annotations[kubetypes.ConfigMirrorAnnotationKey] = hash
+	// 调用api server的client创建pod
 	apiPod, err := mc.apiserverClient.CoreV1().Pods(copyPod.Namespace).Create(&copyPod)
 	if err != nil && errors.IsAlreadyExists(err) {
 		// Check if the existing pod is the same as the pod we want to create.

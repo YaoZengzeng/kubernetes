@@ -58,19 +58,25 @@ type Reflector struct {
 	// 我们期望存放在store中的对象的类型
 	expectedType reflect.Type
 	// The destination to sync up with the watch source
+	// watch的source同步的目的地
 	store Store
 	// listerWatcher is used to perform lists and watches.
+	// listerWatcher用于执行lists和watches
 	listerWatcher ListerWatcher
 	// period controls timing between one watch ending and
 	// the beginning of the next one.
+	// period控制一个watch的结束和下一次watch开始之间的时间间隔
 	period       time.Duration
 	resyncPeriod time.Duration
+	// ShouldResync为一个函数
 	ShouldResync func() bool
 	// clock allows tests to manipulate time
 	clock clock.Clock
 	// lastSyncResourceVersion is the resource version token last
 	// observed when doing a sync with the underlying store
 	// it is thread safe, but not synchronized with the underlying store
+	// lastSyncResourceVersion是在上次使用underlying store做同步的时候观察到的
+	// resource version
 	lastSyncResourceVersion string
 	// lastSyncResourceVersionMutex guards read/write access to lastSyncResourceVersion
 	lastSyncResourceVersionMutex sync.RWMutex
@@ -111,6 +117,7 @@ func NewReflector(lw ListerWatcher, expectedType interface{}, store Store, resyn
 var reflectorDisambiguator = int64(time.Now().UnixNano() % 12345)
 
 // NewNamedReflector same as NewReflector, but with a specified name for logging
+// NewNamedReflector和NewReflector类似，不同的是它有一个特定的name用于logging
 func NewNamedReflector(name string, lw ListerWatcher, expectedType interface{}, store Store, resyncPeriod time.Duration) *Reflector {
 	reflectorSuffix := atomic.AddInt64(&reflectorDisambiguator, 1)
 	r := &Reflector{
@@ -120,6 +127,7 @@ func NewNamedReflector(name string, lw ListerWatcher, expectedType interface{}, 
 		metrics:       newReflectorMetrics(makeValidPromethusMetricLabel(fmt.Sprintf("reflector_"+name+"_%d", reflectorSuffix))),
 		listerWatcher: lw,
 		store:         store,
+		// 获取watch/list的对象的类型
 		expectedType:  reflect.TypeOf(expectedType),
 		period:        time.Second,
 		resyncPeriod:  resyncPeriod,
@@ -222,6 +230,7 @@ func (r *Reflector) Run(stopCh <-chan struct{}) {
 
 var (
 	// nothing will ever be sent down this channel
+	// 没有东西会通过这个channel进行传送
 	neverExitWatch <-chan time.Time = make(chan time.Time)
 
 	// Used to indicate that watching stopped so that a resync could happen.
@@ -234,6 +243,7 @@ var (
 
 // resyncChan returns a channel which will receive something when a resync is
 // required, and a cleanup function.
+// resyncChan返回一个channel，当需要resync的时候会收到一些东西，以及一个cleanup函数
 func (r *Reflector) resyncChan() (<-chan time.Time, func() bool) {
 	if r.resyncPeriod == 0 {
 		return neverExitWatch, func() bool { return false }
@@ -242,6 +252,8 @@ func (r *Reflector) resyncChan() (<-chan time.Time, func() bool) {
 	// always fail so we end up listing frequently. Then, if we don't
 	// manually stop the timer, we could end up with many timers active
 	// concurrently.
+	// 我们需要cleanup函数：想象这样一个场景：watch总是fail，因此我们经常结束listing。
+	// 如果我们比手动停止timer，我们最终可能会有许多timer处于活跃状态
 	t := r.clock.NewTimer(r.resyncPeriod)
 	return t.C(), t.Stop
 }
@@ -264,11 +276,12 @@ func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 	// 增加List的次数
 	r.metrics.numberOfLists.Inc()
 	start := r.clock.Now()
-	// 得到list
+	// 调用listerWatcher的List方法，得到list
 	list, err := r.listerWatcher.List(options)
 	if err != nil {
 		return fmt.Errorf("%s: Failed to list %v: %v", r.name, r.expectedType, err)
 	}
+	// 记录list所需的时间
 	r.metrics.listDuration.Observe(time.Since(start).Seconds())
 	listMetaInterface, err := meta.ListAccessor(list)
 	if err != nil {
@@ -291,13 +304,16 @@ func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 	resyncerrc := make(chan error, 1)
 	cancelCh := make(chan struct{})
 	defer close(cancelCh)
+	// 创建一个goroutine，不断进行resync
 	go func() {
+		// resyncChan()就是获取一个time chan，以及用来停止该chan的函数
 		resyncCh, cleanup := r.resyncChan()
 		defer func() {
 			cleanup() // Call the last one written into cleanup
 		}()
 		for {
 			select {
+			// 定期进行resync
 			case <-resyncCh:
 			case <-stopCh:
 				return
@@ -306,6 +322,7 @@ func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 			}
 			if r.ShouldResync == nil || r.ShouldResync() {
 				glog.V(4).Infof("%s: forcing resync", r.name)
+				// 强制对store进行Resync
 				if err := r.store.Resync(); err != nil {
 					resyncerrc <- err
 					return
@@ -318,6 +335,7 @@ func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 
 	for {
 		// give the stopCh a chance to stop the loop, even in case of continue statements further down on errors
+		// 让stopCh有机会能停止loop
 		select {
 		case <-stopCh:
 			return nil
@@ -329,6 +347,8 @@ func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 			ResourceVersion: resourceVersion,
 			// We want to avoid situations of hanging watchers. Stop any wachers that do not
 			// receive any events within the timeout window.
+			// 我们想要避免hanging watchers的情况
+			// 停止在给定的时间窗口没有收到任何event的watcher
 			TimeoutSeconds: &timemoutseconds,
 		}
 
@@ -347,6 +367,8 @@ func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 			// If this is "connection refused" error, it means that most likely apiserver is not responsive.
 			// It doesn't make sense to re-list all objects because most likely we will be able to restart
 			// watch where we ended.
+			// 如果这是一个"connection refused"错误，这以为着很可能apiserver处于not responsive的状态
+			// 这时候re-list所有的对象是没有意义的，因为很可能我们需要重启watch
 			// If that's the case wait and resend watch request.
 			if urlError, ok := err.(*url.Error); ok {
 				if opError, ok := urlError.Err.(*net.OpError); ok {
@@ -370,8 +392,10 @@ func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 }
 
 // syncWith replaces the store's items with the given list.
+// syncWith用给定的list替换store的items
 func (r *Reflector) syncWith(items []runtime.Object, resourceVersion string) error {
 	found := make([]interface{}, 0, len(items))
+	// 将items转换为interface{}类型的数组
 	for _, item := range items {
 		found = append(found, item)
 	}
@@ -408,6 +432,7 @@ loop:
 			if event.Type == watch.Error {
 				return apierrs.FromObject(event.Object)
 			}
+			// 如果获取的event中的对象类型不为reflector期待的对象类型，则continue
 			if e, a := r.expectedType, reflect.TypeOf(event.Object); e != nil && e != a {
 				utilruntime.HandleError(fmt.Errorf("%s: expected type %v, but watch event object had type %v", r.name, e, a))
 				continue
@@ -420,6 +445,7 @@ loop:
 			// 获取新的resource version
 			newResourceVersion := meta.GetResourceVersion()
 			switch event.Type {
+			// 根据不同的事件类型
 			// 将watch到的对象加入到store中
 			case watch.Added:
 				err := r.store.Add(event.Object)
@@ -451,6 +477,7 @@ loop:
 
 	watchDuration := r.clock.Now().Sub(start)
 	if watchDuration < 1*time.Second && eventCount == 0 {
+		// 增加shortWatches的数目
 		r.metrics.numberOfShortWatches.Inc()
 		return fmt.Errorf("very short watch: %s: Unexpected watch close - watch lasted less than a second and no items received", r.name)
 	}

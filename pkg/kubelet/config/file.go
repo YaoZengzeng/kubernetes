@@ -60,6 +60,7 @@ func new(path string, nodeName types.NodeName, period time.Duration, updates cha
 		for _, o := range objs {
 			pods = append(pods, o.(*v1.Pod))
 		}
+		// 最终封装到PodUpdate中，且Op设置为SET，Source设置为FileSource
 		updates <- kubetypes.PodUpdate{Pods: pods, Op: kubetypes.SET, Source: kubetypes.FileSource}
 	}
 	store := cache.NewUndeltaStore(send, cache.MetaNamespaceKeyFunc)

@@ -70,6 +70,7 @@ func (k KeyError) Error() string {
 
 // ExplicitKey can be passed to MetaNamespaceKeyFunc if you have the key for
 // the object but not the object itself.
+// ExplicitKey可以传输给MetaNamespaceKeyFunc，如果你有对象的key，但是你没有对象本身
 type ExplicitKey string
 
 // MetaNamespaceKeyFunc is a convenient default KeyFunc which knows how to make
@@ -117,11 +118,16 @@ func SplitMetaNamespaceKey(key string) (namespace, name string, err error) {
 // cache responsibilities are limited to:
 //	1. Computing keys for objects via keyFunc
 //  2. Invoking methods of a ThreadSafeStorage interface
+// cache的职责仅限于:
+//  1. 通过keyFunc为对象计算key
+//  2. 调用ThreadSafeStorage接口的方法
 type cache struct {
 	// cacheStorage bears the burden of thread safety for the cache
+	// cacheStorage承受了cache线程安全的重任
 	cacheStorage ThreadSafeStore
 	// keyFunc is used to make the key for objects stored in and retrieved from items, and
 	// should be deterministic.
+	// keyFunc用于为存储的对象创建key并且从items中获取
 	keyFunc KeyFunc
 }
 
@@ -236,6 +242,7 @@ func (c *cache) Resync() error {
 }
 
 // NewStore returns a Store implemented simply with a map and a lock.
+// NewStore返回一个由一个map和lock简单实现的Store
 func NewStore(keyFunc KeyFunc) Store {
 	return &cache{
 		cacheStorage: NewThreadSafeStore(Indexers{}, Indices{}),

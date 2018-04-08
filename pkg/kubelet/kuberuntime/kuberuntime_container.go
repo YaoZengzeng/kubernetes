@@ -106,6 +106,7 @@ func (m *kubeGenericRuntimeManager) startContainer(podSandboxID string, podSandb
 	restartCount := 0
 	containerStatus := podStatus.FindContainerStatusByName(container.Name)
 	if containerStatus != nil {
+		// 找到container，则将其的RestartCount加1
 		restartCount = containerStatus.RestartCount + 1
 	}
 
@@ -164,6 +165,7 @@ func (m *kubeGenericRuntimeManager) startContainer(podSandboxID string, podSandb
 	}
 
 	// Step 4: execute the post start hook.
+	// 执行post start hook
 	if container.Lifecycle != nil && container.Lifecycle.PostStart != nil {
 		kubeContainerID := kubecontainer.ContainerID{
 			Type: m.runtimeName,

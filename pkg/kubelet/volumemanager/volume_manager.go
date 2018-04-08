@@ -93,15 +93,22 @@ const (
 // VolumeManager runs a set of asynchronous loops that figure out which volumes
 // need to be attached/mounted/unmounted/detached based on the pods scheduled on
 // this node and makes it so.
+// VolumeManager运行一系列的asychronous loops用于搞清根据调度到本节点的pods
+// 哪些volumes需要被attached/mounted/unmounted/detached
 type VolumeManager interface {
 	// Starts the volume manager and all the asynchronous loops that it controls
+	// 启动该volume manager以及它控制的所有asychronous loop
 	Run(sourcesReady config.SourcesReady, stopCh <-chan struct{})
 
 	// WaitForAttachAndMount processes the volumes referenced in the specified
 	// pod and blocks until they are all attached and mounted (reflected in
 	// actual state of the world).
+	// WaitForAttachAndMount会处理specified pod中引用的volumes并且会blocked，直到所有的
+	// volumes都被attached以及mounted
 	// An error is returned if all volumes are not attached and mounted within
 	// the duration defined in podAttachAndMountTimeout.
+	// 如果在给定的podAttachAndMountTimeout内有volumes没被attached或者mounted
+	// 就会返回一个error
 	WaitForAttachAndMount(pod *v1.Pod) error
 
 	// GetMountedVolumesForPod returns a VolumeMap containing the volumes
@@ -109,6 +116,8 @@ type VolumeManager interface {
 	// mounted. The key in the map is the OuterVolumeSpecName (i.e.
 	// pod.Spec.Volumes[x].Name). It returns an empty VolumeMap if pod has no
 	// volumes.
+	// GetMountedVolumesForPod返回一个VolumeMap，其中包含了specified pod成功attach
+	// 并且mount的volumes
 	GetMountedVolumesForPod(podName types.UniquePodName) container.VolumeMap
 
 	// GetExtraSupplementalGroupsForPod returns a list of the extra
@@ -141,11 +150,15 @@ type VolumeManager interface {
 
 // NewVolumeManager returns a new concrete instance implementing the
 // VolumeManager interface.
+// NewVolumeManager返回一个实现了VolumeManager接口的新的详细的实例
 //
 // kubeClient - kubeClient is the kube API client used by DesiredStateOfWorldPopulator
 //   to communicate with the API server to fetch PV and PVC objects
+// kubeClient - kubeClient是DesiredStateOfWorldPopulator使用的用于和apiserver交互
+// 用于获取PV和PVC对象的kube API client
 // volumePluginMgr - the volume plugin manager used to access volume plugins.
 //   Must be pre-initialized.
+// volumePluginMgr是用于访问volume plugins的volume plugin manager，它必须被先初始化
 func NewVolumeManager(
 	controllerAttachDetachEnabled bool,
 	nodeName k8stypes.NodeName,
@@ -182,6 +195,7 @@ func NewVolumeManager(
 		vm.desiredStateOfWorld,
 		kubeContainerRuntime,
 		keepTerminatedPodVolumes)
+
 	vm.reconciler = reconciler.NewReconciler(
 		kubeClient,
 		controllerAttachDetachEnabled,
@@ -204,10 +218,14 @@ func NewVolumeManager(
 type volumeManager struct {
 	// kubeClient is the kube API client used by DesiredStateOfWorldPopulator to
 	// communicate with the API server to fetch PV and PVC objects
+	// kubeClient是由DesiredStateOfWorldPopulator用来和API server进行通信来获取
+	// PV和PVC对象的kube API client
 	kubeClient clientset.Interface
 
 	// volumePluginMgr is the volume plugin manager used to access volume
 	// plugins. It must be pre-initialized.
+	// volumePluginMgr是用来访问volume plugins的volume plugin manager
+	// 它必须先被初始化
 	volumePluginMgr *volume.VolumePluginMgr
 
 	// desiredStateOfWorld is a data structure containing the desired state of
@@ -215,6 +233,7 @@ type volumeManager struct {
 	// attached and which pods are referencing the volumes).
 	// The data structure is populated by the desired state of the world
 	// populator using the kubelet pod manager.
+	// 根据volume manager期望达到的状态：哪些volume需要被attached以及哪些pods引用volumes
 	desiredStateOfWorld cache.DesiredStateOfWorld
 
 	// actualStateOfWorld is a data structure containing the actual state of
@@ -222,19 +241,25 @@ type volumeManager struct {
 	// this node and what pods the volumes are mounted to.
 	// The data structure is populated upon successful completion of attach,
 	// detach, mount, and unmount actions triggered by the reconciler.
+	// 具体有哪些volume被attach到node以及这些volume都attach到哪些pods
 	actualStateOfWorld cache.ActualStateOfWorld
 
 	// operationExecutor is used to start asynchronous attach, detach, mount,
 	// and unmount operations.
+	// operationExecutor用于启动异步的attach, detach, mount以及unmount操作
 	operationExecutor operationexecutor.OperationExecutor
 
 	// reconciler runs an asynchronous periodic loop to reconcile the
 	// desiredStateOfWorld with the actualStateOfWorld by triggering attach,
 	// detach, mount, and unmount operations using the operationExecutor.
+	// reconciler运行异步的periodic loop用来通过使用operationExecutor来触发attach
+	// detach, mount以及unmount等操作来同步desiredStateOfWorld和actualStateOfWorld
 	reconciler reconciler.Reconciler
 
 	// desiredStateOfWorldPopulator runs an asynchronous periodic loop to
 	// populate the desiredStateOfWorld using the kubelet PodManager.
+	// desiredStateOfWorldPopulator通过使用kubelet PodManager来定期获取
+	// desiredStateOfWrold
 	desiredStateOfWorldPopulator populator.DesiredStateOfWorldPopulator
 }
 
@@ -340,11 +365,14 @@ func (vm *volumeManager) WaitForAttachAndMount(pod *v1.Pod) error {
 	}
 
 	glog.V(3).Infof("Waiting for volumes to attach and mount for pod %q", format.Pod(pod))
+	// GetUniquePodName返回一个唯一的ID用来引用pod
 	uniquePodName := volumehelper.GetUniquePodName(pod)
 
 	// Some pods expect to have Setup called over and over again to update.
 	// Remount plugins for which this is true. (Atomically updating volumes,
 	// like Downward API, depend on this to update the contents of the volume).
+	// 有的pods希望Setup能够一次一次地被调用用以更新
+	// 像Downward API一样，依赖这个去更新volume的内容
 	vm.desiredStateOfWorldPopulator.ReprocessPod(uniquePodName)
 	vm.actualStateOfWorld.MarkRemountRequired(uniquePodName)
 
@@ -374,8 +402,10 @@ func (vm *volumeManager) WaitForAttachAndMount(pod *v1.Pod) error {
 
 // verifyVolumesMountedFunc returns a method that returns true when all expected
 // volumes are mounted.
+// verifyVolumesMountedFunc返回一个方法，如果所有expected volumes都被mount，就返回true
 func (vm *volumeManager) verifyVolumesMountedFunc(podName types.UniquePodName, expectedVolumes []string) wait.ConditionFunc {
 	return func() (done bool, err error) {
+		// 调用volume manager, 如果unmount的volume数目为0，则说明所有volume都已经被mount
 		return len(vm.getUnmountedVolumes(podName, expectedVolumes)) == 0, nil
 	}
 }
@@ -405,12 +435,14 @@ func filterUnmountedVolumes(mountedVolumes sets.String, expectedVolumes []string
 
 // getExpectedVolumes returns a list of volumes that must be mounted in order to
 // consider the volume setup step for this pod satisfied.
+// getExpectedVolumes返回一系列的volumes它们作为pod的volume setup step必须满足
 func getExpectedVolumes(pod *v1.Pod) []string {
 	expectedVolumes := []string{}
 	if pod == nil {
 		return expectedVolumes
 	}
 
+	// 其实就是从pod.Spec.Volumes中获取
 	for _, podVolume := range pod.Spec.Volumes {
 		expectedVolumes = append(expectedVolumes, podVolume.Name)
 	}

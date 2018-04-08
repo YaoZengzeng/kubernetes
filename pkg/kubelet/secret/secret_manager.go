@@ -55,6 +55,7 @@ type Manager interface {
 
 // simpleSecretManager implements SecretManager interfaces with
 // simple operations to apiserver.
+// simpleSecretManager通过和apiserver进行简单的交互，来实现SecretManager
 type simpleSecretManager struct {
 	kubeClient clientset.Interface
 }
@@ -95,6 +96,7 @@ type secretData struct {
 }
 
 // secretStore is a local cache of secrets.
+// secretStore是secrets的local cache
 type secretStore struct {
 	kubeClient clientset.Interface
 	clock      clock.Clock
@@ -235,12 +237,16 @@ func (s *secretStore) Get(namespace, name string) (*v1.Secret, error) {
 }
 
 // cachingSecretManager keeps a cache of all secrets necessary for registered pods.
+// cachingSecretManager缓存了registered pods所需的所有secrets
 // It implements the following logic:
 // - whenever a pod is created or updated, the cached versions of all its secrets
 //   are invalidated
+// - 每当一个pod被创建或者更新时，它缓存的所有secrets都会失效
 // - every GetSecret() call tries to fetch the value from local cache; if it is
 //   not there, invalidated or too old, we fetch it from apiserver and refresh the
 //   value in cache; otherwise it is just fetched from cache
+// - 每次GetSecret()调用都会尝试从本地缓存中获取secret，如果它不存在，非法或者太老
+//	 则我们从apiserver中获取它并且更新cache；否则直接从cache中获取
 type cachingSecretManager struct {
 	secretStore *secretStore
 
@@ -270,6 +276,7 @@ func getSecretNames(pod *v1.Pod) sets.String {
 }
 
 func (c *cachingSecretManager) RegisterPod(pod *v1.Pod) {
+	// 获取pod中包含的secret
 	names := getSecretNames(pod)
 	c.lock.Lock()
 	defer c.lock.Unlock()

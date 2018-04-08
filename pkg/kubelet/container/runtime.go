@@ -288,6 +288,8 @@ type Container struct {
 
 // PodStatus represents the status of the pod and its containers.
 // v1.PodStatus can be derived from examining PodStatus and v1.Pod.
+// PodStatus代表了pod以及它的container的状态
+// v1.PodStatus可以从PodStatus以及v1.Pod获得
 type PodStatus struct {
 	// ID of the pod.
 	ID types.UID
@@ -301,6 +303,7 @@ type PodStatus struct {
 	ContainerStatuses []*ContainerStatus
 	// Status of the pod sandbox.
 	// Only for kuberuntime now, other runtime may keep it nil.
+	// pod sandbox的状态，只针对kuberuntime，其他runtime可以将其设置为nil
 	SandboxStatuses []*runtimeapi.PodSandboxStatus
 }
 
@@ -330,9 +333,11 @@ type ContainerStatus struct {
 	// Number of times that the container has been restarted.
 	RestartCount int
 	// A string explains why container is in such a status.
+	// 一个string，解释了容器为何会处于这种状态
 	Reason string
 	// Message written by the container before exiting (stored in
 	// TerminationMessagePath).
+	// 容器在退出前写入的message
 	Message string
 }
 
@@ -599,6 +604,8 @@ func (p *Pod) IsEmpty() bool {
 }
 
 // GetPodFullName returns a name that uniquely identifies a pod.
+// PodFullName就是pod的Name加pod的Namespace
+// 该name唯一地识别了一个pod
 func GetPodFullName(pod *v1.Pod) string {
 	// Use underscore as the delimiter because it is not allowed in pod name
 	// (DNS subdomain format), while allowed in the container name format.

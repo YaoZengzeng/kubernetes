@@ -33,6 +33,7 @@ type Merger interface {
 }
 
 // MergeFunc implements the Merger interface
+// MergeFunc实现了Merger这个接口
 type MergeFunc func(source string, update interface{}) error
 
 func (f MergeFunc) Merge(source string, update interface{}) error {
@@ -50,10 +51,12 @@ type Mux struct {
 	// Sources and their lock.
 	sourceLock sync.RWMutex
 	// Maps source names to channels
+	// 将source names映射到channels
 	sources map[string]chan interface{}
 }
 
 // NewMux creates a new mux that can merge changes from multiple sources.
+// NewMux创建一个新的mux，它能够从多个source整合changes
 func NewMux(merger Merger) *Mux {
 	mux := &Mux{
 		sources: make(map[string]chan interface{}),
@@ -67,6 +70,9 @@ func NewMux(merger Merger) *Mux {
 // source will return the same channel. This allows change and state based sources
 // to use the same channel. Different source names however will be treated as a
 // union.
+// Channel返回一个channel，configuration source可以向它发送updates of new configurations
+// 多次以相同的source进行调用会返回同一个channel，这允许基于change和state的sources能够共享同样的
+// channel，不同的source names会被认为是一个union
 func (m *Mux) Channel(source string) chan interface{} {
 	if len(source) == 0 {
 		panic("Channel given an empty name")
@@ -81,6 +87,7 @@ func (m *Mux) Channel(source string) chan interface{} {
 	// 否则，创建一个并监听
 	newChannel := make(chan interface{})
 	m.sources[source] = newChannel
+	// 创建一个goroutine，并且调用listen()函数获取更新
 	go wait.Until(func() { m.listen(source, newChannel) }, 0, wait.NeverStop)
 	return newChannel
 }

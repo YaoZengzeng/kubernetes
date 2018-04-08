@@ -24,6 +24,7 @@ import (
 )
 
 // SourcesReadyFn is function that returns true if the specified sources have been seen.
+// 如果特定的sources可以被看到的话，SourcesReadyFn函数就会返回true
 type SourcesReadyFn func(sourcesSeen sets.String) bool
 
 // SourcesReady tracks the set of configured sources seen by the kubelet.

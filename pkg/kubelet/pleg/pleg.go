@@ -43,6 +43,9 @@ type PodLifecycleEvent struct {
 	// The accompanied data which varies based on the event type.
 	//   - ContainerStarted/ContainerStopped: the container name (string).
 	//   - All other event types: unused.
+	// 根据事件类型的不同，伴随的数据也是不同的：
+	//	 - ContainerStarted/ContainerStopped: 这两种类型，返回容器的名字（string）
+	//	 - 其他所有类型：不使用
 	Data interface{}
 }
 

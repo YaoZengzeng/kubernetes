@@ -382,17 +382,23 @@ type podActions struct {
 	// ContainersToStart keeps a list of indexes for the containers to start,
 	// where the index is the index of the specific container in the pod spec (
 	// pod.Spec.Containers.
+	// ContainerToStart包含了一系列需要启动的容器的index
+	// index是特定容器在pod spec，即pod.Spec.Containers中的索引
 	ContainersToStart []int
 	// ContainersToKill keeps a map of containers that need to be killed, note that
 	// the key is the container ID of the container, while
 	// the value contains necessary information to kill a container.
+	// ContainersToKill包含了一个需要被kill的容器的map
+	// key是容器的ID，value是kill该容器所需的必要信息
 	ContainersToKill map[kubecontainer.ContainerID]containerToKillInfo
 }
 
 // podSandboxChanged checks whether the spec of the pod is changed and returns
 // (changed, new attempt, original sandboxID if exist).
+// 返回是否发生了改变，新的attemp, 以及original sandboxID，如果存在的话
 func (m *kubeGenericRuntimeManager) podSandboxChanged(pod *v1.Pod, podStatus *kubecontainer.PodStatus) (bool, uint32, string) {
 	if len(podStatus.SandboxStatuses) == 0 {
+		// 如果pod里没有sandbox，则需要启动一个新的sandbox
 		glog.V(2).Infof("No sandbox for pod %q can be found. Need to start a new one", format.Pod(pod))
 		return true, 0, ""
 	}
@@ -416,6 +422,7 @@ func (m *kubeGenericRuntimeManager) podSandboxChanged(pod *v1.Pod, podStatus *ku
 	}
 
 	// Needs to create a new sandbox when network namespace changed.
+	// 创建一个新的sandbox，如果network namespace发生变化的话
 	if sandboxStatus.Linux != nil && sandboxStatus.Linux.Namespaces != nil && sandboxStatus.Linux.Namespaces.Options != nil &&
 		sandboxStatus.Linux.Namespaces.Options.HostNetwork != kubecontainer.IsHostNetworkPod(pod) {
 		glog.V(2).Infof("Sandbox for pod %q has changed. Need to start a new one", format.Pod(pod))
@@ -423,6 +430,7 @@ func (m *kubeGenericRuntimeManager) podSandboxChanged(pod *v1.Pod, podStatus *ku
 	}
 
 	// Needs to create a new sandbox when the sandbox does not have an IP address.
+	// 如果sandbox没有IP地址的话，则创建一个新的sandbox
 	if !kubecontainer.IsHostNetworkPod(pod) && sandboxStatus.Network.Ip == "" {
 		glog.V(2).Infof("Sandbox for pod %q has no IP address.  Need to start a new one", format.Pod(pod))
 		return true, sandboxStatus.Metadata.Attempt + 1, sandboxStatus.Id
@@ -449,6 +457,7 @@ func containerSucceeded(c *v1.Container, podStatus *kubecontainer.PodStatus) boo
 }
 
 // computePodActions checks whether the pod spec has changed and returns the changes if true.
+// computePodActions检测pod的spec是否改变了，如果改变的话，返回changes
 func (m *kubeGenericRuntimeManager) computePodActions(pod *v1.Pod, podStatus *kubecontainer.PodStatus) podActions {
 	glog.V(5).Infof("Syncing Pod %q: %+v", format.Pod(pod), pod)
 
@@ -464,6 +473,8 @@ func (m *kubeGenericRuntimeManager) computePodActions(pod *v1.Pod, podStatus *ku
 
 	// If we need to (re-)create the pod sandbox, everything will need to be
 	// killed and recreated, and init containers should be purged.
+	// 如果我们要重建pod sandbox，everything都要被kill以及重建，并且init container
+	// 要被清除
 	if createPodSandbox {
 		if !shouldRestartOnFailure(pod) && attempt != 0 {
 			// Should not restart the pod, just return.
@@ -471,11 +482,13 @@ func (m *kubeGenericRuntimeManager) computePodActions(pod *v1.Pod, podStatus *ku
 		}
 		if len(pod.Spec.InitContainers) != 0 {
 			// Pod has init containers, return the first one.
+			// 如果pod有init container，则返回第一个
 			changes.NextInitContainerToStart = &pod.Spec.InitContainers[0]
 			return changes
 		}
 		// Start all containers by default but exclude the ones that succeeded if
 		// RestartPolicy is OnFailure.
+		// 默认启动所有容器，除了那些已经成功运行并且RestartPolicy为OnFailure的容器
 		for idx, c := range pod.Spec.Containers {
 			if containerSucceeded(&c, podStatus) && pod.Spec.RestartPolicy == v1.RestartPolicyOnFailure {
 				continue
@@ -585,6 +598,7 @@ func (m *kubeGenericRuntimeManager) computePodActions(pod *v1.Pod, podStatus *ku
 // 6、创建普通的container
 func (m *kubeGenericRuntimeManager) SyncPod(pod *v1.Pod, _ v1.PodStatus, podStatus *kubecontainer.PodStatus, pullSecrets []v1.Secret, backOff *flowcontrol.Backoff) (result kubecontainer.PodSyncResult) {
 	// Step 1: Compute sandbox and container changes.
+	// 计算sandbox和container的改变
 	podContainerChanges := m.computePodActions(pod, podStatus)
 	glog.V(3).Infof("computePodActions got %+v for pod %q", podContainerChanges, format.Pod(pod))
 	if podContainerChanges.CreateSandbox {
@@ -596,11 +610,13 @@ func (m *kubeGenericRuntimeManager) SyncPod(pod *v1.Pod, _ v1.PodStatus, podStat
 			// sandbox已经被改变了，它会被kill并且重启
 			m.recorder.Eventf(ref, v1.EventTypeNormal, events.SandboxChanged, "Pod sandbox changed, it will be killed and re-created.")
 		} else {
+			// SandboxID为空，则说明是一个新的pod，创建之
 			glog.V(4).Infof("SyncPod received new pod %q, will create a sandbox for it", format.Pod(pod))
 		}
 	}
 
 	// Step 2: Kill the pod if the sandbox has changed.
+	// 如果sandbox改变的话，kill pod
 	if podContainerChanges.KillPod {
 		if !podContainerChanges.CreateSandbox {
 			glog.V(4).Infof("Stopping PodSandbox for %q because all other containers are dead.", format.Pod(pod))
@@ -620,6 +636,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(pod *v1.Pod, _ v1.PodStatus, podStat
 		}
 	} else {
 		// Step 3: kill any running containers in this pod which are not to keep.
+		// kill在pod中所有在运行的容器
 		for containerID, containerInfo := range podContainerChanges.ContainersToKill {
 			glog.V(3).Infof("Killing unwanted container %q(id=%q) for pod %q", containerInfo.name, containerID, format.Pod(pod))
 			killContainerResult := kubecontainer.NewSyncResult(kubecontainer.KillContainer, containerInfo.name)
@@ -674,6 +691,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(pod *v1.Pod, _ v1.PodStatus, podStat
 		}
 		glog.V(4).Infof("Created PodSandbox %q for pod %q", podSandboxID, format.Pod(pod))
 
+		// 调用底层的容器运行时，创建sandbox
 		podSandboxStatus, err := m.runtimeService.PodSandboxStatus(podSandboxID)
 		if err != nil {
 			ref, err := ref.GetReference(legacyscheme.Scheme, pod)
@@ -766,6 +784,8 @@ func (m *kubeGenericRuntimeManager) SyncPod(pod *v1.Pod, _ v1.PodStatus, podStat
 
 // If a container is still in backoff, the function will return a brief backoff error and
 // a detailed error message.
+// 如果容器还在backoff，则该函数返回一个简单的backoff error
+// 以及一个详细的error message
 func (m *kubeGenericRuntimeManager) doBackOff(pod *v1.Pod, container *v1.Container, podStatus *kubecontainer.PodStatus, backOff *flowcontrol.Backoff) (bool, string, error) {
 	var cStatus *kubecontainer.ContainerStatus
 	for _, c := range podStatus.ContainerStatuses {
