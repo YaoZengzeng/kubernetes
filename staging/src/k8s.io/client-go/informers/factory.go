@@ -54,10 +54,14 @@ type sharedInformerFactory struct {
 	informers map[reflect.Type]cache.SharedIndexInformer
 	// startedInformers is used for tracking which informers have been started.
 	// This allows Start() to be called multiple times safely.
+	// startedInformers用于哪个informers已经启动了
+	// 这允许Start()能够安全地被调用多次
 	startedInformers map[reflect.Type]bool
 }
 
 // NewSharedInformerFactory constructs a new instance of sharedInformerFactory
+// NewSharedInformerFactory创建了一个新的sharedInformerFactory实例
+// 第一个参数为kube client，第二个参数为resync的时间间隔
 func NewSharedInformerFactory(client kubernetes.Interface, defaultResync time.Duration) SharedInformerFactory {
 	return NewFilteredSharedInformerFactory(client, defaultResync, v1.NamespaceAll, nil)
 }
@@ -65,6 +69,7 @@ func NewSharedInformerFactory(client kubernetes.Interface, defaultResync time.Du
 // NewFilteredSharedInformerFactory constructs a new instance of sharedInformerFactory.
 // Listers obtained via this SharedInformerFactory will be subject to the same filters
 // as specified here.
+// NewFilteredSharedInformerFactory创建一个新的sharedInformerFactory实例
 func NewFilteredSharedInformerFactory(client kubernetes.Interface, defaultResync time.Duration, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) SharedInformerFactory {
 	return &sharedInformerFactory{
 		client:           client,
@@ -77,6 +82,7 @@ func NewFilteredSharedInformerFactory(client kubernetes.Interface, defaultResync
 }
 
 // Start initializes all requested informers.
+// Start初始化所有requested informers
 func (f *sharedInformerFactory) Start(stopCh <-chan struct{}) {
 	f.lock.Lock()
 	defer f.lock.Unlock()
@@ -84,6 +90,7 @@ func (f *sharedInformerFactory) Start(stopCh <-chan struct{}) {
 	for informerType, informer := range f.informers {
 		if !f.startedInformers[informerType] {
 			go informer.Run(stopCh)
+			// 将startedInformers标记为true
 			f.startedInformers[informerType] = true
 		}
 	}
@@ -98,6 +105,7 @@ func (f *sharedInformerFactory) WaitForCacheSync(stopCh <-chan struct{}) map[ref
 		informers := map[reflect.Type]cache.SharedIndexInformer{}
 		for informerType, informer := range f.informers {
 			if f.startedInformers[informerType] {
+				// 获取所有已经启动的informer
 				informers[informerType] = informer
 			}
 		}
@@ -105,6 +113,7 @@ func (f *sharedInformerFactory) WaitForCacheSync(stopCh <-chan struct{}) map[ref
 	}()
 
 	res := map[reflect.Type]bool{}
+	// 等待所有informers完成
 	for informType, informer := range informers {
 		res[informType] = cache.WaitForCacheSync(stopCh, informer.HasSynced)
 	}

@@ -155,13 +155,18 @@ func NewPodControllerRefManager(
 }
 
 // ClaimPods tries to take ownership of a list of Pods.
+// ClaimPods会尝试获取一系列pods的所有权
 //
 // It will reconcile the following:
 //   * Adopt orphans if the selector matches.
 //   * Release owned objects if the selector no longer matches.
+// 它会协调以下状况：
+//	 * 接收orphans，如果selector匹配的话
+//	 * 如果selector不再匹配的话，释放objects
 //
 // Optional: If one or more filters are specified, a Pod will only be claimed if
 // all filters return true.
+// 可选：如果指定了一个或多个filters，一个pod只有在所有filters返回true才会被claimed
 //
 // A non-nil error is returned if some form of reconciliation was attempted and
 // failed. Usually, controllers should try again later in case reconciliation

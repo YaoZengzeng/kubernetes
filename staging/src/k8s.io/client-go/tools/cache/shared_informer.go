@@ -39,32 +39,45 @@ import (
 // has advantages over the broadcaster since it allows us to share a common cache across many
 // controllers. Extending the broadcaster would have required us keep duplicate caches for each
 // watch.
+// SharedInformer有一个共享的cache并且能够将cache的change的通知分发到多个通过AddEventHandler注册的多个listeners
+// 它和标准的Informer相比，它有一个行为的改变。当你收到一个通知的时候，cache至少和notification一样新，但是可能更新。
+// 我们不能指望cache中的内容和你从handler函数中收到的notification完全匹配
+// 如果有一个create之后，紧接着一个delete，在cache里可能就没有相应的item
+// 这和broadcast相比更有优势，它能够让许多controller共享同一个cache
+// 扩展broadcaster会要求我们为每个watch复制一个cache
 type SharedInformer interface {
 	// AddEventHandler adds an event handler to the shared informer using the shared informer's resync
 	// period.  Events to a single handler are delivered sequentially, but there is no coordination
 	// between different handlers.
+	// AddEventHandler为shared informer添加handler
+	// Events会按序传输给单个handler中，但是不同的handler之间没有coordination
 	AddEventHandler(handler ResourceEventHandler)
 	// AddEventHandlerWithResyncPeriod adds an event handler to the shared informer using the
 	// specified resync period.  Events to a single handler are delivered sequentially, but there is
 	// no coordination between different handlers.
+	// 用指定的resync period为shared informer增加一个event handler
 	AddEventHandlerWithResyncPeriod(handler ResourceEventHandler, resyncPeriod time.Duration)
 	// GetStore returns the Store.
 	GetStore() Store
 	// GetController gives back a synthetic interface that "votes" to start the informer
 	GetController() Controller
 	// Run starts the shared informer, which will be stopped when stopCh is closed.
+	// Run启动shared informer，当stopCh被关闭的时候就会停止
 	Run(stopCh <-chan struct{})
 	// HasSynced returns true if the shared informer's store has synced.
+	// HasSynced返回true，如果shared informer的store已经sync过的话
 	HasSynced() bool
 	// LastSyncResourceVersion is the resource version observed when last synced with the underlying
 	// store. The value returned is not synchronized with access to the underlying store and is not
 	// thread-safe.
+	// LastSyncResourceVersion是上次和底层的store同步时的resource version
 	LastSyncResourceVersion() string
 }
 
 type SharedIndexInformer interface {
 	SharedInformer
 	// AddIndexers add indexers to the informer before it starts.
+	// AddIndexers在启动之前将indexers加入informer
 	AddIndexers(indexers Indexers) error
 	GetIndexer() Indexer
 }
@@ -75,6 +88,7 @@ func NewSharedInformer(lw ListerWatcher, objType runtime.Object, resyncPeriod ti
 }
 
 // NewSharedIndexInformer creates a new instance for the listwatcher.
+// NewSharedIndexInformer创建一个新的listwatcher实例
 func NewSharedIndexInformer(lw ListerWatcher, objType runtime.Object, defaultEventHandlerResyncPeriod time.Duration, indexers Indexers) SharedIndexInformer {
 	realClock := &clock.RealClock{}
 	sharedIndexInformer := &sharedIndexInformer{
@@ -95,6 +109,7 @@ type InformerSynced func() bool
 
 const (
 	// syncedPollPeriod controls how often you look at the status of your sync funcs
+	// syncedPollPeriod控制查看sync funcs的状态的频率
 	syncedPollPeriod = 100 * time.Millisecond
 
 	// initialBufferSize is the initial number of event notifications that can be buffered.
@@ -105,6 +120,7 @@ const (
 // if the controller should shutdown
 // WaitForCacheSync等待cache被填充，成功则返回true，返回false则关闭controller
 func WaitForCacheSync(stopCh <-chan struct{}, cacheSyncs ...InformerSynced) bool {
+	// 每隔100毫秒轮询一次，直到func返回true
 	err := wait.PollUntil(syncedPollPeriod,
 		func() (bool, error) {
 			for _, syncFunc := range cacheSyncs {
@@ -137,10 +153,13 @@ type sharedIndexInformer struct {
 
 	// resyncCheckPeriod is how often we want the reflector's resync timer to fire so it can call
 	// shouldResync to check if any of our listeners need a resync.
+	// resyncCheckPeriod表示reflector的resync timer过期的频率
+	// 这样它就能调用shouldResync来检测我们的listener是否需要resync
 	resyncCheckPeriod time.Duration
 	// defaultEventHandlerResyncPeriod is the default resync period for any handlers added via
 	// AddEventHandler (i.e. they don't specify one and just want to use the shared informer's default
 	// value).
+	// defaultEventHandlerResyncPeriod是任何通过AddEventHandler加入的handlers默认的resync时间
 	defaultEventHandlerResyncPeriod time.Duration
 	// clock allows for testability
 	clock clock.Clock
@@ -227,6 +246,7 @@ func (s *sharedIndexInformer) Run(stopCh <-chan struct{}) {
 	s.controller.Run(stopCh)
 }
 
+// 如果s.controller不存在，就返回false，否则返回s.controller.HasSynced()结果
 func (s *sharedIndexInformer) HasSynced() bool {
 	s.startedLock.Lock()
 	defer s.startedLock.Unlock()

@@ -352,6 +352,7 @@ through the API as necessary.`,
 
 // SchedulerServer represents all the parameters required to start the
 // Kubernetes scheduler server.
+// SchedulerServer包含了启动一个Kubernetes scheduler server需要的所有参数
 type SchedulerServer struct {
 	SchedulerName                  string
 	Client                         clientset.Interface
@@ -384,6 +385,7 @@ func NewSchedulerServer(config *componentconfig.KubeSchedulerConfiguration, mast
 	}
 
 	// Prepare some Kube clients.
+	// 准备各个Kube client
 	client, leaderElectionClient, eventClient, err := createClients(config.ClientConnection, master)
 	if err != nil {
 		return nil, err
@@ -551,12 +553,14 @@ func (s *SchedulerServer) Run(stop chan struct{}) error {
 	glog.Infof("Version: %+v", version.Get())
 
 	// Build a scheduler config from the provided algorithm source.
+	// 根据algorithm source构建一个scheduler config
 	schedulerConfig, err := s.SchedulerConfig()
 	if err != nil {
 		return err
 	}
 
 	// Create the scheduler.
+	// 根据配置创建scheduler
 	sched := scheduler.NewFromConfig(schedulerConfig)
 
 	// Prepare the event broadcaster.
@@ -587,10 +591,12 @@ func (s *SchedulerServer) Run(stop chan struct{}) error {
 	}
 
 	// Start all informers.
+	// 启动所有的informers
 	go s.PodInformer.Informer().Run(stop)
 	s.InformerFactory.Start(stop)
 
 	// Wait for all caches to sync before scheduling.
+	// 在调度之前等待所有的cache都同步完成
 	s.InformerFactory.WaitForCacheSync(stop)
 	controller.WaitForCacheSync("scheduler", stop, s.PodInformer.Informer().HasSynced)
 

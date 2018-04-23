@@ -306,6 +306,10 @@ type UIDSet struct {
 // DeletionTimestamp on an object as a delete. To do so consistently, one needs
 // to remember the expected deletes so they aren't double counted.
 // TODO: Track creates as well (#22599)
+// UIDTrackingControllerExpectations用来追踪它删除的UID
+// 对于之前的expectations来说，cache是需要的从而能安全地处理graceful deletion
+// 期望的行为是将设置一个对象的DeletionTimestamp作为一个delete
+// 为了保持一致，我们需要记住expected delete从而不会double counted
 type UIDTrackingControllerExpectations struct {
 	ControllerExpectationsInterface
 	// TODO: There is a much nicer way to do this that involves a single store,

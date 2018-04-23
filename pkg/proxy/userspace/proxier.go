@@ -90,10 +90,12 @@ func logTimeout(err error) bool {
 }
 
 // ProxySocketFunc is a function which constructs a ProxySocket from a protocol, ip, and port
+// ProxySocketFunc根据protocol, ip以及port创建一个ProxySocket的函数
 type ProxySocketFunc func(protocol api.Protocol, ip net.IP, port int) (ProxySocket, error)
 
 // Proxier is a simple proxy for TCP connections between a localhost:lport
 // and services that provide the actual implementations.
+// Proxier用于在localhost:lport和提供真正实现之间的services创建一个简单的proxy，用于tcp连接
 type Proxier struct {
 	loadBalancer    LoadBalancer
 	mu              sync.Mutex // protects serviceMap
@@ -207,6 +209,8 @@ func createProxier(loadBalancer LoadBalancer, listenIP net.IP, iptables iptables
 	}
 	// Flush old iptables rules (since the bound ports will be invalid after a restart).
 	// When OnUpdate() is first called, the rules will be recreated.
+	// 清除老的iptables rules(因为绑定的端口会在重启后失效)
+	// 当第一次调用OnUpdate()时，rules会被再次创建
 	if err := iptablesFlush(iptables); err != nil {
 		return nil, fmt.Errorf("failed to flush iptables: %v", err)
 	}
@@ -307,6 +311,7 @@ func (proxier *Proxier) Sync() {
 }
 
 // SyncLoop runs periodic work.  This is expected to run as a goroutine or as the main loop of the app.  It does not return.
+// SyncLoop阶段性地进行工作
 func (proxier *Proxier) SyncLoop() {
 	t := time.NewTicker(proxier.syncPeriod)
 	defer t.Stop()
@@ -318,6 +323,7 @@ func (proxier *Proxier) SyncLoop() {
 }
 
 // Ensure that portals exist for all services.
+// 确保所有service的portals都存在
 func (proxier *Proxier) ensurePortals() {
 	proxier.mu.Lock()
 	defer proxier.mu.Unlock()

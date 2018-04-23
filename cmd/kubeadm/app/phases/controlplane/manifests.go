@@ -74,6 +74,7 @@ func GetStaticPodSpecs(cfg *kubeadmapi.MasterConfiguration, k8sVersion *version.
 	mounts := getHostPathVolumesForTheControlPlane(cfg)
 
 	// Prepare static pod specs
+	// kubeadm会将各个静态pod的文件写入磁盘
 	staticPodSpecs := map[string]v1.Pod{
 		kubeadmconstants.KubeAPIServer: staticpodutil.ComponentPod(v1.Container{
 			Name:          kubeadmconstants.KubeAPIServer,
@@ -116,6 +117,7 @@ func createStaticPodFiles(manifestDir string, cfg *kubeadmapi.MasterConfiguratio
 	}
 
 	// gets the StaticPodSpecs, actualized for the current MasterConfiguration
+	// 获取StaticPodSpecs
 	specs := GetStaticPodSpecs(cfg, k8sVersion)
 
 	// creates required static pod specs
@@ -127,6 +129,7 @@ func createStaticPodFiles(manifestDir string, cfg *kubeadmapi.MasterConfiguratio
 		}
 
 		// writes the StaticPodSpec to disk
+		// 将静态pod的spec写入磁盘
 		if err := staticpodutil.WriteStaticPodToDisk(componentName, manifestDir, spec); err != nil {
 			return fmt.Errorf("failed to create static pod manifest file for %q: %v", componentName, err)
 		}

@@ -44,9 +44,11 @@ func (s *serviceLister) GetPodServices(pod *v1.Pod) ([]*v1.Service, error) {
 		service := allServices[i]
 		if service.Spec.Selector == nil {
 			// services with nil selectors match nothing, not everything.
+			// 如果service的selectors为nil，则意味着和什么都不匹配，而不是匹配所有
 			continue
 		}
 		selector := labels.Set(service.Spec.Selector).AsSelectorPreValidated()
+		// 如果selector和pod的labels匹配
 		if selector.Matches(labels.Set(pod.Labels)) {
 			services = append(services, service)
 		}

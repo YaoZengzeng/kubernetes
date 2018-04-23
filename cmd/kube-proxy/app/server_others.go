@@ -130,8 +130,10 @@ func newProxyServer(
 		healthzUpdater = healthzServer
 	}
 
+	// 选择usernamespace，iptables以及ipvs其中一种作为ProxyProvider
 	var proxier proxy.ProxyProvider
 	// 创建service和endpoint的handler
+	// 其实也是usernamespace，iptables以及ipvs这三种proxy中的一种
 	var serviceEventHandler proxyconfig.ServiceHandler
 	var endpointsEventHandler proxyconfig.EndpointsHandler
 
@@ -178,6 +180,10 @@ func newProxyServer(
 		// Besides, ipvs proxier will create some ipvs rules as well.  Because there is no way to tell if a given
 		// ipvs rule is created by IPVS proxier or not.  Users should explicitly specify `--clean-ipvs=true` to flush
 		// all ipvs rules when kube-proxy start up.  Users do this operation should be with caution.
+		// IPVS Proxier会产生一些iptables rules，在切换为其他模式之前需要需要对它们进行清理
+		// 同时，ipvs proxier也会产生一些ipvs rules
+		// 因为没有办法区分一个给定的ipvs rule是否是IPVS proxier创建的，因此用户需要显式指定'--clean-ipvs=ture'
+		// 用户在做此操作时要小心
 		ipvs.CleanupLeftovers(ipvsInterface, iptInterface, ipsetInterface, cleanupIPVS)
 	} else if proxyMode == proxyModeIPVS {
 		glog.V(0).Info("Using ipvs Proxier.")
@@ -274,11 +280,14 @@ func newProxyServer(
 }
 
 func getProxyMode(proxyMode string, iptver iptables.IPTablesVersioner, ipsetver ipvs.IPSetVersioner, kcompat iptables.KernelCompatTester) string {
+	// user mode的proxy
 	if proxyMode == proxyModeUserspace {
 		return proxyModeUserspace
 	}
 
+	// iptables mode的proxy
 	if len(proxyMode) > 0 && proxyMode == proxyModeIPTables {
+		// 首先需要检查内核是否能够使用iptables
 		return tryIPTablesProxy(iptver, kcompat)
 	}
 
@@ -291,6 +300,7 @@ func getProxyMode(proxyMode string, iptver iptables.IPTablesVersioner, ipsetver 
 		}
 	}
 	glog.Warningf("Flag proxy-mode=%q unknown, assuming iptables proxy", proxyMode)
+	// 默认采用iptables类型的proxy
 	return tryIPTablesProxy(iptver, kcompat)
 }
 

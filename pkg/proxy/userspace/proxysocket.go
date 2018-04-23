@@ -32,6 +32,7 @@ import (
 )
 
 // Abstraction over TCP/UDP sockets which are proxied.
+// 对代理的TCP/UDP sockets进行抽象
 type ProxySocket interface {
 	// Addr gets the net.Addr for a ProxySocket.
 	Addr() net.Addr
@@ -40,6 +41,7 @@ type ProxySocket interface {
 	// while sessions are active.
 	Close() error
 	// ProxyLoop proxies incoming connections for the specified service to the service endpoints.
+	// ProxyLoop代理给定service的incoming connections到service endpoints
 	ProxyLoop(service proxy.ServicePortName, info *ServiceInfo, loadBalancer LoadBalancer)
 	// ListenPort returns the host port that the ProxySocket is listening on
 	ListenPort() int

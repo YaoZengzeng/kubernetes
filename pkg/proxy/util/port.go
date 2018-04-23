@@ -25,6 +25,7 @@ import (
 )
 
 // LocalPort describes a port on specific IP address and protocol
+// LocalPort描述了一个特定IP地址以及协议上的端口
 type LocalPort struct {
 	// Description is the identity message of a given local port.
 	Description string

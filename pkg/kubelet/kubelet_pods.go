@@ -1646,12 +1646,14 @@ func (kl *Kubelet) RunInContainer(podFullName string, podUID types.UID, containe
 
 // ExecInContainer executes a command in a container, connecting the supplied
 // stdin/stdout/stderr to the command's IO streams.
+// ExecInContainer在容器中执行一条命令，将提供的stdin/stdout/stderr连接到command的IO streams
 func (kl *Kubelet) ExecInContainer(podFullName string, podUID types.UID, containerName string, cmd []string, stdin io.Reader, stdout, stderr io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
 	streamingRuntime, ok := kl.containerRuntime.(kubecontainer.DirectStreamingRuntime)
 	if !ok {
 		return fmt.Errorf("streaming methods not supported by runtime")
 	}
 
+	// 找到相应的容器
 	container, err := kl.findContainer(podFullName, podUID, containerName)
 	if err != nil {
 		return err

@@ -51,6 +51,7 @@ type ServiceHandler interface {
 
 // EndpointsHandler is an abstract interface of objects which receive
 // notifications about endpoints object changes.
+// EndpointsHandler是一个抽象接口，它接收endpoint对象改变的消息
 type EndpointsHandler interface {
 	// OnEndpointsAdd is called whenever creation of new endpoints object
 	// is observed.
@@ -63,6 +64,8 @@ type EndpointsHandler interface {
 	OnEndpointsDelete(endpoints *api.Endpoints)
 	// OnEndpointsSynced is called once all the initial event handlers were
 	// called and the state is fully propagated to local cache.
+	// OnEndpointsSynced会在所有initial event handlers被调用的时候调用
+	// 并且状态会传播到local cache中
 	OnEndpointsSynced()
 }
 
@@ -207,6 +210,7 @@ func (c *ServiceConfig) RegisterEventHandler(handler ServiceHandler) {
 
 // Run starts the goroutine responsible for calling
 // registered handlers.
+// Run启动一个goroutine用于负责调用注册的handlers
 func (c *ServiceConfig) Run(stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 

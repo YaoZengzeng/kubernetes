@@ -32,6 +32,7 @@ import (
 
 // ReplicaSetInformer provides access to a shared informer and lister for
 // ReplicaSets.
+// ReplicaSetInformer提供了对于shared informer的访问以及ReplicaSets的lister
 type ReplicaSetInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() v1beta1.ReplicaSetLister

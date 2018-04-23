@@ -2307,6 +2307,7 @@ type ContainerState struct {
 }
 
 // ContainerStatus contains details for the current status of this container.
+// ContainerStatus包含了容器当前状态的详细信息
 type ContainerStatus struct {
 	// This must be a DNS_LABEL. Each container in a pod must have a unique name.
 	// Cannot be updated.
@@ -2343,18 +2344,27 @@ const (
 	// PodPending means the pod has been accepted by the system, but one or more of the containers
 	// has not been started. This includes time before being bound to a node, as well as time spent
 	// pulling images onto the host.
+	// PodPending意味着pod已经被系统接收了，但是还有一个或多个容器未启动
+	// 这包括被绑定到node以及拉取镜像的时间
 	PodPending PodPhase = "Pending"
 	// PodRunning means the pod has been bound to a node and all of the containers have been started.
 	// At least one container is still running or is in the process of being restarted.
+	// PodRunning意味着pod已经被绑定到一个node了并且所有的容器都已经启动了
+	// 至少有一个容器处于running或者正在被重启
 	PodRunning PodPhase = "Running"
 	// PodSucceeded means that all containers in the pod have voluntarily terminated
 	// with a container exit code of 0, and the system is not going to restart any of these containers.
+	// PodSucceeded意味着pod中的所有容器都已经自行结束了并且有一个容器的exit code为0
+	// 并且系统不再重启任何容器
 	PodSucceeded PodPhase = "Succeeded"
 	// PodFailed means that all containers in the pod have terminated, and at least one container has
 	// terminated in a failure (exited with a non-zero exit code or was stopped by the system).
+	// PodFailed意味着pod中的所有容器都已经终止了，并且至少有一个容器处于failure(exit code非零或者被系统停止)
 	PodFailed PodPhase = "Failed"
 	// PodUnknown means that for some reason the state of the pod could not be obtained, typically due
 	// to an error in communicating with the host of the pod.
+	// PodUnknown意味着出于某种原因，我们不能获取pod的状态
+	// 一般来说是因为我们不能喝pod所在的宿主机进行交互
 	PodUnknown PodPhase = "Unknown"
 )
 
@@ -2713,23 +2723,30 @@ const (
 )
 
 // PodSpec is a description of a pod.
+// PodSpec是对一个pod的描述
 type PodSpec struct {
 	// List of volumes that can be mounted by containers belonging to the pod.
 	// More info: https://kubernetes.io/docs/concepts/storage/volumes
 	// +optional
 	// +patchMergeKey=name
 	// +patchStrategy=merge,retainKeys
+	// 可以被pod所属的容器mount的volumes列表
 	Volumes []Volume `json:"volumes,omitempty" patchStrategy:"merge,retainKeys" patchMergeKey:"name" protobuf:"bytes,1,rep,name=volumes"`
 	// List of initialization containers belonging to the pod.
 	// Init containers are executed in order prior to containers being started. If any
 	// init container fails, the pod is considered to have failed and is handled according
 	// to its restartPolicy. The name for an init container or normal container must be
 	// unique among all containers.
+	// Init containers在其他application container之前运行，如果init container运行失败
+	// 则pod也被认为运行失败，之后会根据restartPolicy进行处理
 	// Init containers may not have Lifecycle actions, Readiness probes, or Liveness probes.
+	// Init containers可能没有Lifecycle actions，Readiness probes或者Liveness probes
 	// The resourceRequirements of an init container are taken into account during scheduling
 	// by finding the highest request/limit for each resource type, and then using the max of
 	// of that value or the sum of the normal containers. Limits are applied to init containers
 	// in a similar fashion.
+	// Init container的resourceRequirement会在调度的时候被考虑，通过找到每种resource type的high request/limit
+	// 之后会用该value的最大值或者normail containers的总和
 	// Init containers cannot currently be added or removed.
 	// Cannot be updated.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
@@ -2740,6 +2757,7 @@ type PodSpec struct {
 	// Containers cannot currently be added or removed.
 	// There must be at least one container in a Pod.
 	// Cannot be updated.
+	// Containers不能被添加或移除或更新
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	Containers []Container `json:"containers" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,2,rep,name=containers"`
@@ -2748,6 +2766,7 @@ type PodSpec struct {
 	// Default to Always.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#restart-policy
 	// +optional
+	// 默认为Always
 	RestartPolicy RestartPolicy `json:"restartPolicy,omitempty" protobuf:"bytes,3,opt,name=restartPolicy,casttype=RestartPolicy"`
 	// Optional duration in seconds the pod needs to terminate gracefully. May be decreased in delete request.
 	// Value must be non-negative integer. The value zero indicates delete immediately.
@@ -2757,6 +2776,7 @@ type PodSpec struct {
 	// Set this value longer than the expected cleanup time for your process.
 	// Defaults to 30 seconds.
 	// +optional
+	// 默认为30s
 	TerminationGracePeriodSeconds *int64 `json:"terminationGracePeriodSeconds,omitempty" protobuf:"varint,4,opt,name=terminationGracePeriodSeconds"`
 	// Optional duration in seconds the pod may be active on the node relative to
 	// StartTime before the system will actively try to mark it failed and kill associated containers.
@@ -2771,6 +2791,7 @@ type PodSpec struct {
 	// explicitly to 'ClusterFirstWithHostNet'.
 	// Note that 'None' policy is an alpha feature introduced in v1.9 and CustomPodDNS feature gate must be enabled to use it.
 	// +optional
+	// DNSConfig中设置的DNS parameters会和DNSPolicy中的policy合在一起
 	DNSPolicy DNSPolicy `json:"dnsPolicy,omitempty" protobuf:"bytes,6,opt,name=dnsPolicy,casttype=DNSPolicy"`
 	// NodeSelector is a selector which must be true for the pod to fit on a node.
 	// Selector which must match a node's labels for the pod to be scheduled on that node.
@@ -2794,6 +2815,8 @@ type PodSpec struct {
 	// NodeName is a request to schedule this pod onto a specific node. If it is non-empty,
 	// the scheduler simply schedules this pod onto that node, assuming that it fits resource
 	// requirements.
+	// NodeName是一个请求，将pod调度到特定的node。如果它的值非空，则scheduler简单地将该pod调度到这个节点上
+	// 假设满足resource requirements
 	// +optional
 	NodeName string `json:"nodeName,omitempty" protobuf:"bytes,10,opt,name=nodeName"`
 	// Host networking requested for this pod. Use the host's network namespace.
@@ -2815,10 +2838,13 @@ type PodSpec struct {
 	// SecurityContext holds pod-level security attributes and common container settings.
 	// Optional: Defaults to empty.  See type description for default values of each field.
 	// +optional
+	// SecurityContext包含了pod-level的安全特性以及公共的容器设置
 	SecurityContext *PodSecurityContext `json:"securityContext,omitempty" protobuf:"bytes,14,opt,name=securityContext"`
 	// ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec.
 	// If specified, these secrets will be passed to individual puller implementations for them to use. For example,
 	// in the case of docker, only DockerConfig type secrets are honored.
+	// ImagePullSecrets是一个可选的对同一个namespace内secrets的引用，用于拉取PodSpec中的镜像
+	// 如果指定了的话，这些secrets会被传递到individual puller implementations使用
 	// More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
 	// +optional
 	// +patchMergeKey=name
@@ -2833,10 +2859,12 @@ type PodSpec struct {
 	// +optional
 	Subdomain string `json:"subdomain,omitempty" protobuf:"bytes,17,opt,name=subdomain"`
 	// If specified, the pod's scheduling constraints
+	// 如果指定了affinity，则是对pod的调度的限制
 	// +optional
 	Affinity *Affinity `json:"affinity,omitempty" protobuf:"bytes,18,opt,name=affinity"`
 	// If specified, the pod will be dispatched by specified scheduler.
 	// If not specified, the pod will be dispatched by default scheduler.
+	// 如果指定了SchedulerName，则pod会被指定的scheduler分发，否则使用默认的scheduler
 	// +optional
 	SchedulerName string `json:"schedulerName,omitempty" protobuf:"bytes,19,opt,name=schedulerName"`
 	// If specified, the pod's tolerations.
@@ -2844,6 +2872,7 @@ type PodSpec struct {
 	Tolerations []Toleration `json:"tolerations,omitempty" protobuf:"bytes,22,opt,name=tolerations"`
 	// HostAliases is an optional list of hosts and IPs that will be injected into the pod's hosts
 	// file if specified. This is only valid for non-hostNetwork pods.
+	// HostAliases是一组可选的hosts以及IPs列表，如果指定了HostAliases，它们会被注入到pod的host文件中
 	// +optional
 	// +patchMergeKey=ip
 	// +patchStrategy=merge
@@ -2853,6 +2882,9 @@ type PodSpec struct {
 	// creating a PriorityClass object with that name.
 	// If not specified, the pod priority will be default or zero if there is no
 	// default.
+	// 如果指定了PriorityClassName则表示了pod的优先级。"SYSTEM"是一个特殊的关键字，它表示了
+	// 最高的优先级。其他的名字都需要用该名字创建一个PriorityClass对象
+	// 如果没有指定，则pod priority会被设置为default或者zero，如果没有default的话
 	// +optional
 	PriorityClassName string `json:"priorityClassName,omitempty" protobuf:"bytes,24,opt,name=priorityClassName"`
 	// The priority value. Various system components use this field to find the
@@ -2966,18 +2998,22 @@ type PodDNSConfigOption struct {
 
 // PodStatus represents information about the status of a pod. Status may trail the actual
 // state of a system.
+// PodStatus代表了pod的状态信息，Status可能滞后于系统真实的状态
 type PodStatus struct {
 	// Current condition of the pod.
+	// 当前pod的状态
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-phase
 	// +optional
 	Phase PodPhase `json:"phase,omitempty" protobuf:"bytes,1,opt,name=phase,casttype=PodPhase"`
 	// Current service state of pod.
+	// Conditions包含了pod当前状态的详细信息
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	Conditions []PodCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,2,rep,name=conditions"`
 	// A human readable message indicating details about why the pod is in this condition.
+	// 人类可读的message，表明为何系统处于当前状态
 	// +optional
 	Message string `json:"message,omitempty" protobuf:"bytes,3,opt,name=message"`
 	// A brief CamelCase message indicating details about why the pod is in this state.
@@ -2986,6 +3022,7 @@ type PodStatus struct {
 	Reason string `json:"reason,omitempty" protobuf:"bytes,4,opt,name=reason"`
 
 	// IP address of the host to which the pod is assigned. Empty if not yet scheduled.
+	// pod被绑定的宿主机的IP
 	// +optional
 	HostIP string `json:"hostIP,omitempty" protobuf:"bytes,5,opt,name=hostIP"`
 	// IP address allocated to the pod. Routable at least within the cluster.
@@ -3010,6 +3047,7 @@ type PodStatus struct {
 	// +optional
 	ContainerStatuses []ContainerStatus `json:"containerStatuses,omitempty" protobuf:"bytes,8,rep,name=containerStatuses"`
 	// The Quality of Service (QOS) classification assigned to the pod based on resource requirements
+	// 基于resource requirement赋值给pod的QOS classification
 	// See PodQOSClass type for available QOS classes
 	// More info: https://github.com/kubernetes/kubernetes/blob/master/docs/design/resource-qos.md
 	// +optional
@@ -3643,6 +3681,7 @@ type Endpoints struct {
 // The resulting set of endpoints can be viewed as:
 //     a: [ 10.10.1.1:8675, 10.10.2.2:8675 ],
 //     b: [ 10.10.1.1:309, 10.10.2.2:309 ]
+// 所有的endpoint是ip地址和端口的笛卡尔积
 type EndpointSubset struct {
 	// IP addresses which offer the related ports that are marked as ready. These endpoints
 	// should be considered safe for load balancers and clients to utilize.
@@ -3665,6 +3704,7 @@ type EndpointAddress struct {
 	// or link-local multicast ((224.0.0.0/24).
 	// IPv6 is also accepted but not fully supported on all platforms. Also, certain
 	// kubernetes components, like kube-proxy, are not IPv6 ready.
+	// kube-proxy现在并不支持IPv6
 	// TODO: This should allow hostname or IP, See #4447.
 	IP string `json:"ip" protobuf:"bytes,1,opt,name=ip"`
 	// The Hostname of this endpoint

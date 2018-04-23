@@ -25,6 +25,7 @@ import (
 )
 
 // GetCoreImage generates and returns the image for the core Kubernetes components or returns overrideImage if specified
+// GetCoreImage创建并返回Kubernetes核心组件的镜像，或者overrideImage，如果指定的话
 func GetCoreImage(image, repoPrefix, k8sVersion, overrideImage string) string {
 	if overrideImage != "" {
 		return overrideImage

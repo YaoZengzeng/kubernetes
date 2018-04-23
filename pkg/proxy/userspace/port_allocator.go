@@ -31,6 +31,7 @@ var (
 	errPortRangeNoPortsRemaining = errors.New("port allocation failed; there are no remaining ports left to allocate in the accepted range")
 )
 
+// PortAllocator是一个接口，能够获取下一个可用的port以及释放某个port
 type PortAllocator interface {
 	AllocateNext() (int, error)
 	Release(int)

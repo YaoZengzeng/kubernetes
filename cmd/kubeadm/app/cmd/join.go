@@ -222,6 +222,7 @@ func NewJoin(cfgPath string, args []string, cfg *kubeadmapi.NodeConfiguration, i
 	}
 
 	// Try to start the kubelet service in case it's inactive
+	// TryStartKubelet会在kubelet不active的时候启动kubelet
 	preflight.TryStartKubelet(ignorePreflightErrors)
 
 	return &Join{cfg: cfg}, nil

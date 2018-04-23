@@ -87,12 +87,15 @@ type ReplicaSetController struct {
 
 	// A ReplicaSet is temporarily suspended after creating/deleting these many replicas.
 	// It resumes normal action after observing the watch events for them.
+	// 一个ReplicaSet在创建或删除burstReplicas数量的副本之后就会暂停
+	// 当再一次发现它们的watch events，它就会继续正常运行
 	burstReplicas int
 	// To allow injection of syncReplicaSet for testing.
 	// 允许注入syncReplicaSet用于测试
 	syncHandler func(rsKey string) error
 
 	// A TTLCache of pod creates/deletes each rc expects to see.
+	// 每个rc期望看到的pod创建/删除的TTLCache
 	expectations *controller.UIDTrackingControllerExpectations
 
 	// A store of ReplicaSets, populated by the shared informer passed to NewReplicaSetController
@@ -112,17 +115,21 @@ type ReplicaSetController struct {
 	podListerSynced cache.InformerSynced
 
 	// Controllers that need to be synced
+	// Controller需要同步的数据
 	queue workqueue.RateLimitingInterface
 }
 
 // NewReplicaSetController configures a replica set controller with the specified event recorder
+// NewReplicaSetController用给定的event recorder配置一个replica set controller
 func NewReplicaSetController(rsInformer extensionsinformers.ReplicaSetInformer, podInformer coreinformers.PodInformer, kubeClient clientset.Interface, burstReplicas int) *ReplicaSetController {
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(glog.Infof)
 	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{Interface: v1core.New(kubeClient.CoreV1().RESTClient()).Events("")})
 	return NewBaseController(rsInformer, podInformer, kubeClient, burstReplicas,
+		// gkv
 		v1beta1.SchemeGroupVersion.WithKind("ReplicaSet"),
 		"replicaset_controller",
+		// 队列的名字为replicaset
 		"replicaset",
 		controller.RealPodControl{
 			KubeClient: kubeClient,
@@ -151,6 +158,7 @@ func NewBaseController(rsInformer extensionsinformers.ReplicaSetInformer, podInf
 		queue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), queueName),
 	}
 
+	// 在Informer里面添加各个handler
 	rsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    rsc.enqueueReplicaSet,
 		UpdateFunc: rsc.updateRS,
@@ -447,19 +455,24 @@ func (rsc *ReplicaSetController) enqueueReplicaSetAfter(obj interface{}, after t
 // worker会运行一个worker thread从队列里面取出item，处理它们，并且标记它们已经完成
 // 它要syncHandler不会同时处理同一个key
 func (rsc *ReplicaSetController) worker() {
+	// 不断处理队列中的下一个item
 	for rsc.processNextWorkItem() {
 	}
 }
 
 func (rsc *ReplicaSetController) processNextWorkItem() bool {
+	// 从队列中获取key
 	key, quit := rsc.queue.Get()
 	if quit {
 		return false
 	}
+	// 将key从队列中彻底移除
 	defer rsc.queue.Done(key)
 
+	// 最终调用syncHandler进行处理，即syncReplicaSet函数
 	err := rsc.syncHandler(key.(string))
 	if err == nil {
+		// 从队列中移除key
 		rsc.queue.Forget(key)
 		return true
 	}
@@ -471,9 +484,13 @@ func (rsc *ReplicaSetController) processNextWorkItem() bool {
 }
 
 // manageReplicas checks and updates replicas for the given ReplicaSet.
+// manageReplicas为给定的ReplicaSet检查并且更新副本
 // Does NOT modify <filteredPods>.
+// 不要修改filteredPods
 // It will requeue the replica set in case of an error while creating/deleting pods.
+// 如果在创建/删除pods失败的话，它会将replica set重新入队
 func (rsc *ReplicaSetController) manageReplicas(filteredPods []*v1.Pod, rs *extensions.ReplicaSet) error {
+	// 仅仅统计副本数目的差异即可
 	diff := len(filteredPods) - int(*(rs.Spec.Replicas))
 	rsKey, err := controller.KeyFunc(rs)
 	if err != nil {
@@ -481,6 +498,7 @@ func (rsc *ReplicaSetController) manageReplicas(filteredPods []*v1.Pod, rs *exte
 		return nil
 	}
 	if diff < 0 {
+		// 如果pods数目不够
 		diff *= -1
 		if diff > rsc.burstReplicas {
 			diff = rsc.burstReplicas
@@ -500,6 +518,8 @@ func (rsc *ReplicaSetController) manageReplicas(filteredPods []*v1.Pod, rs *exte
 		// prevented from spamming the API service with the pod create requests
 		// after one of its pods fails.  Conveniently, this also prevents the
 		// event spam that those failures would generate.
+		// 批量创建pod
+		// 它会尝试创建大量的pods，但是它们可能因为同样的原因fail
 		successfulCreations, err := slowStartBatch(diff, controller.SlowStartInitialBatchSize, func() error {
 			boolPtr := func(b bool) *bool { return &b }
 			controllerRef := &metav1.OwnerReference{
@@ -519,6 +539,11 @@ func (rsc *ReplicaSetController) manageReplicas(filteredPods []*v1.Pod, rs *exte
 				// uninitialized for a long time, the informer will not
 				// receive any update, and the controller will create a new
 				// pod when the expectation expires.
+				// Pod已经被创建了但是它的初始化已经超时了
+				// 如果最终初始化成功了，controller最终会通过informer观察到创建成功
+				// 如果pod初始化失败，或者过了很长时间仍然处于位初始化的状态
+				// informer不会收到任何update，controller会在expectation超时之后
+				// 创建新的pod
 				return nil
 			}
 			return err
@@ -527,21 +552,26 @@ func (rsc *ReplicaSetController) manageReplicas(filteredPods []*v1.Pod, rs *exte
 		// Any skipped pods that we never attempted to start shouldn't be expected.
 		// The skipped pods will be retried later. The next controller resync will
 		// retry the slow start process.
+		// 任何skipped pods都会在之前被重试
+		// 下一次的controller的resync会重试slow start process
 		if skippedPods := diff - successfulCreations; skippedPods > 0 {
 			glog.V(2).Infof("Slow-start failure. Skipping creation of %d pods, decrementing expectations for %v %v/%v", skippedPods, rsc.Kind, rs.Namespace, rs.Name)
 			for i := 0; i < skippedPods; i++ {
 				// Decrement the expected number of creates because the informer won't observe this pod
+				// 递减期望创建的pods的数量，因为informer不会观察到这些pod
 				rsc.expectations.CreationObserved(rsKey)
 			}
 		}
 		return err
 	} else if diff > 0 {
+		// 如果pod数目太多的话
 		if diff > rsc.burstReplicas {
 			diff = rsc.burstReplicas
 		}
 		glog.V(2).Infof("Too many replicas for %v %s/%s, need %d, deleting %d", rsc.Kind, rs.Namespace, rs.Name, *(rs.Spec.Replicas), diff)
 
 		// Choose which Pods to delete, preferring those in earlier phases of startup.
+		// 选择需要删除的pods，优先选择那些处于早期启动状态的pods
 		podsToDelete := getPodsToDelete(filteredPods, diff)
 
 		// Snapshot the UIDs (ns/name) of the pods we're expecting to see
@@ -550,6 +580,8 @@ func (rsc *ReplicaSetController) manageReplicas(filteredPods []*v1.Pod, rs *exte
 		// Note that if the labels on a pod/rs change in a way that the pod gets
 		// orphaned, the rs will only wake up after the expectations have
 		// expired even if other pods are deleted.
+		// 为我们期望看到被删除的pods的UIDs(ns/namespace)打一个快照
+		// 这样我们在它更新deletion timestamp或者delete的时候就能记录它们的expectations
 		rsc.expectations.ExpectDeletions(rsKey, getPodKeys(podsToDelete))
 
 		errCh := make(chan error, diff)
@@ -560,6 +592,7 @@ func (rsc *ReplicaSetController) manageReplicas(filteredPods []*v1.Pod, rs *exte
 				defer wg.Done()
 				if err := rsc.podControl.DeletePod(rs.Namespace, targetPod.Name, rs); err != nil {
 					// Decrement the expected number of deletes because the informer won't observe this deletion
+					// 递减删除的expected number，因为informer不会关注到该deletion
 					podKey := controller.PodKey(targetPod)
 					glog.V(2).Infof("Failed to delete %v, decrementing expectations for %v %s/%s", podKey, rsc.Kind, rs.Namespace, rs.Name)
 					rsc.expectations.DeletionObserved(rsKey, podKey)
@@ -572,6 +605,7 @@ func (rsc *ReplicaSetController) manageReplicas(filteredPods []*v1.Pod, rs *exte
 		select {
 		case err := <-errCh:
 			// all errors have been reported before and they're likely to be the same, so we'll only return the first one we hit.
+			// 所有的erros之前都已经report过了并且它们可能都是一样的，因此我们选择第一个返回的那个
 			if err != nil {
 				return err
 			}
@@ -585,6 +619,8 @@ func (rsc *ReplicaSetController) manageReplicas(filteredPods []*v1.Pod, rs *exte
 // syncReplicaSet will sync the ReplicaSet with the given key if it has had its expectations fulfilled,
 // meaning it did not expect to see any more of its pods created or deleted. This function is not meant to be
 // invoked concurrently with the same key.
+// syncReplicaSet会用给定的key来同步ReplicaSet，如果它的期望已经满足了的话，这意味着它不想看到更多的pods被创建或删除
+// 本函数不希望和用同样的key被同时调用
 func (rsc *ReplicaSetController) syncReplicaSet(key string) error {
 
 	startTime := time.Now()
@@ -597,6 +633,7 @@ func (rsc *ReplicaSetController) syncReplicaSet(key string) error {
 	if err != nil {
 		return err
 	}
+	// 获取namespace下加name的ReplicaSets
 	rs, err := rsc.rsLister.ReplicaSets(namespace).Get(name)
 	if errors.IsNotFound(err) {
 		glog.V(4).Infof("%v %v has been deleted", rsc.Kind, key)
@@ -607,7 +644,9 @@ func (rsc *ReplicaSetController) syncReplicaSet(key string) error {
 		return err
 	}
 
+	// rs的状态是否满足预期？从而决定是否同步
 	rsNeedsSync := rsc.expectations.SatisfiedExpectations(key)
+	// 获取rs的selector
 	selector, err := metav1.LabelSelectorAsSelector(rs.Spec.Selector)
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("Error converting pod selector to selector: %v", err))
@@ -624,6 +663,7 @@ func (rsc *ReplicaSetController) syncReplicaSet(key string) error {
 	}
 	// Ignore inactive pods.
 	var filteredPods []*v1.Pod
+	// 忽略所有inactive的pods
 	for _, pod := range allPods {
 		if controller.IsPodActive(pod) {
 			filteredPods = append(filteredPods, pod)
@@ -632,19 +672,25 @@ func (rsc *ReplicaSetController) syncReplicaSet(key string) error {
 
 	// NOTE: filteredPods are pointing to objects from cache - if you need to
 	// modify them, you need to copy it first.
+	// filteredPods指向cache中的对象
+	// 如果你想要修改它，你就要先对它进行拷贝
+	// 找到缓存中和selector匹配的pods
 	filteredPods, err = rsc.claimPods(rs, selector, filteredPods)
 	if err != nil {
 		return err
 	}
 
 	var manageReplicasErr error
+	// 如果rs需要同步并且rs没有被删除
 	if rsNeedsSync && rs.DeletionTimestamp == nil {
 		manageReplicasErr = rsc.manageReplicas(filteredPods, rs)
 	}
 	rs = rs.DeepCopy()
+	// 计算rs新的status
 	newStatus := calculateStatus(rs, filteredPods, manageReplicasErr)
 
 	// Always updates status as pods come up or die.
+	// 在pods启动或死亡的时候都要对status进行更新
 	updatedRS, err := updateReplicaSetStatus(rsc.kubeClient.ExtensionsV1beta1().ReplicaSets(rs.Namespace), rs, newStatus)
 	if err != nil {
 		// Multiple things could lead to this update failing. Requeuing the replica set ensures
@@ -678,16 +724,23 @@ func (rsc *ReplicaSetController) claimPods(rs *extensions.ReplicaSet, selector l
 }
 
 // slowStartBatch tries to call the provided function a total of 'count' times,
+// slowStartBatch会尝试调用给定的函数总共"count"次
 // starting slow to check for errors, then speeding up if calls succeed.
+// 慢启动用于检查error，如果返回成功的话，就加速
 //
 // It groups the calls into batches, starting with a group of initialBatchSize.
 // Within each batch, it may call the function multiple times concurrently.
+// 它将count次的调用划分成多个batch，最开始的group的大小为initialBatchSize
+// 在每个batch中，它会同时调用fn总共batchSize次
 //
 // If a whole batch succeeds, the next batch may get exponentially larger.
 // If there are any failures in a batch, all remaining batches are skipped
 // after waiting for the current batch to complete.
+// 如果整个batch成功的话，下一个batch的大小就会呈指数增长，如果在一个batch中有任何的错误
+// 在当前的batch完成之后就会全部被跳过
 //
 // It returns the number of successful calls to the function.
+// 返回成功调用fn的次数
 func slowStartBatch(count int, initialBatchSize int, fn func() error) (int, error) {
 	remaining := count
 	successes := 0
@@ -695,6 +748,7 @@ func slowStartBatch(count int, initialBatchSize int, fn func() error) (int, erro
 		errCh := make(chan error, batchSize)
 		var wg sync.WaitGroup
 		wg.Add(batchSize)
+		// 尝试调用fn总共batchSize次
 		for i := 0; i < batchSize; i++ {
 			go func() {
 				defer wg.Done()
@@ -721,6 +775,7 @@ func getPodsToDelete(filteredPods []*v1.Pod, diff int) []*v1.Pod {
 		// Sort the pods in the order such that not-ready < ready, unscheduled
 		// < scheduled, and pending < running. This ensures that we delete pods
 		// in the earlier stages whenever possible.
+		// 被保留的pods的优先级，not-ready < ready, unscheduled < scheduled以及pending < running
 		sort.Sort(controller.ActivePods(filteredPods))
 	}
 	return filteredPods[:diff]

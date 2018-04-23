@@ -72,6 +72,7 @@ const (
 )
 
 // Server is a http.Handler which exposes kubelet functionality over HTTP.
+// Server是一个http.Handler，它通过HTTP暴露kubelet的functionality
 type Server struct {
 	auth             AuthInterface
 	host             HostInterface
@@ -115,6 +116,7 @@ func (a *filteringContainer) RegisteredHandlePaths() []string {
 }
 
 // ListenAndServeKubeletServer initializes a server to respond to HTTP network requests on the Kubelet.
+// ListenAndServerKubeletServer初始化一个server用于回复发往Kubelet的HTTP network requests
 func ListenAndServeKubeletServer(
 	host HostInterface,
 	resourceAnalyzer stats.ResourceAnalyzer,
@@ -207,6 +209,7 @@ func NewServer(
 	}
 	server.InstallDefaultHandlers()
 	if enableDebuggingHandlers {
+		// 注册CRI handler
 		server.InstallDebuggingHandlers(criHandler)
 		if enableContentionProfiling {
 			goruntime.SetBlockProfileRate(1)
@@ -257,6 +260,7 @@ func (s *Server) InstallAuthFilter() {
 
 // InstallDefaultHandlers registers the default set of supported HTTP request
 // patterns with the restful Container.
+// InstallDefaultHandlers用restful Container注册默认支持的HTTP request patterns
 func (s *Server) InstallDefaultHandlers() {
 	healthz.InstallHandler(s.restfulCont,
 		healthz.PingHealthz,
@@ -295,6 +299,7 @@ func (s *Server) InstallDefaultHandlers() {
 const pprofBasePath = "/debug/pprof/"
 
 // InstallDebuggingHandlers registers the HTTP request patterns that serve logs or run commands/containers
+// InstallDebuggingHandlers注册HTTP request patterns从而能够进行logs或者运行命令/容器
 func (s *Server) InstallDebuggingHandlers(criHandler http.Handler) {
 	glog.Infof("Adding debug handlers to kubelet server.")
 
@@ -666,6 +671,7 @@ func (s *Server) getAttach(request *restful.Request, response *restful.Response)
 }
 
 // getExec handles requests to run a command inside a container.
+// getExec负责处理在一个容器中运行command的请求
 func (s *Server) getExec(request *restful.Request, response *restful.Response) {
 	params := getExecRequestParams(request)
 	streamOpts, err := remotecommandserver.NewOptions(request.Request)
@@ -691,6 +697,7 @@ func (s *Server) getExec(request *restful.Request, response *restful.Response) {
 		return
 	}
 
+	// 调用remotecommandserver的ServeExec请求
 	remotecommandserver.ServeExec(response.ResponseWriter,
 		request.Request,
 		s.host,

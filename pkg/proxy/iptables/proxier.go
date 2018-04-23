@@ -375,6 +375,8 @@ type Proxier struct {
 	// services that happened since iptables was synced. For a single object,
 	// changes are accumulated, i.e. previous is state from before all of them,
 	// current is state after applying all of those.
+	// endpointsChanges和serviceChanges包含了自iptables同步以来endpoints和services所有的change
+	// 对于单个的对象，changes都是累加的
 	endpointsChanges endpointsChangeMap
 	serviceChanges   serviceChangeMap
 
@@ -385,9 +387,12 @@ type Proxier struct {
 	// endpointsSynced and servicesSynced are set to true when corresponding
 	// objects are synced after startup. This is used to avoid updating iptables
 	// with some partial data after kube-proxy restart.
+	// 当对应的对象在启动之后被同步以后，endpointsSynced和servicesSynced会被设置为true
+	// 这会用于在重启kube-proxy之后用部分数据更新iptables
 	endpointsSynced bool
 	servicesSynced  bool
 	initialized     int32
+	// 控制对syncProxyRules的调用
 	syncRunner      *async.BoundedFrequencyRunner // governs calls to syncProxyRules
 
 	// These are effectively const and do not need the mutex to be held.
@@ -410,6 +415,7 @@ type Proxier struct {
 
 	// The following buffers are used to reuse memory and avoid allocations
 	// that are significantly impacting performance.
+	// 以下的buffer都用于重用内存并且避免分配内存影响性能
 	iptablesData *bytes.Buffer
 	filterChains *bytes.Buffer
 	filterRules  *bytes.Buffer
@@ -433,6 +439,10 @@ var _ proxy.ProxyProvider = &Proxier{}
 // An error will be returned if iptables fails to update or acquire the initial lock.
 // Once a proxier is created, it will keep iptables up to date in the background and
 // will not terminate if a particular iptables call fails.
+// NewProxier根据给定的iptables Interface实例返回一个新的Proxier
+// 因为iptables的逻辑，我们假设一台机器只有一个活跃的Proxier
+// 如果iptables更新或者获取initial lock失败，则返回错误
+// 一旦proxier创建，它会在幕后保持iptables处于最新状态，并且不会因为一个特定的iptables调用而失败
 func NewProxier(ipt utiliptables.Interface,
 	sysctl utilsysctl.Interface,
 	exec utilexec.Interface,
@@ -454,6 +464,8 @@ func NewProxier(ipt utiliptables.Interface,
 	// Proxy needs br_netfilter and bridge-nf-call-iptables=1 when containers
 	// are connected to a Linux bridge (but not SDN bridges).  Until most
 	// plugins handle this, log when config is missing
+	// Proxy需要将br_netfilter和bridge-nf-call-iptables都设置为1，当容器被连接到
+	// linux bridge的时候
 	if val, err := sysctl.GetSysctl(sysctlBridgeCallIPTables); err == nil && val != 1 {
 		glog.Warningf("missing br-netfilter module or unset sysctl br-nf-call-iptables; proxy may not work as intended")
 	}
@@ -667,8 +679,9 @@ func (proxier *Proxier) isInitialized() bool {
 
 func (proxier *Proxier) OnServiceAdd(service *api.Service) {
 	namespacedName := types.NamespacedName{Namespace: service.Namespace, Name: service.Name}
-	// 调用update进行更新
+	// 调用update对serviceChange进行更新
 	if proxier.serviceChanges.update(&namespacedName, nil, service) && proxier.isInitialized() {
+		// 接着再调用syncRunner运行一次
 		proxier.syncRunner.Run()
 	}
 }
@@ -700,6 +713,8 @@ func (proxier *Proxier) OnServiceSynced() {
 
 // <serviceMap> is updated by this function (based on the given changes).
 // <changes> map is cleared after applying them.
+// <serviceMap>在这个函数中被更新（基于给定的changes）
+// <changes> map在添加了它们之后被删除
 func updateServiceMap(
 	serviceMap proxyServiceMap,
 	changes *serviceChangeMap) (result updateServiceMapResult) {
@@ -729,6 +744,7 @@ func updateServiceMap(
 
 func (proxier *Proxier) OnEndpointsAdd(endpoints *api.Endpoints) {
 	namespacedName := types.NamespacedName{Namespace: endpoints.Namespace, Name: endpoints.Name}
+	// 调用udpate更新endpointsChanges，并且调用syncRunner更新一下
 	if proxier.endpointsChanges.update(&namespacedName, nil, endpoints) && proxier.isInitialized() {
 		proxier.syncRunner.Run()
 	}
@@ -975,6 +991,8 @@ func (proxier *Proxier) deleteEndpointConnections(connectionMap map[endpointServ
 // This is where all of the iptables-save/restore calls happen.
 // The only other iptables rules are those that are setup in iptablesInit()
 // This assumes proxier.mu is NOT held
+// 所有的iptables-save/restore都发生在这个函数
+// 其他的的iptables规则都发生在iptablesInit()
 func (proxier *Proxier) syncProxyRules() {
 	proxier.mu.Lock()
 	defer proxier.mu.Unlock()
@@ -985,6 +1003,7 @@ func (proxier *Proxier) syncProxyRules() {
 		glog.V(4).Infof("syncProxyRules took %v", time.Since(start))
 	}()
 	// don't sync rules till we've received services and endpoints
+	// 直到我们收到services和endpoints之前都不同步rules
 	if !proxier.endpointsSynced || !proxier.servicesSynced {
 		glog.V(2).Info("Not syncing iptables until Services and Endpoints have been received from master")
 		return
@@ -1010,6 +1029,7 @@ func (proxier *Proxier) syncProxyRules() {
 	glog.V(3).Infof("Syncing iptables rules")
 
 	// Create and link the kube services chain.
+	// 创建"KUBE-SERVICE" chain
 	{
 		tablesNeedServicesChain := []utiliptables.Table{utiliptables.TableFilter, utiliptables.TableNAT}
 		for _, table := range tablesNeedServicesChain {
@@ -1176,6 +1196,7 @@ func (proxier *Proxier) syncProxyRules() {
 
 	// Build rules for each service.
 	var svcNameString string
+	// 为每个service创建rules
 	for svcName, svcInfo := range proxier.serviceMap {
 		protocol := strings.ToLower(string(svcInfo.protocol))
 		svcNameString = svcInfo.serviceNameString
@@ -1205,6 +1226,7 @@ func (proxier *Proxier) syncProxyRules() {
 		}
 
 		// Capture the clusterIP.
+		// 捕获clusterIP
 		args = append(args[:0],
 			"-A", string(kubeServicesChain),
 			"-m", "comment", "--comment", fmt.Sprintf(`"%s cluster IP"`, svcNameString),
@@ -1225,6 +1247,7 @@ func (proxier *Proxier) syncProxyRules() {
 		writeLine(proxier.natRules, append(args, "-j", string(svcChain))...)
 
 		// Capture externalIPs.
+		// 捕获externalIPs
 		for _, externalIP := range svcInfo.externalIPs {
 			// If the "external" IP happens to be an IP that is local to this
 			// machine, hold the local port open so no other process can open it
@@ -1297,6 +1320,7 @@ func (proxier *Proxier) syncProxyRules() {
 		}
 
 		// Capture load-balancer ingress.
+		// 捕获load-balancer ingress
 		fwChain := svcInfo.serviceFirewallChainName
 		for _, ingress := range svcInfo.loadBalancerStatus.Ingress {
 			if ingress.IP != "" {
@@ -1432,6 +1456,7 @@ func (proxier *Proxier) syncProxyRules() {
 		}
 
 		// If the service has no endpoints then reject packets.
+		// 如果service没有endpoints，则拒绝packets
 		if len(proxier.endpointsMap[svcName]) == 0 {
 			writeLine(proxier.filterRules,
 				"-A", string(kubeServicesChain),
@@ -1448,6 +1473,7 @@ func (proxier *Proxier) syncProxyRules() {
 
 		// Generate the per-endpoint chains.  We do this in multiple passes so we
 		// can group rules together.
+		// 创建每个endpoint的chains
 		// These two slices parallel each other - keep in sync
 		endpoints = endpoints[:0]
 		endpointChains = endpointChains[:0]

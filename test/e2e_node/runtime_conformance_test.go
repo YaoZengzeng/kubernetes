@@ -259,6 +259,8 @@ while true; do sleep 1; done
 			// The following images are not added into NodeImageWhiteList, because this test is
 			// testing image pulling, these images don't need to be prepulled. The ImagePullPolicy
 			// is v1.PullAlways, so it won't be blocked by framework image white list check.
+			// 以下的这些镜像都不会被添加到NodeImageWhiteList中，因为这个测试就是用于测试拉取镜像的，这些镜像不会被提前拉取
+			// 这里ImagePullPolicy为v1.PullAlways，所以它不会被image white list检测所阻塞
 			for _, testCase := range []struct {
 				description        string
 				image              string
@@ -328,6 +330,7 @@ while true; do sleep 1; done
 						RestartPolicy: v1.RestartPolicyNever,
 					}
 					if testCase.secret {
+						// 创建secret
 						secret.Name = "image-pull-secret-" + string(uuid.NewUUID())
 						By("create image pull secret")
 						_, err := f.ClientSet.CoreV1().Secrets(f.Namespace.Name).Create(secret)
@@ -336,12 +339,14 @@ while true; do sleep 1; done
 						container.ImagePullSecrets = []string{secret.Name}
 					}
 					if testCase.credentialProvider {
+						// 创建config file，将auth信息写入
 						configFile := filepath.Join(services.KubeletRootDirectory, "config.json")
 						err := ioutil.WriteFile(configFile, []byte(auth), 0644)
 						Expect(err).NotTo(HaveOccurred())
 						defer os.Remove(configFile)
 					}
 					// checkContainerStatus checks whether the container status matches expectation.
+					// checkContainerStatus检查container的status是否符合预期
 					checkContainerStatus := func() error {
 						status, err := container.GetStatus()
 						if err != nil {
@@ -350,6 +355,8 @@ while true; do sleep 1; done
 						// We need to check container state first. The default pod status is pending, If we check
 						// pod phase first, and the expected pod phase is Pending, the container status may not
 						// even show up when we check it.
+						// 我们应该首先检查容器的状态，默认的pod的状态是pending
+						// 如果我们先检查pod的状态，期望的pod的状态是Pending，在我们检查容器状态的时候，它可能根本不会出现
 						// Check container state
 						if !testCase.waiting {
 							if status.State.Running == nil {
@@ -380,6 +387,8 @@ while true; do sleep 1; done
 					}
 					// The image registry is not stable, which sometimes causes the test to fail. Add retry mechanism to make this
 					// less flaky.
+					// image registry可能不太稳定，有时候可能导致测试fail
+					// 增加retry机制
 					const flakeRetry = 3
 					for i := 1; i <= flakeRetry; i++ {
 						var err error

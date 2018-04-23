@@ -47,6 +47,7 @@ const (
 	// DefaultCertificatesDir defines default certificate directory
 	DefaultCertificatesDir = "/etc/kubernetes/pki"
 	// DefaultImageRepository defines default image registry
+	// DefaultImageRepository定义了默认的image registry
 	DefaultImageRepository = "gcr.io/google_containers"
 	// DefaultManifestsDir defines default manifests directory
 	DefaultManifestsDir = "/etc/kubernetes/manifests"
@@ -74,6 +75,7 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 }
 
 // SetDefaults_MasterConfiguration assigns default values to Master node
+// SetDefaults_MasterConfiguration将默认值赋值给Master节点
 func SetDefaults_MasterConfiguration(obj *MasterConfiguration) {
 	if obj.KubernetesVersion == "" {
 		obj.KubernetesVersion = DefaultKubernetesVersion
@@ -105,6 +107,7 @@ func SetDefaults_MasterConfiguration(obj *MasterConfiguration) {
 		}
 	}
 
+	// 如果ImageRepository为空，则设置为
 	if obj.ImageRepository == "" {
 		obj.ImageRepository = DefaultImageRepository
 	}

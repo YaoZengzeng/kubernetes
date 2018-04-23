@@ -163,6 +163,8 @@ func (c *controller) processLoop() {
 // ResourceEventHandler can handle notifications for events that happen to a
 // resource. The events are informational only, so you can't return an
 // error.
+// ResourceEventHandler能够用于处理发生在一个资源上的事件的通知
+// 事件仅仅是通知性质的，所以不能返回错误
 //  * OnAdd is called when an object is added.
 //  * OnUpdate is called when an object is modified. Note that oldObj is the
 //      last known state of the object-- it is possible that several changes
@@ -174,6 +176,9 @@ func (c *controller) processLoop() {
 //      it will get an object of type DeletedFinalStateUnknown. This can
 //      happen if the watch is closed and misses the delete event and we don't
 //      notice the deletion until the subsequent re-list.
+//  * OnDelete会收到item的最后状态，如果它指定的话，否则它会得到一个类型为DeletedFinalStateUnkown
+// 	* 对象，这会在watch被关闭并且丢失了一个delete事件的时候发生
+//	* 我们直到下一次re-list都不会知道该次delete的发生
 type ResourceEventHandler interface {
 	OnAdd(obj interface{})
 	OnUpdate(oldObj, newObj interface{})
@@ -183,6 +188,8 @@ type ResourceEventHandler interface {
 // ResourceEventHandlerFuncs is an adaptor to let you easily specify as many or
 // as few of the notification functions as you want while still implementing
 // ResourceEventHandler.
+// ResourceEventHandlerFuns是一个adaptor，它能够让你指定任意多的或任意少的
+// notification函数，同时还是实现了ResourceEventHandler这个接口
 type ResourceEventHandlerFuncs struct {
 	AddFunc    func(obj interface{})
 	UpdateFunc func(oldObj, newObj interface{})
@@ -254,6 +261,8 @@ func (r FilteringResourceEventHandler) OnDelete(obj interface{}) {
 // DeletionHandlingMetaNamespaceKeyFunc checks for
 // DeletedFinalStateUnknown objects before calling
 // MetaNamespaceKeyFunc.
+// DeletionHandlingMetaNamespaceKeyFunc在调用MetaNamespaceKeyFunc之前
+// 确认是否为DeletedFinalStateUnknown函数
 func DeletionHandlingMetaNamespaceKeyFunc(obj interface{}) (string, error) {
 	if d, ok := obj.(DeletedFinalStateUnknown); ok {
 		return d.Key, nil

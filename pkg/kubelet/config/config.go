@@ -198,6 +198,7 @@ func (s *podStorage) Merge(source string, change interface{}) error {
 	// deliver update notifications
 	switch s.mode {
 	case PodConfigNotificationIncremental:
+		// 将所有信息都发送到updates中
 		if len(removes.Pods) > 0 {
 			s.updates <- *removes
 		}
@@ -298,6 +299,7 @@ func (s *podStorage) merge(source string, change interface{}) (adds, updates, de
 			}
 			recordFirstSeenTime(ref)
 			pods[ref.UID] = ref
+			// 在oldPods中找不到的话，直接加入addPods
 			addPods = append(addPods, ref)
 		}
 	}
@@ -306,6 +308,7 @@ func (s *podStorage) merge(source string, change interface{}) (adds, updates, de
 	update := change.(kubetypes.PodUpdate)
 	switch update.Op {
 	case kubetypes.ADD, kubetypes.UPDATE, kubetypes.DELETE:
+		// 处理ADD, UPDATE, DELETE三类事件
 		if update.Op == kubetypes.ADD {
 			glog.V(4).Infof("Adding new pods from source %s : %v", source, update.Pods)
 		} else if update.Op == kubetypes.DELETE {
@@ -338,6 +341,7 @@ func (s *podStorage) merge(source string, change interface{}) (adds, updates, de
 		for uid, existing := range oldPods {
 			if _, found := pods[uid]; !found {
 				// this is a delete
+				// 需要被移除的pods
 				removePods = append(removePods, existing)
 			}
 		}
@@ -457,6 +461,7 @@ func updateAnnotations(existing, ref *v1.Pod) {
 	existing.Annotations = annotations
 }
 
+// 判断Pod的各个部分是否完全相同
 func podsDifferSemantically(existing, ref *v1.Pod) bool {
 	if reflect.DeepEqual(existing.Spec, ref.Spec) &&
 		reflect.DeepEqual(existing.Labels, ref.Labels) &&
@@ -469,11 +474,17 @@ func podsDifferSemantically(existing, ref *v1.Pod) bool {
 }
 
 // checkAndUpdatePod updates existing, and:
+// checkAndUpdatePod更新existing
 //   * if ref makes a meaningful change, returns needUpdate=true
+//	 * 如果ref发生了有意义的change，则返回needUpdate为true
 //   * if ref makes a meaningful change, and this change is graceful deletion, returns needGracefulDelete=true
+//	 * 如果ref发生了有意义的change，且change为graceful deletion，返回needGracefulDelete为true	
 //   * if ref makes no meaningful change, but changes the pod status, returns needReconcile=true
+//	 * 如果ref没有发生有意义的change，但是改变了pod status，返回needReconcile为true
 //   * else return all false
+//	 * 否则都返回false
 //   Now, needUpdate, needGracefulDelete and needReconcile should never be both true
+//	 现在，needUpdate, needGracefulDelete以及needReconcile永远不可能同时为true
 func checkAndUpdatePod(existing, ref *v1.Pod) (needUpdate, needReconcile, needGracefulDelete bool) {
 
 	// 1. this is a reconcile
@@ -483,9 +494,11 @@ func checkAndUpdatePod(existing, ref *v1.Pod) (needUpdate, needReconcile, needGr
 		// this is not an update
 		// Only check reconcile when it is not an update, because if the pod is going to
 		// be updated, an extra reconcile is unnecessary
+		// 只有在不是update的时候才检查是否为reconcile
 		if !reflect.DeepEqual(existing.Status, ref.Status) {
 			// Pod with changed pod status needs reconcile, because kubelet should
 			// be the source of truth of pod status.
+			// 如果Pod的status改变了则需要reconcile,因为kubelet需要是pod status的source of truth
 			existing.Status = ref.Status
 			needReconcile = true
 		}
@@ -494,8 +507,10 @@ func checkAndUpdatePod(existing, ref *v1.Pod) (needUpdate, needReconcile, needGr
 
 	// Overwrite the first-seen time with the existing one. This is our own
 	// internal annotation, there is no need to update.
+	// 内部的annotation，不需要更新
 	ref.Annotations[kubetypes.ConfigFirstSeenAnnotationKey] = existing.Annotations[kubetypes.ConfigFirstSeenAnnotationKey]
 
+	// 用ref更新existing
 	existing.Spec = ref.Spec
 	existing.Labels = ref.Labels
 	existing.DeletionTimestamp = ref.DeletionTimestamp

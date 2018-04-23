@@ -25,6 +25,7 @@ import (
 // ProxyProvider is the interface provided by proxier implementations.
 type ProxyProvider interface {
 	// Sync immediately synchronizes the ProxyProvider's current state to iptables.
+	// Sync马上将ProxyProvider的当前状态同步到iptables
 	Sync()
 	// SyncLoop runs periodic work.
 	// This is expected to run as a goroutine or as the main loop of the app.

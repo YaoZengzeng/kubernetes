@@ -163,6 +163,7 @@ func Run(s *options.CMServer) error {
 		saTokenControllerInitFunc := serviceAccountTokenControllerStarter{rootClientBuilder: rootClientBuilder}.startServiceAccountTokenController
 
 		// 启动各个controller
+		// NewControllerInitializers()创建一个map，建立controller map和InitFunc之间的映射
 		if err := StartControllers(ctx, saTokenControllerInitFunc, NewControllerInitializers()); err != nil {
 			glog.Fatalf("error starting controllers: %v", err)
 		}
@@ -259,15 +260,19 @@ func createClients(s *options.CMServer) (*clientset.Clientset, *clientset.Client
 
 type ControllerContext struct {
 	// ClientBuilder will provide a client for this controller to use
+	// ClientBuilder会提供client供controller使用
 	ClientBuilder controller.ControllerClientBuilder
 
 	// InformerFactory gives access to informers for the controller.
+	// InformerFactory能够让controller访问informers
 	InformerFactory informers.SharedInformerFactory
 
 	// Options provides access to init options for a given controller
+	// Options能够让controller访问init options
 	Options options.CMServer
 
 	// AvailableResources is a map listing currently available resources
+	// AvailableResources是一个map，列举了当前可用的资源
 	AvailableResources map[schema.GroupVersionResource]bool
 
 	// Cloud is the cloud provider interface for the controllers to use.
@@ -484,6 +489,8 @@ func CreateControllerContext(s *options.CMServer, rootClientBuilder, clientBuild
 func StartControllers(ctx ControllerContext, startSATokenController InitFunc, controllers map[string]InitFunc) error {
 	// Always start the SA token controller first using a full-power client, since it needs to mint tokens for the rest
 	// If this fails, just return here and fail since other controllers won't be able to get credentials.
+	// 总是用full-power client启动SA toke controller
+	// 如果fail的话，直接返回，因为其他的	controller就不能获取credential了
 	if _, err := startSATokenController(ctx); err != nil {
 		return err
 	}

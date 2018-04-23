@@ -26,6 +26,8 @@ import (
 
 // DelayingInterface is an Interface that can Add an item at a later time. This makes it easier to
 // requeue items after failures without ending up in a hot-loop.
+// DelayingInterface是一个能在later time添加item的接口
+// 这能够让item在failures之后，重新入队更加容易而不用停止hot-loop
 type DelayingInterface interface {
 	Interface
 	// AddAfter adds an item to the workqueue after the indicated duration has passed

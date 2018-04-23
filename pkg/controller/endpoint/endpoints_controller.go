@@ -51,6 +51,7 @@ const (
 	// sequence of delays between successive queuings of a service.
 	//
 	// 5ms, 10ms, 20ms, 40ms, 80ms, 160ms, 320ms, 640ms, 1.3s, 2.6s, 5.1s, 10.2s, 20.4s, 41s, 82s
+	// maxRetries代表了一个service在从队列移除之前会进行重试的次数
 	maxRetries = 15
 
 	// An annotation on the Service denoting if the endpoints controller should
@@ -115,6 +116,7 @@ type EndpointController struct {
 
 	// serviceLister is able to list/get services and is populated by the shared informer passed to
 	// NewEndpointController.
+	// serviceLister用于list/get service，并且由传递给NewEndpointController的shared informer进行填充
 	serviceLister corelisters.ServiceLister
 	// servicesSynced returns true if the service shared informer has been synced at least once.
 	// Added as a member to the struct to allow injection for testing.
@@ -139,9 +141,13 @@ type EndpointController struct {
 	// more often than services with few pods; it also would cause a
 	// service that's inserted multiple times to be processed more than
 	// necessary.
+	// 那些需要被更新的service，在这里一个channel是不合适的
+	// 因为这会让那些有着更多的pods被更多的处理
+	// 同时也会让那些插入次数越多的service被更多的处理，而不是那些更需要的
 	queue workqueue.RateLimitingInterface
 
 	// workerLoopPeriod is the time between worker runs. The workers process the queue of service and pod changes.
+	// worker用于处理队列中的service以及pod的change
 	workerLoopPeriod time.Duration
 }
 
@@ -174,6 +180,7 @@ func (e *EndpointController) Run(workers int, stopCh <-chan struct{}) {
 
 func (e *EndpointController) getPodServiceMemberships(pod *v1.Pod) (sets.String, error) {
 	set := sets.String{}
+	// 获取缓存的并且和pod匹配的service
 	services, err := e.serviceLister.GetPodServices(pod)
 	if err != nil {
 		// don't log this error because this function makes pointless
@@ -192,6 +199,7 @@ func (e *EndpointController) getPodServiceMemberships(pod *v1.Pod) (sets.String,
 
 // When a pod is added, figure out what services it will be a member of and
 // enqueue them. obj must have *v1.Pod type.
+// 当有一个新的pod被添加时，搞清楚它会是哪个service的member并且将它们加入队列
 func (e *EndpointController) addPod(obj interface{}) {
 	pod := obj.(*v1.Pod)
 	services, err := e.getPodServiceMemberships(pod)
@@ -226,6 +234,9 @@ func podChanged(oldPod, newPod *v1.Pod) bool {
 	// will move from the unready endpoints set to the ready endpoints.
 	// So for the purposes of an endpoint, a readiness change on a pod
 	// means we have a changed pod.
+	// 当一个pod的readiness发生改变的时候，相关的endpoint address会被从unready endpoints set
+	// 移动到ready endpoints set中
+	// 因此一个pod的readiness改变了，pod也改变了
 	if podutil.IsPodReady(oldPod) != podutil.IsPodReady(newPod) {
 		return true
 	}
@@ -236,6 +247,8 @@ func podChanged(oldPod, newPod *v1.Pod) bool {
 	// Ignore the ResourceVersion because it changes
 	// with every pod update. This allows the comparison to
 	// show equality if all other relevant fields match.
+	// 忽略pod的ResourceVersion，因为每次pod update它都会改变
+	// 将它们都置为空，就会直接对其他的字段直接进行比较 
 	newEndpointAddress.TargetRef.ResourceVersion = ""
 	oldEndpointAddress.TargetRef.ResourceVersion = ""
 	if reflect.DeepEqual(newEndpointAddress, oldEndpointAddress) {
@@ -248,11 +261,13 @@ func podChanged(oldPod, newPod *v1.Pod) bool {
 func determineNeededServiceUpdates(oldServices, services sets.String, podChanged bool) sets.String {
 	if podChanged {
 		// if the labels and pod changed, all services need to be updated
+		// 如果labels和pod都改变了，则oldServices和services都需要改变
 		services = services.Union(oldServices)
 	} else {
 		// if only the labels changed, services not common to
 		// both the new and old service set (i.e the disjunctive union)
 		// need to be updated
+		// 如果只有labels改变了，则只有oldServices和services的非交集才需要更新
 		services = services.Difference(oldServices).Union(oldServices.Difference(services))
 	}
 	return services
@@ -261,19 +276,25 @@ func determineNeededServiceUpdates(oldServices, services sets.String, podChanged
 // When a pod is updated, figure out what services it used to be a member of
 // and what services it will be a member of, and enqueue the union of these.
 // old and cur must be *v1.Pod types.
+// 当一个pod更新的时候，搞清楚它曾是哪些service的member以及会成为哪些service的member
+// 并将这些联合起来加入队列
+// old以及cur都必须为*v1.Pod类型
 func (e *EndpointController) updatePod(old, cur interface{}) {
 	newPod := cur.(*v1.Pod)
 	oldPod := old.(*v1.Pod)
 	if newPod.ResourceVersion == oldPod.ResourceVersion {
 		// Periodic resync will send update events for all known pods.
+		// 阶段性的resync会为所有已知的pods发送update事件
 		// Two different versions of the same pod will always have different RVs.
 		return
 	}
 
+	// pod本身发生了变化，例如readiness，代表的endpoint等等
 	podChangedFlag := podChanged(oldPod, newPod)
 
 	// Check if the pod labels have changed, indicating a possibe
 	// change in the service membership
+	// 检查pod的label是否发生改变，这暗示着可能的service membership的改变
 	labelsChanged := false
 	if !reflect.DeepEqual(newPod.Labels, oldPod.Labels) ||
 		!hostNameAndDomainAreEqual(newPod, oldPod) {
@@ -297,6 +318,7 @@ func (e *EndpointController) updatePod(old, cur interface{}) {
 			utilruntime.HandleError(fmt.Errorf("Unable to get pod %v/%v's service memberships: %v", oldPod.Namespace, oldPod.Name, err))
 			return
 		}
+		// 用于确定哪些service需要更新
 		services = determineNeededServiceUpdates(oldServices, services, podChangedFlag)
 	}
 
@@ -312,6 +334,8 @@ func hostNameAndDomainAreEqual(pod1, pod2 *v1.Pod) bool {
 
 // When a pod is deleted, enqueue the services the pod used to be a member of.
 // obj could be an *v1.Pod, or a DeletionFinalStateUnknown marker item.
+// 当一个pod被删除的时候，将这个pod曾经是member的service加入队列
+// obj可以是一个*v1.Pod，或者是一个DeletionnFinalStateUnkown标记的item
 func (e *EndpointController) deletePod(obj interface{}) {
 	if _, ok := obj.(*v1.Pod); ok {
 		// Enqueue all the services that the pod used to be a member
@@ -391,13 +415,16 @@ func (e *EndpointController) syncService(key string) error {
 		glog.V(4).Infof("Finished syncing service %q endpoints. (%v)", key, time.Now().Sub(startTime))
 	}()
 
+	// 从key中获取service所在的namespace和name
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		return err
 	}
+	// 根据从key中获取来的namespace和name在serviceLister中找到缓存
 	service, err := e.serviceLister.Services(namespace).Get(name)
 	if err != nil {
 		// Delete the corresponding endpoint, as the service has been deleted.
+		// 如果service已经被删除的话，删除对应的endpoint
 		// TODO: Please note that this will delete an endpoint when a
 		// service is deleted. However, if we're down at the time when
 		// the service is deleted, we will miss that deletion, so this
@@ -447,6 +474,7 @@ func (e *EndpointController) syncService(key string) error {
 			continue
 		}
 
+		// 将pod转换为endpoint
 		epa := *podToEndpointAddress(pod)
 
 		hostname := pod.Spec.Hostname
@@ -461,6 +489,7 @@ func (e *EndpointController) syncService(key string) error {
 				subsets, totalReadyEps, totalNotReadyEps = addEndpointSubset(subsets, pod, epa, epp, tolerateUnreadyEndpoints)
 			}
 		} else {
+			// 遍历service的所有port
 			for i := range service.Spec.Ports {
 				servicePort := &service.Spec.Ports[i]
 
@@ -473,6 +502,7 @@ func (e *EndpointController) syncService(key string) error {
 				}
 
 				var readyEps, notReadyEps int
+				// 创建endpoint
 				epp := v1.EndpointPort{Name: portName, Port: int32(portNum), Protocol: portProto}
 				subsets, readyEps, notReadyEps = addEndpointSubset(subsets, pod, epa, epp, tolerateUnreadyEndpoints)
 				totalReadyEps = totalReadyEps + readyEps
@@ -497,6 +527,8 @@ func (e *EndpointController) syncService(key string) error {
 		}
 	}
 
+	// 如果currentEndpoints的ResourceVersion为0
+	// 则需要创建endpoint
 	createEndpoints := len(currentEndpoints.ResourceVersion) == 0
 
 	if !createEndpoints &&
@@ -515,16 +547,21 @@ func (e *EndpointController) syncService(key string) error {
 	glog.V(4).Infof("Update endpoints for %v/%v, ready: %d not ready: %d", service.Namespace, service.Name, totalReadyEps, totalNotReadyEps)
 	if createEndpoints {
 		// No previous endpoints, create them
+		// 如果之前没有endpoints，创建它们
 		_, err = e.client.CoreV1().Endpoints(service.Namespace).Create(newEndpoints)
 	} else {
 		// Pre-existing
+		// 如果之前已经存在了，就更新
 		_, err = e.client.CoreV1().Endpoints(service.Namespace).Update(newEndpoints)
 	}
 	if err != nil {
 		if createEndpoints && errors.IsForbidden(err) {
 			// A request is forbidden primarily for two reasons:
+			// 一个请求可能因为两个原因被拒绝：
 			// 1. namespace is terminating, endpoint creation is not allowed by default.
+			// 1. namespace被终止了，endpoint的创建默认是不允许的
 			// 2. policy is misconfigured, in which case no service would function anywhere.
+			// 2. policy被错误配置了，在这种情况下，没有service能正常运行
 			// Given the frequency of 1, we log at a lower level.
 			glog.V(5).Infof("Forbidden from creating endpoints: %v", err)
 		}
@@ -567,6 +604,7 @@ func addEndpointSubset(subsets []v1.EndpointSubset, pod *v1.Pod, epa v1.Endpoint
 	epp v1.EndpointPort, tolerateUnreadyEndpoints bool) ([]v1.EndpointSubset, int, int) {
 	var readyEps int = 0
 	var notReadyEps int = 0
+	// 如果能够忍受不ready的endpoints或者pod处于ready状态，则都算ready的endpoint
 	if tolerateUnreadyEndpoints || podutil.IsPodReady(pod) {
 		subsets = append(subsets, v1.EndpointSubset{
 			Addresses: []v1.EndpointAddress{epa},
@@ -584,6 +622,7 @@ func addEndpointSubset(subsets []v1.EndpointSubset, pod *v1.Pod, epa v1.Endpoint
 	return subsets, readyEps, notReadyEps
 }
 
+// shouldPodBeInEndpoints判断pod是否最终死亡
 func shouldPodBeInEndpoints(pod *v1.Pod) bool {
 	switch pod.Spec.RestartPolicy {
 	case v1.RestartPolicyNever:

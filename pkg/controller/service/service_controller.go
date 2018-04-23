@@ -67,10 +67,13 @@ const (
 
 	// LabelNodeRoleMaster specifies that a node is a master
 	// It's copied over to kubeadm until it's merged in core: https://github.com/kubernetes/kubernetes/pull/39112
+	// LabelNodeRoleMaster表明该node为master
 	LabelNodeRoleMaster = "node-role.kubernetes.io/master"
 
 	// LabelNodeRoleExcludeBalancer specifies that the node should be
 	// exclude from load balancers created by a cloud provider.
+	// LabelNodeRoleExcludeBalancer表明该node需要被排除到cloud provider建立
+	// 的load balancer之外
 	LabelNodeRoleExcludeBalancer = "alpha.service-controller.kubernetes.io/exclude-balancer"
 )
 
@@ -139,10 +142,12 @@ func New(
 
 	serviceInformer.Informer().AddEventHandlerWithResyncPeriod(
 		cache.ResourceEventHandlerFuncs{
+			// Add就直接加入队列
 			AddFunc: s.enqueueService,
 			UpdateFunc: func(old, cur interface{}) {
 				oldSvc, ok1 := old.(*v1.Service)
 				curSvc, ok2 := cur.(*v1.Service)
+				// 判断service是否需要加入队列
 				if ok1 && ok2 && s.needsUpdate(oldSvc, curSvc) {
 					s.enqueueService(cur)
 				}
@@ -173,6 +178,8 @@ func (s *ServiceController) enqueueService(obj interface{}) {
 // Run starts a background goroutine that watches for changes to services that
 // have (or had) LoadBalancers=true and ensures that they have
 // load balancers created and deleted appropriately.
+// 启动一个background goroutine用于监听LoadBalancers=true类型的service的change
+// 并且保证它们的load balancer的创建以及删除
 // serviceSyncPeriod controls how often we check the cluster's services to
 // ensure that the correct load balancers exist.
 // nodeSyncPeriod controls how often we check the cluster's nodes to determine
@@ -180,6 +187,7 @@ func (s *ServiceController) enqueueService(obj interface{}) {
 //
 // It's an error to call Run() more than once for a given ServiceController
 // object.
+// 对于给定的ServiceController多次调用Run()函数是错的
 func (s *ServiceController) Run(stopCh <-chan struct{}, workers int) {
 	defer runtime.HandleCrash()
 	defer s.workingQueue.ShutDown()
@@ -220,6 +228,7 @@ func (s *ServiceController) worker() {
 
 func (s *ServiceController) init() error {
 	if s.cloud == nil {
+		// load balancer类型的service，如果没有cloud provider就会fail
 		return fmt.Errorf("WARNING: no cloud provider provided, services of type LoadBalancer will fail")
 	}
 

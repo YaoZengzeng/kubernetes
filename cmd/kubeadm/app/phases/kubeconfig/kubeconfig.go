@@ -59,6 +59,9 @@ type kubeConfigSpec struct {
 // CreateInitKubeConfigFiles will create and write to disk all kubeconfig files necessary in the kubeadm init phase
 // to establish the control plane, including also the admin kubeconfig file.
 // If kubeconfig files already exists, they are used only if evaluated equal; otherwise an error is returned.
+// CreateInitKubeConfigFiles会在kubeadm init阶段创建并且将所有必要的kubeconfig file写入磁盘
+// 用于建立控制平面，同时也包括admin kubeconfig file
+// 如果kubeconfig files已经存在的话，它们只有在评估了完全相同之后才会被使用，否则返回错误
 func CreateInitKubeConfigFiles(outDir string, cfg *kubeadmapi.MasterConfiguration) error {
 	return createKubeConfigFiles(
 		outDir,

@@ -81,6 +81,8 @@ type KubeSchedulerConfiguration struct {
 
 	// schedulerName is name of the scheduler, used to select which pods
 	// will be processed by this scheduler, based on pod's "spec.SchedulerName".
+	// schedulerName是scheduler的名字，用来选择哪些pods该由这个scheduler处理
+	// 基于pod的"spec.SchedulerName"
 	SchedulerName string
 	// AlgorithmSource specifies the scheduler algorithm source.
 	AlgorithmSource SchedulerAlgorithmSource

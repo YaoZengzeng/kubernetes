@@ -33,6 +33,7 @@ import (
 )
 
 // updateReplicaSetStatus attempts to update the Status.Replicas of the given ReplicaSet, with a single GET/PUT retry.
+// udpateReplicaSetStatus尝试更新给定的ReplicaSet的Status.Replicas
 func updateReplicaSetStatus(c unversionedextensions.ReplicaSetInterface, rs *extensions.ReplicaSet, newStatus extensions.ReplicaSetStatus) (*extensions.ReplicaSet, error) {
 	// This is the steady state. It happens when the ReplicaSet doesn't have any expectations, since
 	// we do a periodic relist every 30s. If the generations differ but the replicas are
@@ -68,6 +69,7 @@ func updateReplicaSetStatus(c unversionedextensions.ReplicaSetInterface, rs *ext
 			return updatedRS, nil
 		}
 		// Stop retrying if we exceed statusUpdateRetries - the replicaSet will be requeued with a rate limit.
+		// 当重试超过statusUpdateRetris次时，replicaSet会以rate limit被重新入队
 		if i >= statusUpdateRetries {
 			break
 		}
@@ -89,6 +91,7 @@ func calculateStatus(rs *extensions.ReplicaSet, filteredPods []*v1.Pod, manageRe
 	// labels than are in the template. Because the label of podTemplateSpec is
 	// a superset of the selector of the replica set, so the possible
 	// matching pods must be part of the filteredPods.
+	// 统计和replica set中的pod template里的label匹配的pods的数目	
 	fullyLabeledReplicasCount := 0
 	readyReplicasCount := 0
 	availableReplicasCount := 0

@@ -229,6 +229,7 @@ func pollInternal(wait WaitFunc, condition ConditionFunc) error {
 
 // PollImmediate tries a condition func until it returns true, an error, or the timeout
 // is reached.
+// PollImmediate会不断尝试condition func，直到它返回true, error或者timeout
 //
 // Poll always checks 'condition' before waiting for the interval. 'condition'
 // will always be invoked at least once.

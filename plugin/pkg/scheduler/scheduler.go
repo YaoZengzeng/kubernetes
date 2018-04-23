@@ -63,6 +63,7 @@ type PodPreemptor interface {
 
 // Scheduler watches for new unscheduled pods. It attempts to find
 // nodes that they fit on and writes bindings back to the api server.
+// Scheduler监听没有被调度的pods，它会找到适合的nodes并且将bindings写入api server
 type Scheduler struct {
 	config *Config
 }
@@ -113,15 +114,20 @@ type Config struct {
 	// handler so that binding and setting PodCondition it is atomic.
 	PodConditionUpdater PodConditionUpdater
 	// PodPreemptor is used to evict pods and update pod annotations.
+	// PodPreemptor用于驱逐pods以及更新pod的annotations
 	PodPreemptor PodPreemptor
 
 	// NextPod should be a function that blocks until the next pod
 	// is available. We don't use a channel for this, because scheduling
 	// a pod may take some amount of time and we don't want pods to get
 	// stale while they sit in a channel.
+	// NextPod是一个函数，它会一直阻塞，直到可以获取下一个pod
+	// 我们在这里不用channel，因为调度一个pod需要花费一些时间
+	// 我们不想pod待在channel里就变旧了
 	NextPod func() *v1.Pod
 
 	// WaitForCacheSync waits for scheduler cache to populate.
+	// WaitForCacheSync等待scheduler的cache填充完成
 	// It returns true if it was successful, false if the controller should shutdown.
 	WaitForCacheSync func() bool
 
@@ -133,9 +139,11 @@ type Config struct {
 	Recorder record.EventRecorder
 
 	// Close this to shut down the scheduler.
+	// StopEverything用于关闭scheduler
 	StopEverything chan struct{}
 
 	// VolumeBinder handles PVC/PV binding for the pod.
+	// VolumeBinder处理pod的PVC/PV binding
 	VolumeBinder *volumebinder.VolumeBinder
 }
 
@@ -167,6 +175,7 @@ func NewFromConfig(config *Config) *Scheduler {
 }
 
 // Run begins watching and scheduling. It waits for cache to be synced, then starts a goroutine and returns immediately.
+// Run开始监听并且调度，它先等待cache被sync，然后再启动一个goroutine并且立即返回
 func (sched *Scheduler) Run() {
 	if !sched.config.WaitForCacheSync() {
 		return
@@ -427,6 +436,7 @@ func (sched *Scheduler) bind(assumed *v1.Pod, b *v1.Binding) error {
 }
 
 // scheduleOne does the entire scheduling workflow for a single pod.  It is serialized on the scheduling algorithm's host fitting.
+// scheduleOne为单个pod完成完整的调度流
 func (sched *Scheduler) scheduleOne() {
 	pod := sched.config.NextPod()
 	if pod.DeletionTimestamp != nil {

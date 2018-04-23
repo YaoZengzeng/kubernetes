@@ -24,6 +24,7 @@ import (
 
 // PortRange represents a range of TCP/UDP ports.  To represent a single port,
 // set Size to 1.
+// PortRange代表了一个TCP/UDP端口的范围，为了表示一个单一的端口，将Size设置为1
 type PortRange struct {
 	Base int
 	Size int

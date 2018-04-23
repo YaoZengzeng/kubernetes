@@ -104,6 +104,8 @@ var _ timer = realTimer{}
 
 // NewBoundedFrequencyRunner creates a new BoundedFrequencyRunner instance,
 // which will manage runs of the specified function.
+// NewBoundedFrequencyRunner创建一个新的BoundedFrequencyRunner实例，它会对特定函数
+// 的运行进行管理
 //
 // All runs will be async to the caller of BoundedFrequencyRunner.Run, but
 // multiple runs are serialized. If the function needs to hold locks, it must
@@ -123,7 +125,9 @@ var _ timer = realTimer{}
 //
 // NewBoundedFrequencyRunner("name", fn, time.Second, 5*time.Second, 1)
 // - fn will have at least 1 second between runs
+// - fn在两次调用之间至少有1秒
 // - fn will have no more than 5 seconds between runs
+// - fn在两次调用之间不会超过5秒
 //
 // NewBoundedFrequencyRunner("name", fn, 3*time.Second, 10*time.Second, 3)
 // - fn will have at least 3 seconds between runs, with up to 3 burst runs
@@ -166,6 +170,7 @@ func construct(name string, fn func(), minInterval, maxInterval time.Duration, b
 
 // Loop handles the periodic timer and run requests.  This is expected to be
 // called as a goroutine.
+// Loop处理定时器并且运行请求
 func (bfr *BoundedFrequencyRunner) Loop(stop <-chan struct{}) {
 	glog.V(3).Infof("%s Loop running", bfr.name)
 	bfr.timer.Reset(bfr.maxInterval)

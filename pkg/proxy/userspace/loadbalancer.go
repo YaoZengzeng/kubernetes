@@ -23,9 +23,11 @@ import (
 )
 
 // LoadBalancer is an interface for distributing incoming requests to service endpoints.
+// LoadBalancer是一个用于将incoming requests分发到service endpoints的接口
 type LoadBalancer interface {
 	// NextEndpoint returns the endpoint to handle a request for the given
 	// service-port and source address.
+	// NextEndpoint返回endpoint用于处理给定service-port以及源地址的请求
 	NextEndpoint(service proxy.ServicePortName, srcAddr net.Addr, sessionAffinityReset bool) (string, error)
 	NewService(service proxy.ServicePortName, sessionAffinityType api.ServiceAffinity, stickyMaxAgeSeconds int) error
 	DeleteService(service proxy.ServicePortName)

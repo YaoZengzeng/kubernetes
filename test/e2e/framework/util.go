@@ -109,6 +109,7 @@ const (
 	PodListTimeout = time.Minute
 	// Initial pod start can be delayed O(minutes) by slow docker pulls
 	// TODO: Make this 30 seconds once #4566 is resolved.
+	// Initial pod启动的时间
 	PodStartTimeout = 5 * time.Minute
 
 	// If there are any orphaned namespaces to clean up, this test is running
@@ -1379,6 +1380,7 @@ func podCompleted(c clientset.Interface, podName, namespace string) wait.Conditi
 		if err != nil {
 			return false, err
 		}
+		// 直到pod的状态为failed或者succeeded
 		switch pod.Status.Phase {
 		case v1.PodFailed, v1.PodSucceeded:
 			return true, nil

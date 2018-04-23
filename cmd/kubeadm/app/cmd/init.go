@@ -227,6 +227,7 @@ func AddInitOtherFlags(flagSet *flag.FlagSet, cfgPath *string, skipPreFlight, sk
 }
 
 // NewInit validates given arguments and instantiates Init struct with provided information.
+// NewInit检验给定的参数并且用给定的信息初始化Init结构
 func NewInit(cfgPath string, cfg *kubeadmapi.MasterConfiguration, ignorePreflightErrors sets.String, skipTokenPrint, dryRun bool, criSocket string) (*Init, error) {
 
 	if cfgPath != "" {
@@ -265,6 +266,7 @@ func NewInit(cfgPath string, cfg *kubeadmapi.MasterConfiguration, ignorePrefligh
 	}
 
 	// Try to start the kubelet service in case it's inactive
+	// 如果kubelet没有启动的话，则试着启动它
 	preflight.TryStartKubelet(ignorePreflightErrors)
 
 	return &Init{cfg: cfg, skipTokenPrint: skipTokenPrint, dryRun: dryRun}, nil
@@ -286,9 +288,11 @@ func (i *Init) Validate(cmd *cobra.Command) error {
 }
 
 // Run executes master node provisioning, including certificates, needed static pod manifests, etc.
+// Run执行master节点的配置，包括certificates以及必要的静态pod的manifest
 func (i *Init) Run(out io.Writer) error {
 	// Get directories to write files to; can be faked if we're dry-running
 	realCertsDir := i.cfg.CertificatesDir
+	// 获取各个所需的目录
 	certsDirToWriteTo, kubeConfigDir, manifestDir, err := getDirectoriesToUse(i.dryRun, i.cfg.CertificatesDir)
 	if err != nil {
 		return fmt.Errorf("error getting directories to use: %v", err)
@@ -319,6 +323,7 @@ func (i *Init) Run(out io.Writer) error {
 	i.cfg.CertificatesDir = realCertsDir
 
 	// PHASE 3: Bootstrap the control plane
+	// 创建静态pod的manifest文件
 	if err := controlplanephase.CreateInitStaticPodManifestFiles(manifestDir, i.cfg); err != nil {
 		return fmt.Errorf("error creating init static pod manifest files: %v", err)
 	}
@@ -346,6 +351,7 @@ func (i *Init) Run(out io.Writer) error {
 	}
 
 	// Create a kubernetes client and wait for the API server to be healthy (if not dryrunning)
+	// 创建一个kubernetes client，等待API server变为healthy状态
 	client, err := createClient(i.cfg, i.dryRun)
 	if err != nil {
 		return fmt.Errorf("error creating client: %v", err)
@@ -378,6 +384,8 @@ func (i *Init) Run(out io.Writer) error {
 	// Upload currently used configuration to the cluster
 	// Note: This is done right in the beginning of cluster initialization; as we might want to make other phases
 	// depend on centralized information from this source in the future
+	// 上传当前的配置到cluster
+	// Note: 这必须在集群初始化的时候完成，因为我们以后可能基于它完成一些操作
 	if err := uploadconfigphase.UploadConfiguration(i.cfg, client); err != nil {
 		return fmt.Errorf("error uploading configuration: %v", err)
 	}
@@ -527,6 +535,8 @@ func getWaiter(dryRun bool, client clientset.Interface) apiclient.Waiter {
 // waitForAPIAndKubelet waits primarily for the API server to come up. If that takes a long time, and the kubelet
 // /healthz and /healthz/syncloop endpoints continuously are unhealthy, kubeadm will error out after a period of
 // backoffing exponentially
+// waitForAPIAndKubelet等待API server启动完成，如果这花费了太长时间，并且kubelet的/healthz和/healthz/syncloop
+// 持续不健康，kubeadm就会在一段指数回退之后，报错
 func waitForAPIAndKubelet(waiter apiclient.Waiter) error {
 	errorChan := make(chan error)
 

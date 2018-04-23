@@ -51,6 +51,7 @@ import (
 
 // informerAdapter implements ReplicaSetInformer by wrapping ReplicationControllerInformer
 // and converting objects.
+// informerAdapter通过封装ReplicationControllerInformer和转换对象来实现ReplicaSetInformer
 type informerAdapter struct {
 	rcInformer coreinformers.ReplicationControllerInformer
 }

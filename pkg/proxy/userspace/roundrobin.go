@@ -208,6 +208,7 @@ func flattenValidEndpoints(endpoints []hostPortPair) []string {
 	var result []string
 	for i := range endpoints {
 		hpp := &endpoints[i]
+		// host不为"", port大于0就是合法的endpoint
 		if isValidEndpoint(hpp) {
 			result = append(result, net.JoinHostPort(hpp.host, strconv.Itoa(hpp.port)))
 		}
@@ -255,6 +256,7 @@ func buildPortsToEndpointsMap(endpoints *api.Endpoints) map[string][]hostPortPai
 	portsToEndpoints := map[string][]hostPortPair{}
 	for i := range endpoints.Subsets {
 		ss := &endpoints.Subsets[i]
+		// port和address的笛卡尔积
 		for i := range ss.Ports {
 			port := &ss.Ports[i]
 			for i := range ss.Addresses {
@@ -262,6 +264,7 @@ func buildPortsToEndpointsMap(endpoints *api.Endpoints) map[string][]hostPortPai
 				// 从port.Name映射到一系列的hostPortPair
 				portsToEndpoints[port.Name] = append(portsToEndpoints[port.Name], hostPortPair{addr.IP, int(port.Port)})
 				// Ignore the protocol field - we'll get that from the Service objects.
+				// 忽略protocol字段 - 我们将从service对象获取它
 			}
 		}
 	}
@@ -269,6 +272,7 @@ func buildPortsToEndpointsMap(endpoints *api.Endpoints) map[string][]hostPortPai
 }
 
 func (lb *LoadBalancerRR) OnEndpointsAdd(endpoints *api.Endpoints) {
+	// 构建端口到endpoints之间的映射
 	portsToEndpoints := buildPortsToEndpointsMap(endpoints)
 
 	lb.lock.Lock()
@@ -281,6 +285,7 @@ func (lb *LoadBalancerRR) OnEndpointsAdd(endpoints *api.Endpoints) {
 		state, exists := lb.services[svcPort]
 
 		if !exists || state == nil || len(newEndpoints) > 0 {
+			// 为端口设置endpoints
 			glog.V(1).Infof("LoadBalancerRR: Setting endpoints for %s to %+v", svcPort, newEndpoints)
 			lb.updateAffinityMap(svcPort, newEndpoints)
 			// OnEndpointsAdd can be called without NewService being called externally.

@@ -126,6 +126,8 @@ type Runtime interface {
 
 // DirectStreamingRuntime is the interface implemented by runtimes for which the streaming calls
 // (exec/attach/port-forward) should be served directly by the Kubelet.
+// DirectStreamingRuntime是运行时需要实现的接口，从而让streaming calls(exec/attach/port-forward)
+// 能直接被Kubelet服务
 type DirectStreamingRuntime interface {
 	// Runs the command in the container of the specified pod. Attaches
 	// the processes stdin, stdout, and stderr. Optionally uses a tty.
@@ -139,6 +141,8 @@ type DirectStreamingRuntime interface {
 // IndirectStreamingRuntime is the interface implemented by runtimes that handle the serving of the
 // streaming calls (exec/attach/port-forward) themselves. In this case, Kubelet should redirect to
 // the runtime server.
+// IndirectStreamingRuntime是运行时实现的接口用来为streaming calls(exec/attach/port-forward)服务
+// 这种情况下，Kubelet应该转发请求到runtime server中
 type IndirectStreamingRuntime interface {
 	GetExec(id ContainerID, cmd []string, stdin, stdout, stderr, tty bool) (*url.URL, error)
 	GetAttach(id ContainerID, stdin, stdout, stderr, tty bool) (*url.URL, error)

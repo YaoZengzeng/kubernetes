@@ -17,6 +17,7 @@ limitations under the License.
 package workqueue
 
 // RateLimitingInterface is an interface that rate limits items being added to the queue.
+// RateLimitingInterface是一个用于限制items被加入到队列的速率的接口
 type RateLimitingInterface interface {
 	DelayingInterface
 

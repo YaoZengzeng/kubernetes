@@ -63,6 +63,7 @@ func TestGetCoreImage(t *testing.T) {
 		},
 	}
 	for _, rt := range tests {
+		// 对镜像的repo, version都能够指定
 		actual := GetCoreImage(rt.image, rt.repo, rt.version, rt.override)
 		if actual != rt.expected {
 			t.Errorf(

@@ -29,6 +29,10 @@ import (
 // targetPort is a number, use that.  If the targetPort is a string, look that
 // string up in all named ports in all containers in the target pod.  If no
 // match is found, fail.
+// FindPort为给定的pod和portName定位container port
+// 如果targetPort为number，则直接用它
+// 如果targetPort为一个string，则在target port的所有容器的所有named port里进行匹配
+// 如果没有匹配的，则fail
 func FindPort(pod *v1.Pod, svcPort *v1.ServicePort) (int, error) {
 	portName := svcPort.TargetPort
 	switch portName.Type {
@@ -36,12 +40,14 @@ func FindPort(pod *v1.Pod, svcPort *v1.ServicePort) (int, error) {
 		name := portName.StrVal
 		for _, container := range pod.Spec.Containers {
 			for _, port := range container.Ports {
+				// 如果容器的端口的name以及Protocol一致的话，就返回对应的port
 				if port.Name == name && port.Protocol == svcPort.Protocol {
 					return int(port.ContainerPort), nil
 				}
 			}
 		}
 	case intstr.Int:
+		// 是数值形式的port就直接返回
 		return portName.IntValue(), nil
 	}
 

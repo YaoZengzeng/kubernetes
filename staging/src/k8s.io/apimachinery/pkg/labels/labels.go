@@ -65,6 +65,8 @@ func (ls Set) AsSelector() Selector {
 // AsSelectorPreValidated converts labels into a selector, but
 // assumes that labels are already validated and thus don't
 // preform any validation.
+// AsSelectorPreValidated将labels转换为selector
+// 但是假设labels已经经过验证了，因此不用再做任何的validation
 // According to our measurements this is significantly faster
 // in codepaths that matter at high scale.
 func (ls Set) AsSelectorPreValidated() Selector {

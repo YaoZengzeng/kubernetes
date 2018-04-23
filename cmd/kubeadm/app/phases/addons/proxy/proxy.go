@@ -47,6 +47,7 @@ const (
 )
 
 // EnsureProxyAddon creates the kube-proxy addons
+// EnsureProxyAddon创建kube-proxy插件
 func EnsureProxyAddon(cfg *kubeadmapi.MasterConfiguration, client clientset.Interface) error {
 	if err := CreateServiceAccount(client); err != nil {
 		return fmt.Errorf("error when creating kube-proxy service account: %v", err)
