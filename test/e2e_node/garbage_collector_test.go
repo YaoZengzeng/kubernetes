@@ -326,10 +326,12 @@ func verifyPodRestartCount(f *framework.Framework, podName string, expectedNumCo
 	if err != nil {
 		return err
 	}
+	// pod启动的容器的数目和实际相符
 	if len(updatedPod.Status.ContainerStatuses) != expectedNumContainers {
 		return fmt.Errorf("expected pod %s to have %d containers, actual: %d",
 			updatedPod.Name, expectedNumContainers, len(updatedPod.Status.ContainerStatuses))
 	}
+	// 容器重启的次数和预期相符
 	for _, containerStatus := range updatedPod.Status.ContainerStatuses {
 		if containerStatus.RestartCount != expectedRestartCount {
 			return fmt.Errorf("pod %s had container with restartcount %d.  Should have been at least %d",

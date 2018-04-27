@@ -446,6 +446,7 @@ func (kl *Kubelet) GeneratePodHostNameAndDomain(pod *v1.Pod) (string, string, er
 }
 
 // GetPodCgroupParent gets pod cgroup parent from container manager.
+// GetPodCgroupParent从container manager中获取pod的cgroup parent
 func (kl *Kubelet) GetPodCgroupParent(pod *v1.Pod) string {
 	pcm := kl.containerManager.NewPodContainerManager()
 	_, cgroupParent := pcm.GetPodContainerName(pod)
@@ -942,6 +943,8 @@ func (kl *Kubelet) IsPodDeleted(uid types.UID) bool {
 
 // PodResourcesAreReclaimed returns true if all required node-level resources that a pod was consuming have
 // been reclaimed by the kubelet.  Reclaiming resources is a prerequisite to deleting a pod from the API server.
+// PodResourcesAreReclaimed返回true,如果所有一个pod所需的所有node-level的资源已经被kubelet回收了
+// 回收资源是从api server中删除一个pod的前提
 func (kl *Kubelet) PodResourcesAreReclaimed(pod *v1.Pod, status v1.PodStatus) bool {
 	if !notRunning(status.ContainerStatuses) {
 		// We shouldnt delete pods that still have running containers
@@ -954,10 +957,12 @@ func (kl *Kubelet) PodResourcesAreReclaimed(pod *v1.Pod, status v1.PodStatus) bo
 		glog.V(3).Infof("Pod %q is terminated, Error getting runtimeStatus from the podCache: %s", format.Pod(pod), err)
 		return false
 	}
+	// pod中还有容器存在
 	if len(runtimeStatus.ContainerStatuses) > 0 {
 		glog.V(3).Infof("Pod %q is terminated, but some containers have not been cleaned up: %+v", format.Pod(pod), runtimeStatus.ContainerStatuses)
 		return false
 	}
+	// 如果还有pod的volume没有被删除，并且kubelet没有配置为保存terminated的pod的volume
 	if kl.podVolumesExist(pod.UID) && !kl.keepTerminatedPodVolumes {
 		// We shouldnt delete pods whose volumes have not been cleaned up if we are not keeping terminated pod volumes
 		glog.V(3).Infof("Pod %q is terminated, but some volumes have not been cleaned up", format.Pod(pod))

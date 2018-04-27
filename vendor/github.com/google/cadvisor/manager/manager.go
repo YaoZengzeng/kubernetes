@@ -61,6 +61,7 @@ var applicationMetricsCountLimit = flag.Int("application_metrics_count_limit", 1
 
 // The Manager interface defines operations for starting a manager and getting
 // container and machine information.
+// Manager接口定义了启动manager以及获取容器和机器信息的操作
 type Manager interface {
 	// Start the manager. Calling other manager methods before this returns
 	// may produce undefined behavior.
@@ -138,12 +139,14 @@ type Manager interface {
 }
 
 // New takes a memory storage and returns a new manager.
+// New获取一个memory storage并且返回一个新的manager
 func New(memoryCache *memory.InMemoryCache, sysfs sysfs.SysFs, maxHousekeepingInterval time.Duration, allowDynamicHousekeeping bool, ignoreMetricsSet container.MetricSet, collectorHttpClient *http.Client) (Manager, error) {
 	if memoryCache == nil {
 		return nil, fmt.Errorf("manager requires memory storage")
 	}
 
 	// Detect the container we are running on.
+	// 检测我们正在运行的容器
 	selfContainer, err := cgroups.GetOwnCgroupPath("cpu")
 	if err != nil {
 		return nil, err
@@ -264,6 +267,7 @@ type manager struct {
 }
 
 // Start the container manager.
+// 启动container manager
 func (self *manager) Start() error {
 	err := docker.Register(self, self.fsInfo, self.ignoreMetrics)
 	if err != nil {
@@ -551,6 +555,7 @@ func (self *manager) getSubcontainers(containerName string) map[string]*containe
 	containersMap := make(map[string]*containerData, len(self.containers))
 
 	// Get all the unique subcontainers of the specified container
+	// 获取指定容器的所有unique subcontainers
 	matchedName := path.Join(containerName, "/")
 	for i := range self.containers {
 		name := self.containers[i].info.Name

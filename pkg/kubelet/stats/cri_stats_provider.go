@@ -71,9 +71,11 @@ func newCRIStatsProvider(
 }
 
 // ListPodStats returns the stats of all the pod-managed containers.
+// ListPodStats返回所有pod管理的容器的stats
 func (p *criStatsProvider) ListPodStats() ([]statsapi.PodStats, error) {
 	// Gets node root filesystem information, which will be used to populate
 	// the available and capacity bytes/inodes in container stats.
+	// 获取节点的rootfs信息，它可以用来填充container stats中的available以及capacity
 	rootFsInfo, err := p.cadvisor.RootFsInfo()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get rootFs info: %v", err)
@@ -86,22 +88,28 @@ func (p *criStatsProvider) ListPodStats() ([]statsapi.PodStats, error) {
 
 	// Creates pod sandbox map.
 	podSandboxMap := make(map[string]*runtimeapi.PodSandbox)
+	// 调用CRI的list sandbox获取信息
 	podSandboxes, err := p.runtimeService.ListPodSandbox(&runtimeapi.PodSandboxFilter{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list all pod sandboxes: %v", err)
 	}
 	for _, s := range podSandboxes {
+		// 保存list sandbox的结果
 		podSandboxMap[s.Id] = s
 	}
 
 	// uuidToFsInfo is a map from filesystem UUID to its stats. This will be
 	// used as a cache to avoid querying cAdvisor for the filesystem stats with
 	// the same UUID many times.
+	// uuidToFsInfo是文件系统的UUID到它的status的映射
+	// 它会作为缓存从而避免用同样的UUID访问cAdvisor多次用于获取文件系统的stats
 	uuidToFsInfo := make(map[runtimeapi.StorageIdentifier]*cadvisorapiv2.FsInfo)
 
 	// sandboxIDToPodStats is a temporary map from sandbox ID to its pod stats.
+	// sandboxIDToPodStats是sandbox ID到它的pod stats的临时映射
 	sandboxIDToPodStats := make(map[string]*statsapi.PodStats)
 
+	// 获取container stats
 	resp, err := p.runtimeService.ListContainerStats(&runtimeapi.ContainerStatsFilter{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list all container stats: %v", err)
@@ -111,6 +119,7 @@ func (p *criStatsProvider) ListPodStats() ([]statsapi.PodStats, error) {
 	// Creates container map.
 	containerMap := make(map[string]*runtimeapi.Container)
 	for _, c := range containers {
+		// 保存list container的结果
 		containerMap[c.Id] = c
 	}
 
@@ -119,6 +128,7 @@ func (p *criStatsProvider) ListPodStats() ([]statsapi.PodStats, error) {
 		return nil, fmt.Errorf("failed to get container info from cadvisor: %v", err)
 	}
 
+	// 遍历ListContainerStats返回的结果
 	for _, stats := range resp {
 		containerID := stats.Attributes.Id
 		container, found := containerMap[containerID]
@@ -128,6 +138,7 @@ func (p *criStatsProvider) ListPodStats() ([]statsapi.PodStats, error) {
 		}
 
 		podSandboxID := container.PodSandboxId
+		// 找到sandbox status
 		podSandbox, found := podSandboxMap[podSandboxID]
 		if !found {
 			glog.Errorf("Unknown id %q in pod sandbox map.", podSandboxID)
@@ -136,25 +147,33 @@ func (p *criStatsProvider) ListPodStats() ([]statsapi.PodStats, error) {
 
 		// Creates the stats of the pod (if not created yet) which the
 		// container belongs to.
+		// 根据sandbox ID获取pod stats
 		ps, found := sandboxIDToPodStats[podSandboxID]
 		if !found {
+			// 创建pod stats
+			// buildPodStats仅仅是一些标识性的元数据的填充
 			ps = buildPodStats(podSandbox)
 			// Fill stats from cadvisor is available for full set of required pod stats
+			// 用从cadvisor获取的数据填充caInfos
 			caPodSandbox, found := caInfos[podSandboxID]
 			if !found {
 				glog.V(4).Info("Unable to find cadvisor stats for sandbox %q", podSandboxID)
 			} else {
+				// addCadvisorPodStats主要用于填充网络相关的数据
 				p.addCadvisorPodStats(ps, &caPodSandbox)
 			}
 			sandboxIDToPodStats[podSandboxID] = ps
 		}
+		// 第一个参数stats是从CRI获取的结果
 		cs := p.makeContainerStats(stats, container, &rootFsInfo, uuidToFsInfo)
 		// If cadvisor stats is available for the container, use it to populate
 		// container stats
+		// 如果容器的cadvisor stats是可得的，用它来填充container stats
 		caStats, caFound := caInfos[containerID]
 		if !caFound {
 			glog.V(4).Info("Unable to find cadvisor stats for %q", containerID)
 		} else {
+			// 添加容器的CPU和memory相关的信息
 			p.addCadvisorContainerStats(cs, &caStats)
 		}
 		ps.Containers = append(ps.Containers, *cs)
@@ -162,6 +181,7 @@ func (p *criStatsProvider) ListPodStats() ([]statsapi.PodStats, error) {
 
 	result := make([]statsapi.PodStats, 0, len(sandboxIDToPodStats))
 	for _, s := range sandboxIDToPodStats {
+		// 为每个pod stats添加volume等相关信息
 		p.makePodStorageStats(s, &rootFsInfo)
 		result = append(result, *s)
 	}
@@ -177,6 +197,7 @@ func (p *criStatsProvider) ImageFsStats() (*statsapi.FsStats, error) {
 
 	// CRI may return the stats of multiple image filesystems but we only
 	// return the first one.
+	// CRI可能会返回多个image filesystems，但是我们只要第一个
 	//
 	// TODO(yguo0905): Support returning stats of multiple image filesystems.
 	for _, fs := range resp {
@@ -205,6 +226,8 @@ func (p *criStatsProvider) ImageFsStats() (*statsapi.FsStats, error) {
 // getFsInfo returns the information of the filesystem with the specified
 // storageID. If any error occurs, this function logs the error and returns
 // nil.
+// getFsInfo返回给定的storageID的文件系统的信息
+// 如果报错，本函数会记录error并且返回nil
 func (p *criStatsProvider) getFsInfo(storageID *runtimeapi.StorageIdentifier) *cadvisorapiv2.FsInfo {
 	if storageID == nil {
 		glog.V(2).Infof("Failed to get filesystem info: storageID is nil.")
@@ -232,6 +255,7 @@ func buildPodStats(podSandbox *runtimeapi.PodSandbox) *statsapi.PodStats {
 			Namespace: podSandbox.Metadata.Namespace,
 		},
 		// The StartTime in the summary API is the pod creation time.
+		// StartTime是pod创建的时间
 		StartTime: metav1.NewTime(time.Unix(0, podSandbox.CreatedAt)),
 	}
 }
@@ -280,21 +304,26 @@ func (p *criStatsProvider) makeContainerStats(
 			InodesFree:     rootFsInfo.InodesFree,
 			Inodes:         rootFsInfo.Inodes,
 			// UsedBytes and InodesUsed are unavailable from CRI stats.
+			// UsedBytes和InodesUsed从CRI stats中无法获取
 			//
 			// TODO(yguo0905): Get this information from kubelet and
 			// populate the two fields here.
 		},
 		// UserDefinedMetrics is not supported by CRI.
 	}
+	// 如果从CRI获取的stats的CPU不为空
 	if stats.Cpu != nil {
 		result.CPU.Time = metav1.NewTime(time.Unix(0, stats.Cpu.Timestamp))
 		if stats.Cpu.UsageCoreNanoSeconds != nil {
+			// UsageCoreNanoSeconds是从CRI获取的
 			result.CPU.UsageCoreNanoSeconds = &stats.Cpu.UsageCoreNanoSeconds.Value
 		}
 	}
+	// 如果从CRI获取的stats的Memory不为空
 	if stats.Memory != nil {
 		result.Memory.Time = metav1.NewTime(time.Unix(0, stats.Memory.Timestamp))
 		if stats.Memory.WorkingSetBytes != nil {
+			// WorkingSetBytes也从CRI获取
 			result.Memory.WorkingSetBytes = &stats.Memory.WorkingSetBytes.Value
 		}
 	}
@@ -373,6 +402,7 @@ func (p *criStatsProvider) addCadvisorContainerStats(
 		cs.UserDefinedMetrics = cadvisorInfoToUserDefinedMetrics(caPodStats)
 	}
 
+	// 从cadvisor中获取CPU和Memory相关的信息
 	cpu, memory := cadvisorInfoToCPUandMemoryStats(caPodStats)
 	if cpu != nil {
 		cs.CPU = cpu
@@ -384,6 +414,7 @@ func (p *criStatsProvider) addCadvisorContainerStats(
 
 func getCRICadvisorStats(ca cadvisor.Interface) (map[string]cadvisorapiv2.ContainerInfo, error) {
 	stats := make(map[string]cadvisorapiv2.ContainerInfo)
+	// 用cadvisor获取容器相关的信息
 	infos, err := getCadvisorContainerInfo(ca)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch cadvisor stats: %v", err)

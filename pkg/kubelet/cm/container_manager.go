@@ -62,9 +62,11 @@ type ContainerManager interface {
 	NewPodContainerManager() PodContainerManager
 
 	// GetMountedSubsystems returns the mounted cgroup subsystems on the node
+	// GetMountedSubsystems返回在node中挂载的cgroup子系统
 	GetMountedSubsystems() *CgroupSubsystems
 
 	// GetQOSContainersInfo returns the names of top level QoS containers
+	// GetQOSContainersInfo返回顶层的QoS容器的名字
 	GetQOSContainersInfo() QOSContainersInfo
 
 	// GetNodeAllocatableReservation returns the amount of compute resources that have to be reserved from scheduling.

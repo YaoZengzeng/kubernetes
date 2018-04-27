@@ -83,6 +83,7 @@ type StatsProvider struct {
 
 // containerStatsProvider is an interface that provides the stats of the
 // containers managed by pods.
+// containerStatsProvider返回pod管理的容器的stats
 type containerStatsProvider interface {
 	ListPodStats() ([]statsapi.PodStats, error)
 	ImageFsStats() (*statsapi.FsStats, error)

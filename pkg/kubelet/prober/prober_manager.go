@@ -47,14 +47,19 @@ type Manager interface {
 
 	// RemovePod handles cleaning up the removed pod state, including terminating probe workers and
 	// deleting cached results.
+	// RemovePod负责清除已经被移除的pod state，包括结束probe workers以及删除缓存的result
 	RemovePod(pod *v1.Pod)
 
 	// CleanupPods handles cleaning up pods which should no longer be running.
 	// It takes a list of "active pods" which should not be cleaned up.
+	// CleanupPods清理那些不应该再继续运行的pods
+	// 它会接收一系列的"active pods"，它们不会被清除
 	CleanupPods(activePods []*v1.Pod)
 
 	// UpdatePodStatus modifies the given PodStatus with the appropriate Ready state for each
 	// container based on container running status, cached probe results and worker states.
+	// UpdatePodStatus修改给定的PodStatus，为每个容器设置合适的Ready state
+	// 基于容器的运行状态，缓存的probe results以及worker states
 	UpdatePodStatus(types.UID, *v1.PodStatus)
 
 	// Start starts the Manager sync loops.
@@ -108,6 +113,7 @@ func (m *manager) Start() {
 }
 
 // Key uniquely identifying container probes
+// Key用于区分container probes
 type probeKey struct {
 	podUID        types.UID
 	containerName string
@@ -139,6 +145,7 @@ func (m *manager) AddPod(pod *v1.Pod) {
 	defer m.workerLock.Unlock()
 
 	key := probeKey{podUID: pod.UID}
+	// 遍历pod的spec中的所有容器
 	for _, c := range pod.Spec.Containers {
 		key.containerName = c.Name
 
@@ -256,5 +263,6 @@ func (m *manager) updateReadiness() {
 	update := <-m.readinessManager.Updates()
 
 	ready := update.Result == results.Success
+	// 设置status manager的container readiness
 	m.statusManager.SetContainerReadiness(update.PodUID, update.ContainerID, ready)
 }

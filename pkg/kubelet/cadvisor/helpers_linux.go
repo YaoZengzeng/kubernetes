@@ -53,6 +53,7 @@ func (i *imageFsInfoProvider) ImageFsInfoLabel() (string, error) {
 }
 
 // NewImageFsInfoProvider returns a provider for the specified runtime configuration.
+// NewImageFsInfoProvider为给定的runtime configuration提供provider
 func NewImageFsInfoProvider(runtime, runtimeEndpoint string) ImageFsInfoProvider {
 	return &imageFsInfoProvider{runtime: runtime, runtimeEndpoint: runtimeEndpoint}
 }

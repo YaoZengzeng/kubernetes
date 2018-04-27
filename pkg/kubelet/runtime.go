@@ -35,6 +35,7 @@ type runtimeState struct {
 
 // A health check function should be efficient and not rely on external
 // components (e.g., container runtime).
+// 一个health check函数应该足够高效并且不依赖于外部组件（比如，容器运行时）
 type healthCheckFnType func() (bool, error)
 
 type healthCheck struct {
@@ -42,6 +43,7 @@ type healthCheck struct {
 	fn   healthCheckFnType
 }
 
+// 添加health check函数
 func (s *runtimeState) addHealthCheck(name string, f healthCheckFnType) {
 	s.Lock()
 	defer s.Unlock()

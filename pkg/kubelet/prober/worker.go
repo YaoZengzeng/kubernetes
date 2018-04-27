@@ -56,17 +56,21 @@ type worker struct {
 	initialValue results.Result
 
 	// Where to store this workers results.
+	// 用于存储worker results
 	resultsManager results.Manager
 	probeManager   *manager
 
 	// The last known container ID for this worker.
 	containerID kubecontainer.ContainerID
 	// The last probe result for this worker.
+	// 该worker上次的probe的result
 	lastResult results.Result
 	// How many times in a row the probe has returned the same result.
+	// 同一个probe结果已经返回了多少次
 	resultRun int
 
 	// If set, skip probing.
+	// 如果onHold设置的haul，则跳过probing
 	onHold bool
 }
 
@@ -78,6 +82,7 @@ func newWorker(
 	container v1.Container) *worker {
 
 	w := &worker{
+		// 一个1的缓存，因此stop()函数就不会被阻塞
 		stopCh:       make(chan struct{}, 1), // Buffer so stop() can be non-blocking.
 		pod:          pod,
 		container:    container,
@@ -90,10 +95,12 @@ func newWorker(
 	case readiness:
 		w.spec = container.ReadinessProbe
 		w.resultsManager = m.readinessManager
+		// readiness默认的initialValue位Failure
 		w.initialValue = results.Failure
 	case liveness:
 		w.spec = container.LivenessProbe
 		w.resultsManager = m.livenessManager
+		// liveness默认的initialValue为Success
 		w.initialValue = results.Success
 	}
 
@@ -117,6 +124,7 @@ func (w *worker) run() {
 			w.resultsManager.Remove(w.containerID)
 		}
 
+		// 从probeManager中移除worker
 		w.probeManager.removeWorker(w.pod.UID, w.container.Name, w.probeType)
 	}()
 
@@ -134,6 +142,9 @@ probeLoop:
 
 // stop stops the probe worker. The worker handles cleanup and removes itself from its manager.
 // It is safe to call stop multiple times.
+// stop停止probe worker
+// worker负责清理并且从manager中移除自己
+// 多次调用本函数是安全的
 func (w *worker) stop() {
 	select {
 	case w.stopCh <- struct{}{}:
@@ -147,9 +158,12 @@ func (w *worker) stop() {
 // 返回worker是否继续
 func (w *worker) doProbe() (keepGoing bool) {
 	defer func() { recover() }() // Actually eat panics (HandleCrash takes care of logging)
+	// HandleCrash()会负责处理日志的工作
 	defer runtime.HandleCrash(func(_ interface{}) { keepGoing = true })
 
+	// 获取pod的status
 	status, ok := w.probeManager.statusManager.GetPodStatus(w.pod.UID)
+	// 从status manager中找不到status，则pod还未被创建，或者已经删除了
 	if !ok {
 		// Either the pod has not been created yet, or it was already deleted.
 		glog.V(3).Infof("No status for pod: %v", format.Pod(w.pod))
@@ -163,6 +177,7 @@ func (w *worker) doProbe() (keepGoing bool) {
 		return false
 	}
 
+	// 获取pod中容器的状态
 	c, ok := podutil.GetContainerStatus(status.ContainerStatuses, w.container.Name)
 	if !ok || len(c.ContainerID) == 0 {
 		// Either the container has not been created yet, or it was deleted.
@@ -195,6 +210,7 @@ func (w *worker) doProbe() (keepGoing bool) {
 			w.resultsManager.Set(w.containerID, results.Failure, w.pod)
 		}
 		// Abort if the container will not be restarted.
+		// 如果容器不会再被重启了，就退出
 		return c.State.Terminated == nil ||
 			w.pod.Spec.RestartPolicy != v1.RestartPolicyNever
 	}
@@ -224,9 +240,11 @@ func (w *worker) doProbe() (keepGoing bool) {
 	if (result == results.Failure && w.resultRun < int(w.spec.FailureThreshold)) ||
 		(result == results.Success && w.resultRun < int(w.spec.SuccessThreshold)) {
 		// Success or failure is below threshold - leave the probe state unchanged.
+		// 如果Sucess或者failure的次数小于threshold，则保持probe state不变
 		return true
 	}
 
+	// 设置result manager
 	w.resultsManager.Set(w.containerID, result, w.pod)
 
 	if w.probeType == liveness && result == results.Failure {

@@ -40,10 +40,13 @@ import (
 // Host methods required by stats handlers.
 type StatsProvider interface {
 	// The following stats are provided by either CRI or cAdvisor.
+	// 以下数据由CRI或者cAdvisor获取
 	//
 	// ListPodStats returns the stats of all the containers managed by pods.
+	// ListPodStats返回pod所管理的所有容器的stats
 	ListPodStats() ([]statsapi.PodStats, error)
 	// ImageFsStats returns the stats of the image filesystem.
+	// ImageFsStats返回镜像文件系统的stats
 	ImageFsStats() (*statsapi.FsStats, error)
 
 	// The following stats are provided by cAdvisor.
@@ -85,6 +88,7 @@ type handler struct {
 	summaryProvider SummaryProvider
 }
 
+// summayProvider为resource analyzer
 func CreateHandlers(rootPath string, provider StatsProvider, summaryProvider SummaryProvider) *restful.WebService {
 	h := &handler{provider, summaryProvider}
 
@@ -187,6 +191,7 @@ func (h *handler) handleSummary(request *restful.Request, response *restful.Resp
 	if err != nil {
 		handleError(response, "/stats/summary", err)
 	} else {
+		// 将summary写入response
 		writeResponse(response, summary)
 	}
 }

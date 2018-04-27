@@ -76,6 +76,7 @@ const (
 	// The expiration time of version cache.
 	versionCacheTTL = 60 * time.Second
 
+	// dockershim默认的cgroup driver为"cgroupfs"
 	defaultCgroupDriver = "cgroupfs"
 
 	// TODO: https://github.com/kubernetes/kubernetes/pull/31169 provides experimental
@@ -430,6 +431,9 @@ func (ds *dockerService) GenerateExpectedCgroupParent(cgroupParent string) (stri
 		// if we configured kubelet to use --cgroup-driver=cgroupfs, and docker is configured to use systemd driver
 		// docker will fail to launch the container because the name we provide will not be a valid slice.
 		// this is a very good thing.
+		// 如果docker使用systemd cgroup driver，它会期望*.slice风格的cgroup parent名字
+		// 如果我们遇到kubelet使用--cgroup-driver=cgroupfs，但是docker使用systemd driver
+		// docker会不能启动容器，因为我们提供的不会是一个合法的slice
 		if ds.cgroupDriver == "systemd" {
 			systemdCgroupParent, err := kubecm.ConvertCgroupFsNameToSystemd(cgroupParent)
 			if err != nil {

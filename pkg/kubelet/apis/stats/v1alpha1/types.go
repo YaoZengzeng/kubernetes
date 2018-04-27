@@ -59,10 +59,14 @@ type NodeStats struct {
 }
 
 // RuntimeStats are stats pertaining to the underlying container runtime.
+// RuntimeStats是和底层容器运行时相关的数据
 type RuntimeStats struct {
 	// Stats about the underlying filesystem where container images are stored.
 	// This filesystem could be the same as the primary (root) filesystem.
 	// Usage here refers to the total number of bytes occupied by images on the filesystem.
+	// 用于存储容器镜像的底层文件系统的数据
+	// 该文件系统可以和root fs相同
+	// 此处的Usage表示的是镜像在文件系统中占据的字节数
 	// +optional
 	ImageFs *FsStats `json:"imageFs,omitempty"`
 }
@@ -81,12 +85,14 @@ type PodStats struct {
 	// Reference to the measured Pod.
 	PodRef PodReference `json:"podRef"`
 	// The time at which data collection for the pod-scoped (e.g. network) stats was (re)started.
+	// pod-scoped的数据开始收集的时间
 	StartTime metav1.Time `json:"startTime"`
 	// Stats of containers in the measured pod.
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	Containers []ContainerStats `json:"containers" patchStrategy:"merge" patchMergeKey:"name"`
 	// Stats pertaining to CPU resources consumed by pod cgroup (which includes all containers' resource usage and pod overhead).
+	// 由pod cgroup消耗的CPU资源（包括所有容器的资源使用以及pod的损耗）
 	// +optional
 	CPU *CPUStats `json:"cpu,omitempty"`
 	// Stats pertaining to memory (RAM) resources consumed by pod cgroup (which includes all containers' resource usage and pod overhead).
@@ -263,6 +269,7 @@ type FsStats struct {
 	// +optional
 	CapacityBytes *uint64 `json:"capacityBytes,omitempty"`
 	// UsedBytes represents the bytes used for a specific task on the filesystem.
+	// UsedBytes代表文件系统中某个特定的task使用的字节数
 	// This may differ from the total bytes used on the filesystem and may not equal CapacityBytes - AvailableBytes.
 	// e.g. For ContainerStats.Rootfs this is the bytes used by the container rootfs on the filesystem.
 	// +optional

@@ -45,11 +45,15 @@ import (
 const maxProbeRetries = 3
 
 // Prober helps to check the liveness/readiness of a container.
+// Prober用于检测一个容器的liveness以及readiness
 type prober struct {
 	exec execprobe.ExecProber
 	// probe types needs different httprobe instances so they don't
 	// share a connection pool which can cause collsions to the
 	// same host:port and transient failures. See #49740.
+	// 不同的probe types有不同的httprobe实例
+	// 这样它们就不会共享同一个连接池，从而不会产生对于同一个host:port的访问
+	// 冲突以及短暂的失败
 	readinessHttp httprobe.HTTPProber
 	livenessHttp  httprobe.HTTPProber
 	tcp           tcprobe.TCPProber
@@ -61,6 +65,8 @@ type prober struct {
 
 // NewProber creates a Prober, it takes a command runner and
 // several container info managers.
+// NewProber创建一个Prober
+// 它需要一个commad runner以及一些container info managers
 func newProber(
 	runner kubecontainer.ContainerCommandRunner,
 	refManager *kubecontainer.RefManager,
@@ -92,6 +98,7 @@ func (pb *prober) probe(probeType probeType, pod *v1.Pod, status v1.PodStatus, c
 	ctrName := fmt.Sprintf("%s:%s", format.Pod(pod), container.Name)
 	if probeSpec == nil {
 		glog.Warningf("%s probe for %s is nil", probeType, ctrName)
+		// 如果spec的probe为空，则默认返回Success
 		return results.Success, nil
 	}
 
@@ -121,6 +128,8 @@ func (pb *prober) probe(probeType probeType, pod *v1.Pod, status v1.PodStatus, c
 
 // runProbeWithRetries tries to probe the container in a finite loop, it returns the last result
 // if it never succeeds.
+// runProbeWithRetries会有限次地尝试探测容器
+// 如果未成功的话，返回最后一次获取的result
 func (pb *prober) runProbeWithRetries(probeType probeType, p *v1.Probe, pod *v1.Pod, status v1.PodStatus, container v1.Container, containerID kubecontainer.ContainerID, retries int) (probe.Result, string, error) {
 	var err error
 	var result probe.Result
@@ -146,6 +155,7 @@ func buildHeader(headerList []v1.HTTPHeader) http.Header {
 
 func (pb *prober) runProbe(probeType probeType, p *v1.Probe, pod *v1.Pod, status v1.PodStatus, container v1.Container, containerID kubecontainer.ContainerID) (probe.Result, string, error) {
 	timeout := time.Duration(p.TimeoutSeconds) * time.Second
+	// 直接用pb中的配置进行调用
 	if p.Exec != nil {
 		glog.V(4).Infof("Exec-Probe Pod: %v, Container: %v, Command: %v", pod, container, p.Exec.Command)
 		command := kubecontainer.ExpandContainerCommandOnlyStatic(p.Exec.Command, container.Env)

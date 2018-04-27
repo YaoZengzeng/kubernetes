@@ -33,6 +33,8 @@ const (
 
 // GeneratePodReadyCondition returns ready condition if all containers in a pod are ready, else it
 // returns an unready condition.
+// GeneratePodReadyCondition返回ready，如果pod中所有的容器都处于ready状态
+// 否则返回状态为unready
 func GeneratePodReadyCondition(spec *v1.PodSpec, containerStatuses []v1.ContainerStatus, podPhase v1.PodPhase) v1.PodCondition {
 	// Find if all containers are ready or not.
 	if containerStatuses == nil {

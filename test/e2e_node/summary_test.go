@@ -54,6 +54,7 @@ var _ = framework.KubeDescribe("Summary API", func() {
 
 			By("Creating test pods")
 			numRestarts := int32(1)
+			// 创建pod0和pod1两个对象
 			pods := getSummaryTestPods(f, numRestarts, pod0, pod1)
 			f.PodClient().CreateBatch(pods)
 
@@ -283,8 +284,10 @@ var _ = framework.KubeDescribe("Summary API", func() {
 
 			By("Validating /stats/summary")
 			// Give pods a minute to actually start up.
+			// 首先需要达到期望的状态
 			Eventually(getNodeSummary, 1*time.Minute, 15*time.Second).Should(matchExpectations)
 			// Then the summary should match the expectations a few more times.
+			// 接着还要多次保持期望状态
 			Consistently(getNodeSummary, 30*time.Second, 15*time.Second).Should(matchExpectations)
 		})
 	})
@@ -307,6 +310,7 @@ func getSummaryTestPods(f *framework.Framework, numRestarts int32, names ...stri
 						Resources: v1.ResourceRequirements{
 							Limits: v1.ResourceList{
 								// Must set memory limit to get MemoryStats.AvailableBytes
+								// 必须设置memory limit，从而能够获取MemoryStats.AvailableBytes
 								v1.ResourceMemory: resource.MustParse("10M"),
 							},
 						},

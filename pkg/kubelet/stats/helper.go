@@ -130,6 +130,7 @@ func cadvisorInfoToContainerStats(name string, info *cadvisorapiv2.ContainerInfo
 
 // cadvisorInfoToNetworkStats returns the statsapi.NetworkStats converted from
 // the container info from cadvisor.
+// cadvisorInfoToNetworkStats返回从cadvisor处获取的容器信息转换而来的statsapi.NetworkStats
 func cadvisorInfoToNetworkStats(name string, info *cadvisorapiv2.ContainerInfo) *statsapi.NetworkStats {
 	if !info.Spec.HasNetwork {
 		return nil
@@ -215,6 +216,7 @@ func cadvisorInfoToUserDefinedMetrics(info *cadvisorapiv2.ContainerInfo) []stats
 }
 
 // latestContainerStats returns the latest container stats from cadvisor, or nil if none exist
+// latestContainerStats返回从cadvisor获取的最新的容器stats，如果不存在的话，则返回nil
 func latestContainerStats(info *cadvisorapiv2.ContainerInfo) (*cadvisorapiv2.ContainerStats, bool) {
 	stats := info.Stats
 	if len(stats) < 1 {

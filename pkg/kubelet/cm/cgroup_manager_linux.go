@@ -27,6 +27,7 @@ import (
 	units "github.com/docker/go-units"
 	"github.com/golang/glog"
 	libcontainercgroups "github.com/opencontainers/runc/libcontainer/cgroups"
+	// 调用runc的cgroup包
 	cgroupfs "github.com/opencontainers/runc/libcontainer/cgroups/fs"
 	cgroupsystemd "github.com/opencontainers/runc/libcontainer/cgroups/systemd"
 	libcontainerconfigs "github.com/opencontainers/runc/libcontainer/configs"
@@ -46,6 +47,7 @@ const (
 	// libcontainerSystemd means use libcontainer with systemd
 	libcontainerSystemd libcontainerCgroupManagerType = "systemd"
 	// systemdSuffix is the cgroup name suffix for systemd
+	// systemdSuffix是systemd的cgroup name后缀
 	systemdSuffix string = ".slice"
 )
 
@@ -54,8 +56,11 @@ const (
 var hugePageSizeList = []string{"B", "kB", "MB", "GB", "TB", "PB"}
 
 // ConvertCgroupNameToSystemd converts the internal cgroup name to a systemd name.
+// ConvertCgroupNameToSystemd将internal cgroup name转换为一个systemd name
 // For example, the name /Burstable/pod_123-456 becomes Burstable-pod_123_456.slice
+// 比如，可以将/Burstable/pod_123-456转换为Burstable-pod_123_456.slice
 // If outputToCgroupFs is true, it expands the systemd name into the cgroupfs form.
+// 如果outputToCgroupFs为true，则将systemd name扩展为/Burstable.slice/Burstable-pod_123_456.slice
 // For example, it will return /Burstable.slice/Burstable-pod_123_456.slice in above scenario.
 func ConvertCgroupNameToSystemd(cgroupName CgroupName, outputToCgroupFs bool) string {
 	name := string(cgroupName)
@@ -105,6 +110,7 @@ func ConvertCgroupNameToSystemd(cgroupName CgroupName, outputToCgroupFs bool) st
 }
 
 // ConvertCgroupFsNameToSystemd converts an expanded cgroupfs name to its systemd name.
+// ConvertCgroupFsNameToSystemd将一个expanded cgroupfs name转换为systemd name
 // For example, it will convert test.slice/test-a.slice/test-a-b.slice to become test-a-b.slice
 // NOTE: this is public right now to allow its usage in dockermanager and dockershim, ideally both those
 // code areas could use something from libcontainer if we get this style function upstream.
@@ -168,6 +174,9 @@ func RevertFromSystemdToCgroupStyleName(name string) string {
 	if err != nil {
 		panic(err)
 	}
+	// 去除".slice"
+	// 将"-"换为"/"
+	// 将"_"换为"-"
 	driverName = strings.TrimSuffix(driverName, systemdSuffix)
 	driverName = strings.Replace(driverName, "-", "/", -1)
 	driverName = strings.Replace(driverName, "_", "-", -1)
@@ -175,7 +184,9 @@ func RevertFromSystemdToCgroupStyleName(name string) string {
 }
 
 // adaptName converts a CgroupName identifier to a driver specific conversion value.
+// adaptName将CgroupName identifier转换为一个驱动特定的值
 // if outputToCgroupFs is true, the result is returned in the cgroupfs format rather than the driver specific form.
+// 如果outputToCgroupFs为true，则返回的结果为cgroupfs形式而不是特定驱动的形式
 func (l *libcontainerAdapter) adaptName(cgroupName CgroupName, outputToCgroupFs bool) string {
 	if l.cgroupManagerType != libcontainerSystemd {
 		name := string(cgroupName)
@@ -208,6 +219,7 @@ type cgroupManagerImpl struct {
 	// mounted cgroup subsystems on the node
 	subsystems *CgroupSubsystems
 	// simplifies interaction with libcontainer and its cgroup managers
+	// 简化和libcontainer和cgroup manager之间的交互
 	adapter *libcontainerAdapter
 }
 
@@ -217,6 +229,7 @@ var _ CgroupManager = &cgroupManagerImpl{}
 // NewCgroupManager is a factory method that returns a CgroupManager
 func NewCgroupManager(cs *CgroupSubsystems, cgroupDriver string) CgroupManager {
 	managerType := libcontainerCgroupfs
+	// 确定cgroup manager的类型
 	if cgroupDriver == string(libcontainerSystemd) {
 		managerType = libcontainerSystemd
 	}
@@ -227,16 +240,19 @@ func NewCgroupManager(cs *CgroupSubsystems, cgroupDriver string) CgroupManager {
 }
 
 // Name converts the cgroup to the driver specific value in cgroupfs form.
+// Name将driver specific的值转换为cgroupfs的形式
 func (m *cgroupManagerImpl) Name(name CgroupName) string {
 	return m.adapter.adaptName(name, true)
 }
 
 // CgroupName converts the literal cgroupfs name on the host to an internal identifier.
+// CgroupName将宿主机上字面的cgroupfs name转换为内部的identifier
 func (m *cgroupManagerImpl) CgroupName(name string) CgroupName {
 	return m.adapter.revertName(name)
 }
 
 // buildCgroupPaths builds a path to each cgroup subsystem for the specified name.
+// buildCgroupPaths用给定的name位每个cgroup subsystem构建path
 func (m *cgroupManagerImpl) buildCgroupPaths(name CgroupName) map[string]string {
 	cgroupFsAdaptedName := m.Name(name)
 	cgroupPaths := make(map[string]string, len(m.subsystems.MountPoints))
@@ -247,8 +263,10 @@ func (m *cgroupManagerImpl) buildCgroupPaths(name CgroupName) map[string]string 
 }
 
 // Exists checks if all subsystem cgroups already exist
+// Exists检测所有的子系统cgroup都已经存在了
 func (m *cgroupManagerImpl) Exists(name CgroupName) bool {
 	// Get map of all cgroup paths on the system for the particular cgroup
+	// 获取一个map，其中包含了系统中，对于给定cgroup的所有cgroup paths
 	cgroupPaths := m.buildCgroupPaths(name)
 
 	// the presence of alternative control groups not known to runc confuses
@@ -260,6 +278,7 @@ func (m *cgroupManagerImpl) Exists(name CgroupName) bool {
 	whitelistControllers := sets.NewString("cpu", "cpuacct", "cpuset", "memory", "systemd")
 
 	// If even one cgroup path doesn't exist, then the cgroup doesn't exist.
+	// 即使有一个cgroup path不存在，那么cgroup就不存在
 	for controller, path := range cgroupPaths {
 		// ignore mounts we don't care about
 		if !whitelistControllers.Has(controller) {
@@ -461,6 +480,7 @@ func (m *cgroupManagerImpl) Create(cgroupConfig *CgroupConfig) error {
 
 	resources := m.toResources(cgroupConfig.ResourceParameters)
 	// Initialize libcontainer's cgroup config with driver specific naming.
+	// 用特定driver的naming初始化libcontainer的cgroup config
 	libcontainerCgroupConfig := &libcontainerconfigs.Cgroup{
 		Name:      driverName,
 		Parent:    driverParent,

@@ -155,6 +155,7 @@ type basicManager struct {
 }
 
 // NewBasicPodManager returns a functional Manager.
+// NewBasicPodManager返回一个functional Manager
 func NewBasicPodManager(client MirrorClient, secretManager secret.Manager, configMapManager configmap.Manager) Manager {
 	pm := &basicManager{}
 	pm.secretManager = secretManager

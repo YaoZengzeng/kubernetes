@@ -99,6 +99,7 @@ func (c *cache) Get(id types.UID) (*PodStatus, error) {
 	return d.status, d.err
 }
 
+// GetNewerThan用于获取比minTime更新的status
 func (c *cache) GetNewerThan(id types.UID, minTime time.Time) (*PodStatus, error) {
 	ch := c.subscribe(id, minTime)
 	d := <-ch
@@ -149,6 +150,10 @@ func (c *cache) get(id types.UID) *data {
 		// What this *really* means is that there are no visible pod/containers
 		// associated with this pod. Simply return an default (mostly empty)
 		// PodStatus to reflect this.
+		// Cache应该保存所有容器运行时已知的pod/container信息
+		// 一次cache miss意味着我们在上次访问容器运行时的时候没有该pod的状态信息
+		// 实际上这意味着该pod没有可见的pod/containers与它关联
+		// 简单地返回一个默认的PodStatus来反映
 		return makeDefaultData(id)
 	}
 	return d
@@ -156,18 +161,25 @@ func (c *cache) get(id types.UID) *data {
 
 // getIfNewerThan returns the data it is newer than the given time.
 // Otherwise, it returns nil. The caller should acquire the lock.
+// getIfNewerThan返回data，如果它比给定的time更新的话
+// 否则返回nil
 func (c *cache) getIfNewerThan(id types.UID, minTime time.Time) *data {
 	d, ok := c.pods[id]
 	globalTimestampIsNewer := (c.timestamp != nil && c.timestamp.After(minTime))
 	if !ok && globalTimestampIsNewer {
 		// Status is not cached, but the global timestamp is newer than
 		// minTime, return the default status.
+		// Status没有被缓存，但是global timestamp比minTime更新
+		// 返回默认的status
 		return makeDefaultData(id)
 	}
 	if ok && (d.modified.After(minTime) || globalTimestampIsNewer) {
 		// Status is cached, return status if either of the following is true.
 		//   * status was modified after minTime
 		//   * the global timestamp of the cache is newer than minTime.
+		// 如果Status被缓存了，在以下两种情况之一为true时，返回status
+		//	 * status在minTime之后被修改了
+		//	 * minTime比cache的global timestamp无关
 		return d
 	}
 	// The pod status is not ready.
@@ -176,6 +188,7 @@ func (c *cache) getIfNewerThan(id types.UID, minTime time.Time) *data {
 
 // notify sends notifications for pod with the given id, if the requirements
 // are met. Note that the caller should acquire the lock.
+// notify发送通知至给定id的pod，如果要求满足的话
 func (c *cache) notify(id types.UID, timestamp time.Time) {
 	list, ok := c.subscribers[id]
 	if !ok {
@@ -186,12 +199,15 @@ func (c *cache) notify(id types.UID, timestamp time.Time) {
 	for i, r := range list {
 		if timestamp.Before(r.time) {
 			// Doesn't meet the time requirement; keep the record.
+			// 没有满足时间要求，保存record
 			newList = append(newList, list[i])
 			continue
 		}
+		// 否则，发送数据
 		r.ch <- c.get(id)
 		close(r.ch)
 	}
+	// 更新c.subscribers[]
 	if len(newList) == 0 {
 		delete(c.subscribers, id)
 	} else {
@@ -206,10 +222,12 @@ func (c *cache) subscribe(id types.UID, timestamp time.Time) chan *data {
 	d := c.getIfNewerThan(id, timestamp)
 	if d != nil {
 		// If the cache entry is ready, send the data and return immediately.
+		// 如果cache已经准备完成，则马上发送数据并返回
 		ch <- d
 		return ch
 	}
 	// Add the subscription record.
+	// 否则，加入subscription record
 	c.subscribers[id] = append(c.subscribers[id], &subRecord{time: timestamp, ch: ch})
 	return ch
 }

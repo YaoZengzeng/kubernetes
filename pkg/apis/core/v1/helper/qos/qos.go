@@ -33,8 +33,11 @@ func isSupportedQoSComputeResource(name v1.ResourceName) bool {
 
 // GetPodQOS returns the QoS class of a pod.
 // A pod is besteffort if none of its containers have specified any requests or limits.
+// 如果一个容器pod中没有容器指定了任何request和limit，则pod是besteffort
 // A pod is guaranteed only when requests and limits are specified for all the containers and they are equal.
+// 如果pod中的每个容器都指定了requests和limits并且相等，则pod为guranteed
 // A pod is burstable if limits and requests do not match across all containers.
+// 如果容器间的limits和requests不相等，则pod为burstable
 func GetPodQOS(pod *v1.Pod) v1.PodQOSClass {
 	requests := v1.ResourceList{}
 	limits := v1.ResourceList{}

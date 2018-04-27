@@ -32,6 +32,7 @@ import (
 )
 
 // volumeStatCalculator calculates volume metrics for a given pod periodically in the background and caches the result
+// volumeStatCalculator在后台阶段性地对一个给定的pod计算volume metrics并且缓存结果
 type volumeStatCalculator struct {
 	statsProvider StatsProvider
 	jitterPeriod  time.Duration

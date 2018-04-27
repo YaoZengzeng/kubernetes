@@ -39,6 +39,7 @@ var _ ResourceAnalyzer = &resourceAnalyzer{}
 
 // NewResourceAnalyzer returns a new ResourceAnalyzer
 // NewResourceAnalyzer返回一个新的ResourceAnalyzer
+// statsProvider其实就是kubelet
 func NewResourceAnalyzer(statsProvider StatsProvider, calVolumeFrequency time.Duration) ResourceAnalyzer {
 	fsAnalyzer := newFsResourceAnalyzer(statsProvider, calVolumeFrequency)
 	summaryProvider := NewSummaryProvider(statsProvider)

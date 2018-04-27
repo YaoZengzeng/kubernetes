@@ -103,6 +103,7 @@ func HugePageLimits(resourceList v1.ResourceList) map[int64]int64 {
 }
 
 // ResourceConfigForPod takes the input pod and outputs the cgroup resource config.
+// ResourceConfigForPod接收pod并且输出cgroup resource config
 func ResourceConfigForPod(pod *v1.Pod) *ResourceConfig {
 	// sum requests and limits.
 	reqs, limits := resource.PodRequestsAndLimits(pod)
@@ -176,6 +177,7 @@ func ResourceConfigForPod(pod *v1.Pod) *ResourceConfig {
 // GetCgroupSubsystems returns information about the mounted cgroup subsystems
 func GetCgroupSubsystems() (*CgroupSubsystems, error) {
 	// get all cgroup mounts.
+	// 获取所有已经挂载的cgroup
 	allCgroups, err := libcontainercgroups.GetCgroupMounts(true)
 	if err != nil {
 		return &CgroupSubsystems{}, err
@@ -225,6 +227,8 @@ func getCgroupProcs(dir string) ([]int, error) {
 }
 
 // GetPodCgroupNameSuffix returns the last element of the pod CgroupName identifier
+// GetPodCgroupNameSuffix返回pod的CgroupName identifier的最后一个元素
 func GetPodCgroupNameSuffix(podUID types.UID) string {
+	// "pod" + podUID
 	return podCgroupNamePrefix + string(podUID)
 }

@@ -63,10 +63,14 @@ type ResourceStats struct {
 
 // CgroupManager allows for cgroup management.
 // Supports Cgroup Creation ,Deletion and Updates.
+// CgroupManager允许对cgroup进行管理
+// 支持Cgroup的创建，删除以及更新
 type CgroupManager interface {
 	// Create creates and applies the cgroup configurations on the cgroup.
 	// It just creates the leaf cgroups.
+	// Create创建一个cgroup并且将cgroup configuration应用其上
 	// It expects the parent cgroup to already exist.
+	// 它希望它的parent cgroup已经存在
 	Create(*CgroupConfig) error
 	// Destroy the cgroup.
 	Destroy(*CgroupConfig) error
@@ -79,8 +83,11 @@ type CgroupManager interface {
 	// For example, if we pass /foo/bar
 	// then systemd should convert the name to something like
 	// foo.slice/foo-bar.slice
+	// Name返回宿主机上字面的cgroupfs name，在经过任何的driver转换之后
+	// 对于systemd，我们传入/foo/bar，systemd就将它转换为foo.slice/foo-bar.slice
 	Name(name CgroupName) string
 	// CgroupName converts the literal cgroupfs name on the host to an internal identifier.
+	// CgroupName将字面的literal cgroupfs转换为internal identifier
 	CgroupName(name string) CgroupName
 	// Pids scans through all subsystems to find pids associated with specified cgroup.
 	Pids(name CgroupName) []int
@@ -100,24 +107,33 @@ type QOSContainersInfo struct {
 // PodContainerManager stores and manages pod level containers
 // The Pod workers interact with the PodContainerManager to create and destroy
 // containers for the pod.
+// PodContainerManager存储并且管理pod level的容器
+// Pod worker通过和PodContainerManager进行交互，来为pod创建以及删除容器
 type PodContainerManager interface {
 	// GetPodContainerName returns the CgroupName identifier, and its literal cgroupfs form on the host.
+	// GetPodContainerName返回CgroupName标识符，以及它在宿主机的字面形式
 	GetPodContainerName(*v1.Pod) (CgroupName, string)
 
 	// EnsureExists takes a pod as argument and makes sure that
 	// pod cgroup exists if qos cgroup hierarchy flag is enabled.
 	// If the pod cgroup doesn't already exist this method creates it.
+	// EnsureExists将pod作为argument，并且在qos cgroup hierarchy flag使能的情况下
+	// 确保pod的cgroup存在
+	// 如果pod的cgroup不存在，则创建它
 	EnsureExists(*v1.Pod) error
 
 	// Exists returns true if the pod cgroup exists.
 	Exists(*v1.Pod) bool
 
 	// Destroy takes a pod Cgroup name as argument and destroys the pod's container.
+	// Destroy将pod的Cgroup name作为参数并且销毁pod的容器
 	Destroy(name CgroupName) error
 
 	// ReduceCPULimits reduces the CPU CFS values to the minimum amount of shares.
+	// ReduceCPULimits减小CPU CFS值至最小值
 	ReduceCPULimits(name CgroupName) error
 
 	// GetAllPodsFromCgroups enumerates the set of pod uids to their associated cgroup based on state of cgroupfs system.
+	// GetAllPodsFromCgroups枚举根据cgroupfs的状态枚举pod uids到它们相关的cgroup的映射
 	GetAllPodsFromCgroups() (map[types.UID]CgroupName, error)
 }

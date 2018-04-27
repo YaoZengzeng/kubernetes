@@ -236,8 +236,10 @@ func NewContainerManager(mountUtil mount.Interface, cadvisorInterface cadvisor.I
 	capacity = cadvisor.CapacityFromMachineInfo(machineInfo)
 
 	cgroupRoot := nodeConfig.CgroupRoot
+	// 创建cgroup manager
 	cgroupManager := NewCgroupManager(subsystems, nodeConfig.CgroupDriver)
 	// Check if Cgroup-root actually exists on the node
+	// 检查Cgroup-root是否已经在节点上存在
 	if nodeConfig.CgroupsPerQOS {
 		// this does default to / when enabled, but this tests against regressions.
 		if nodeConfig.CgroupRoot == "" {

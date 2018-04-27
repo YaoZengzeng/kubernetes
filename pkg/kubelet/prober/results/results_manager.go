@@ -28,9 +28,11 @@ import (
 // Manager提供了probe结果的缓存以及一个更新的channel
 type Manager interface {
 	// Get returns the cached result for the container with the given ID.
+	// Get返回给定ID的容器的cached result
 	Get(kubecontainer.ContainerID) (Result, bool)
 	// Set sets the cached result for the container with the given ID.
 	// The pod is only included to be sent with the update.
+	// Set设置给定ID的容器的cached result
 	Set(kubecontainer.ContainerID, Result, *v1.Pod)
 	// Remove clears the cached result for the container with the given ID.
 	Remove(kubecontainer.ContainerID)
@@ -61,6 +63,7 @@ func (r Result) String() string {
 }
 
 // Update is an enum of the types of updates sent over the Updates channel.
+// Update是通过Update channel传送的更新类型
 type Update struct {
 	ContainerID kubecontainer.ContainerID
 	Result      Result
@@ -95,7 +98,9 @@ func (m *manager) Get(id kubecontainer.ContainerID) (Result, bool) {
 }
 
 func (m *manager) Set(id kubecontainer.ContainerID, result Result, pod *v1.Pod) {
+	// 是否确实进行了更新
 	if m.setInternal(id, result) {
+		// 是的话，就发送更新
 		m.updates <- Update{id, result, pod.UID}
 	}
 }

@@ -51,7 +51,9 @@ type Interface interface {
 }
 
 // ImageFsInfoProvider informs cAdvisor how to find imagefs for container images.
+// ImageFsInfoProvider告诉cAdvisor如果找到container images的imagefs
 type ImageFsInfoProvider interface {
 	// ImageFsInfoLabel returns the label cAdvisor should use to find the filesystem holding container images.
+	// ImageFsInfoLabel返回一些label，cAdvisor会用这些label去找到存储容器镜像的文件系统
 	ImageFsInfoLabel() (string, error)
 }

@@ -361,6 +361,7 @@ func (ds *dockerService) ContainerStatus(containerID string) (*runtimeapi.Contai
 	}
 
 	// Convert to unix timestamps.
+	// 转化为unix timestamps
 	ct, st, ft := createdAt.UnixNano(), startedAt.UnixNano(), finishedAt.UnixNano()
 	exitCode := int32(r.State.ExitCode)
 

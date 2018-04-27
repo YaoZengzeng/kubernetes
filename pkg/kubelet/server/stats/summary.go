@@ -42,6 +42,7 @@ func NewSummaryProvider(statsProvider StatsProvider) SummaryProvider {
 }
 
 // Get provides a new Summary with the stats from Kubelet.
+// Get用从Kubelet获取的stats提供一个新的Summary
 func (sp *summaryProviderImpl) Get() (*statsapi.Summary, error) {
 	// TODO(timstclair): Consider returning a best-effort response if any of
 	// the following errors occur.

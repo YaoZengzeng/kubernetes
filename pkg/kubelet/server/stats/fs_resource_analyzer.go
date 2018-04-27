@@ -33,6 +33,7 @@ type Cache map[types.UID]*volumeStatCalculator
 
 // fsResourceAnalyzerInterface is for embedding fs functions into ResourceAnalyzer
 type fsResourceAnalyzerInterface interface {
+	// 获取PodVolume数据
 	GetPodVolumeStats(uid types.UID) (PodVolumeStats, bool)
 }
 
@@ -70,6 +71,7 @@ func (s *fsResourceAnalyzer) Start() {
 }
 
 // updateCachedPodVolumeStats calculates and caches the PodVolumeStats for every Pod known to the kubelet.
+// updateCachedPodVolumeStats计算并且缓存kubelet已知的每个Pod的PodVolumeStats
 func (s *fsResourceAnalyzer) updateCachedPodVolumeStats() {
 	oldCache := s.cachedVolumeStats.Load().(Cache)
 	newCache := make(Cache)

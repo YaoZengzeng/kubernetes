@@ -109,6 +109,7 @@ func verifyActions(t *testing.T, manager *manager, expectedActions []core.Action
 
 func verifyUpdates(t *testing.T, manager *manager, expectedUpdates int) {
 	// Consume all updates in the channel.
+	// 消耗掉channel中所有的更新
 	numUpdates := manager.consumeUpdates()
 	if numUpdates != expectedUpdates {
 		t.Errorf("unexpected number of updates %d, expected %d", numUpdates, expectedUpdates)
@@ -119,6 +120,7 @@ func (m *manager) consumeUpdates() int {
 	updates := 0
 	for {
 		select {
+		// 从manager的podStatusChannel中不断获取sync request
 		case syncRequest := <-m.podStatusChannel:
 			m.syncPod(syncRequest.podUID, syncRequest.status)
 			updates++
@@ -151,6 +153,7 @@ func TestNewStatusPreservesPodStartTime(t *testing.T) {
 		Status: v1.PodStatus{},
 	}
 	now := metav1.Now()
+	// 设置pod的start time
 	startTime := metav1.NewTime(now.Time.Add(-1 * time.Minute))
 	pod.Status.StartTime = &startTime
 	syncer.SetPodStatus(pod, getRandomPodStatus())
@@ -174,6 +177,7 @@ func getReadyPodStatus() v1.PodStatus {
 
 func TestNewStatusSetsReadyTransitionTime(t *testing.T) {
 	syncer := newTestManager(&fake.Clientset{})
+	// 设置pod的status为ready
 	podStatus := getReadyPodStatus()
 	pod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -253,6 +257,7 @@ func TestUnchangedStatus(t *testing.T) {
 	syncer := newTestManager(&fake.Clientset{})
 	testPod := getTestPod()
 	podStatus := getRandomPodStatus()
+	// 如果status本质上没有改变，则只会收到一次更新
 	syncer.SetPodStatus(testPod, podStatus)
 	syncer.SetPodStatus(testPod, podStatus)
 	verifyUpdates(t, syncer, 1)
@@ -488,6 +493,7 @@ func TestStaticPod(t *testing.T) {
 	staticPod.Annotations = map[string]string{kubetypes.ConfigSourceAnnotationKey: "file"}
 	mirrorPod := getTestPod()
 	mirrorPod.UID = "mirror-12345678"
+	// 设置mirror pod的annotations
 	mirrorPod.Annotations = map[string]string{
 		kubetypes.ConfigSourceAnnotationKey: "api",
 		kubetypes.ConfigMirrorAnnotationKey: "mirror",
@@ -745,6 +751,7 @@ func TestReconcilePodStatus(t *testing.T) {
 }
 
 func expectPodStatus(t *testing.T, m *manager, pod *v1.Pod) v1.PodStatus {
+	// 获取pod status
 	status, ok := m.GetPodStatus(pod.UID)
 	if !ok {
 		t.Fatalf("Expected PodStatus for %q not found", pod.UID)

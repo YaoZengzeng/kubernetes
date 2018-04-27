@@ -189,6 +189,7 @@ type HostInterface interface {
 }
 
 // NewServer initializes and configures a kubelet.Server object to handle HTTP requests.
+// NewServer初始化并且配置kubelet.Server对象用于处理http请求
 func NewServer(
 	host HostInterface,
 	resourceAnalyzer stats.ResourceAnalyzer,
@@ -275,6 +276,7 @@ func (s *Server) InstallDefaultHandlers() {
 		Operation("getPods"))
 	s.restfulCont.Add(ws)
 
+	// 创建/stats/summary等各个http handler
 	s.restfulCont.Add(stats.CreateHandlers(statsPath, s.host, s.resourceAnalyzer))
 	s.restfulCont.Handle(metricsPath, prometheus.Handler())
 

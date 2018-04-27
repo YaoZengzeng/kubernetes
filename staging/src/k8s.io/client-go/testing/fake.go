@@ -98,6 +98,7 @@ type WatchReactionFunc func(action Action) (handled bool, ret watch.Interface, e
 type ProxyReactionFunc func(action Action) (handled bool, ret restclient.ResponseWrapper, err error)
 
 // AddReactor appends a reactor to the end of the chain.
+// AddReactor将reactor添加到链的后端
 func (c *Fake) AddReactor(verb, resource string, reaction ReactionFunc) {
 	c.ReactionChain = append(c.ReactionChain, &SimpleReactor{verb, resource, reaction})
 }

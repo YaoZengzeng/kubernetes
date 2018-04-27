@@ -39,11 +39,14 @@ const (
 // management if qos Cgroup is enabled.
 type podContainerManagerImpl struct {
 	// qosContainersInfo hold absolute paths of the top level qos containers
+	// qosContainersInfo维护了到qos容器的绝对路径
 	qosContainersInfo QOSContainersInfo
 	// Stores the mounted cgroup subsystems
+	// subsystems存储了挂载的cgroup子系统
 	subsystems *CgroupSubsystems
 	// cgroupManager is the cgroup Manager Object responsible for managing all
 	// pod cgroups.
+	// cgroupManager是用于负责所有pod的cgroup的cgroup Manager对象
 	cgroupManager CgroupManager
 }
 
@@ -73,6 +76,7 @@ func (m *podContainerManagerImpl) EnsureExists(pod *v1.Pod) error {
 	alreadyExists := m.Exists(pod)
 	if !alreadyExists {
 		// Create the pod container
+		// 创建pod container
 		containerConfig := &CgroupConfig{
 			Name:               podContainerName,
 			ResourceParameters: ResourceConfigForPod(pod),
@@ -82,7 +86,9 @@ func (m *podContainerManagerImpl) EnsureExists(pod *v1.Pod) error {
 		}
 	}
 	// Apply appropriate resource limits on the pod container
+	// 为pod container应用适当的resource limits
 	// Top level qos containers limits are not updated
+	// 顶层的qos containers limits不会更新
 	// until we figure how to maintain the desired state in the kubelet.
 	// Because maintaining the desired state is difficult without checkpointing.
 	if err := m.applyLimits(pod); err != nil {
@@ -92,7 +98,9 @@ func (m *podContainerManagerImpl) EnsureExists(pod *v1.Pod) error {
 }
 
 // GetPodContainerName returns the CgroupName identifier, and its literal cgroupfs form on the host.
+// GetPodContainerName返回CgroupName identifier，以及在宿主机的literal cgroupfs形式
 func (m *podContainerManagerImpl) GetPodContainerName(pod *v1.Pod) (CgroupName, string) {
+	// GetPodQOS返回pod的qos类型
 	podQOS := v1qos.GetPodQOS(pod)
 	// Get the parent QOS container name
 	var parentContainer string
@@ -107,6 +115,7 @@ func (m *podContainerManagerImpl) GetPodContainerName(pod *v1.Pod) (CgroupName, 
 	podContainer := GetPodCgroupNameSuffix(pod.UID)
 
 	// Get the absolute path of the cgroup
+	// 例如"besteffor/pod${PodUID}"
 	cgroupName := (CgroupName)(path.Join(parentContainer, podContainer))
 	// Get the literal cgroupfs name
 	cgroupfsName := m.cgroupManager.Name(cgroupName)
@@ -177,6 +186,8 @@ func (m *podContainerManagerImpl) ReduceCPULimits(podCgroup CgroupName) error {
 
 // GetAllPodsFromCgroups scans through all the subsystems of pod cgroups
 // Get list of pods whose cgroup still exist on the cgroup mounts
+// GetAllPodsFromCgroups遍历所有pod cgroups的子系统
+// 获取一个pods的列表，它们的cgroup依然存在在cgroup mounts
 func (m *podContainerManagerImpl) GetAllPodsFromCgroups() (map[types.UID]CgroupName, error) {
 	// Map for storing all the found pods on the disk
 	foundPods := make(map[types.UID]CgroupName)
@@ -234,6 +245,7 @@ func (m *podContainerManagerImpl) GetAllPodsFromCgroups() (map[types.UID]CgroupN
 // podContainerManagerNoop is used in case the QoS cgroup Hierarchy is not
 // enabled, so Exists() returns true always as the cgroupRoot
 // is expected to always exist.
+// 如果QoS cgroup Hierarchy没有使能的话，则返回podContainerManagerNoop什么都不做
 type podContainerManagerNoop struct {
 	cgroupRoot CgroupName
 }
