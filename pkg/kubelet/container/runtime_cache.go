@@ -23,6 +23,7 @@ import (
 
 var (
 	// TODO(yifan): Maybe set the them as parameters for NewCache().
+	// 设置Runtime Cache的更新时间为2秒
 	defaultCachePeriod = time.Second * 2
 )
 
@@ -58,6 +59,7 @@ type runtimeCache struct {
 	// cache上一次更新的时间
 	cacheTime time.Time
 	// The content of the cache.
+	// pods就是cache的内容
 	pods []*Pod
 }
 
@@ -79,6 +81,8 @@ func (r *runtimeCache) GetPods() ([]*Pod, error) {
 func (r *runtimeCache) ForceUpdateIfOlder(minExpectedCacheTime time.Time) error {
 	r.Lock()
 	defer r.Unlock()
+	// 如果保存的cache time比minExpectedCacheTime更早
+	// 则强制更新
 	if r.cacheTime.Before(minExpectedCacheTime) {
 		return r.updateCache()
 	}

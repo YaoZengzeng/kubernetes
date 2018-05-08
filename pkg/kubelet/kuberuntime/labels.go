@@ -81,6 +81,7 @@ func newPodLabels(pod *v1.Pod) map[string]string {
 		labels[k] = v
 	}
 
+	// 额外加了PodNameLabel，PodNamespaceLabel以及PodUIDLabel
 	labels[types.KubernetesPodNameLabel] = pod.Name
 	labels[types.KubernetesPodNamespaceLabel] = pod.Namespace
 	labels[types.KubernetesPodUIDLabel] = string(pod.UID)

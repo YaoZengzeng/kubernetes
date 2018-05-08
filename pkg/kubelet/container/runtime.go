@@ -57,6 +57,7 @@ type ImageStats struct {
 
 // Runtime interface defines the interfaces that should be implemented
 // by a container runtime.
+// Runtime定义了一个容器运行时需要实现的接口
 // Thread safety is required from implementations of this interface.
 type Runtime interface {
 	// Type returns the type of the container runtime.
@@ -78,6 +79,7 @@ type Runtime interface {
 	// exited and dead containers (used for garbage collection).
 	GetPods(all bool) ([]*Pod, error)
 	// GarbageCollect removes dead containers using the specified container gc policy
+	// 用指定的容器gc policy移除dead containers	
 	// If allSourcesReady is not true, it means that kubelet doesn't have the
 	// complete list of pods from all avialble sources (e.g., apiserver, http,
 	// file). In this case, garbage collector should refrain itself from aggressive
@@ -87,6 +89,7 @@ type Runtime interface {
 	// TODO: Revisit this method and make it cleaner.
 	GarbageCollect(gcPolicy ContainerGCPolicy, allSourcesReady bool, evictNonDeletedPods bool) error
 	// Syncs the running pod into the desired pod.
+	// 将running pod同步到指定状态
 	SyncPod(pod *v1.Pod, apiPodStatus v1.PodStatus, podStatus *PodStatus, pullSecrets []v1.Secret, backOff *flowcontrol.Backoff) PodSyncResult
 	// KillPod kills all the containers of a pod. Pod may be nil, running pod must not be.
 	// TODO(random-liu): Return PodSyncResult in KillPod.
@@ -115,6 +118,7 @@ type Runtime interface {
 	// "100" or "all") to tail the log.
 	GetContainerLogs(pod *v1.Pod, containerID ContainerID, logOptions *v1.PodLogOptions, stdout, stderr io.Writer) (err error)
 	// Delete a container. If the container is still running, an error is returned.
+	// 删除一个容器，如果容器还在运行，则返回error
 	DeleteContainer(containerID ContainerID) error
 	// ImageService provides methods to image-related methods.
 	ImageService
@@ -184,10 +188,13 @@ type Pod struct {
 	Namespace string
 	// List of containers that belongs to this pod. It may contain only
 	// running containers, or mixed with dead ones (when GetPods(true)).
+	// 属于某个pod的containers，里面可能只包含running containers
+	// 或者混有dead containers（当调用GetPods(true)）
 	Containers []*Container
 	// List of sandboxes associated with this pod. The sandboxes are converted
 	// to Container temporariliy to avoid substantial changes to other
 	// components. This is only populated by kuberuntime.
+	// 暂时将Sandbox转换为Container从而避免其他组件的大量变更
 	// TODO: use the runtimeApi.PodSandbox type directly.
 	Sandboxes []*Container
 }
@@ -203,6 +210,7 @@ type PodPair struct {
 // ContainerID is a type that identifies a container.
 type ContainerID struct {
 	// The type of the container runtime. e.g. 'docker', 'rkt'.
+	// 容器运行时的类型，例如"docker", "rkt"
 	Type string
 	// The identification of the container, this is comsumable by
 	// the underlying container runtime. (Note that the container
@@ -347,6 +355,8 @@ type ContainerStatus struct {
 
 // FindContainerStatusByName returns container status in the pod status with the given name.
 // When there are multiple containers' statuses with the same name, the first match will be returned.
+// FindContainerStatusByName返回一个pod里给定name的container的status
+// 当有多个容器的status有着相同的名字时，选择第一个匹配的
 func (podStatus *PodStatus) FindContainerStatusByName(containerName string) *ContainerStatus {
 	for _, containerStatus := range podStatus.ContainerStatuses {
 		if containerStatus.Name == containerName {

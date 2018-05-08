@@ -38,6 +38,8 @@ import (
 // and the blocking GetNewerThan() method. The component responsible for
 // populating the cache is expected to call Delete() to explicitly free the
 // cache entries.
+// Cache提供了两种方法用于获取PodStatus: 非阻塞的Get()方法以及阻塞的GetNewerThan()方法
+// 负责填充cache的组件负责调用Delete()来显式地清除cache entries
 type Cache interface {
 	// Get是非阻塞的
 	Get(types.UID) (*PodStatus, error)
@@ -165,6 +167,7 @@ func (c *cache) get(id types.UID) *data {
 // 否则返回nil
 func (c *cache) getIfNewerThan(id types.UID, minTime time.Time) *data {
 	d, ok := c.pods[id]
+	// 当容器第一次被创建，globalTimestampIsNewer为true
 	globalTimestampIsNewer := (c.timestamp != nil && c.timestamp.After(minTime))
 	if !ok && globalTimestampIsNewer {
 		// Status is not cached, but the global timestamp is newer than

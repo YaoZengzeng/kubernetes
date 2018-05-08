@@ -81,6 +81,7 @@ var (
 )
 
 // A non-user container tracked by the Kubelet.
+// Kubelet追踪的non-user容器
 type systemContainer struct {
 	// Absolute name of the container.
 	name string
@@ -90,6 +91,8 @@ type systemContainer struct {
 
 	// Function that ensures the state of the container.
 	// m is the cgroup manager for the specified container.
+	// 用于确保容器状态的函数
+	// m是特定容器的cgroup manager
 	ensureStateFunc func(m *fs.Manager) error
 
 	// Manager for the cgroups of the external container.
@@ -117,6 +120,7 @@ type containerManagerImpl struct {
 	// 定期运行的task
 	periodicTasks []func()
 	// Holds all the mounted cgroup subsystems
+	// 维护所有挂载的cgroup subsystems
 	subsystems *CgroupSubsystems
 	nodeInfo   *v1.Node
 	// Interface for cgroup management
@@ -127,6 +131,7 @@ type containerManagerImpl struct {
 	capacity v1.ResourceList
 	// Absolute cgroupfs path to a cgroup that Kubelet needs to place all pods under.
 	// This path include a top level container for enforcing Node Allocatable.
+	// 一个cgroup的cgroupfs绝对路径，Kubelet需要将所有的pods都放到下面
 	cgroupRoot string
 	// Event recorder interface.
 	recorder record.EventRecorder
@@ -249,6 +254,7 @@ func NewContainerManager(mountUtil mount.Interface, cadvisorInterface cadvisor.I
 		// we need to check that the cgroup root actually exists for each subsystem
 		// of note, we always use the cgroupfs driver when performing this check since
 		// the input is provided in that format.
+		// 我们需要确认每个subsystem的cgroup root确实存在
 		// this is important because we do not want any name conversion to occur.
 		if !cgroupManager.Exists(CgroupName(cgroupRoot)) {
 			return nil, fmt.Errorf("invalid configuration: cgroup-root %q doesn't exist: %v", cgroupRoot, err)

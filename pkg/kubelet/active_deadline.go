@@ -67,6 +67,8 @@ func (m *activeDeadlineHandler) ShouldSync(pod *v1.Pod) bool {
 
 // ShouldEvict returns true if the pod is past its active deadline.
 // It dispatches an event that the pod should be evicted if it is past its deadline.
+// ShouldEvict返回true，如果pod已经过了它的active deadline
+// 它会分发一个event，说明pod应该被evicted
 func (m *activeDeadlineHandler) ShouldEvict(pod *v1.Pod) lifecycle.ShouldEvictResponse {
 	if !m.pastActiveDeadline(pod) {
 		return lifecycle.ShouldEvictResponse{Evict: false}

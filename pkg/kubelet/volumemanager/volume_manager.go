@@ -79,6 +79,7 @@ const (
 
 	// podAttachAndMountRetryInterval is the amount of time the GetVolumesForPod
 	// call waits before retrying
+	// GetVolumesForPod进行重试的时间间隔
 	podAttachAndMountRetryInterval time.Duration = 300 * time.Millisecond
 
 	// waitForAttachTimeout is the maximum amount of time a

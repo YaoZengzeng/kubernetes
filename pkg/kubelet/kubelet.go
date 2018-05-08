@@ -127,6 +127,7 @@ const (
 	podKillingChannelCapacity = 50
 
 	// Period for performing global cleanup tasks.
+	// 用于global cleanup tasks的时间间隔
 	housekeepingPeriod = time.Second * 2
 
 	// Period for performing eviction monitoring.
@@ -138,6 +139,8 @@ const (
 
 	// Capacity of the channel for receiving pod lifecycle events. This number
 	// is a bit arbitrary and may be adjusted in the future.
+	// 用于接收pod lifecycle events的channel的capacity
+	// 这个数字的设置有些随意并且可能在以后修改
 	plegChannelCapacity = 1000
 
 	// Generic PLEG relies on relisting for discovering container events.
@@ -145,9 +148,14 @@ const (
 	// changes and to update pod status. On the other hand, a shorter period
 	// will cause more frequent relisting (e.g., container runtime operations),
 	// leading to higher cpu usage.
+	// 一般的PLEG依赖relisting来发现container events
+	// 一个长的检测时间间隔意味着kubelet会用更长的时间检测container changes以及更新pod status
+	// 另外，一个更短的检测时间间隔会导致更频繁的relisting（容器运行时的操作），会导致更高的cpu使用率
 	// Note that even though we set the period to 1s, the relisting itself can
 	// take more than 1s to finish if the container runtime responds slowly
 	// and/or when there are many container changes in one cycle.
+	// 虽然我们将时间间隔设置为1秒，但是relisting本身的用时可能会多于一秒
+	// 因为容器运行时的反应可能比较慢，或者在一个周期内有太多的changes
 	plegRelistPeriod = time.Second * 1
 
 	// backOffPeriod is the period to back off when pod syncing results in an
@@ -165,6 +173,7 @@ const (
 )
 
 // SyncHandler is an interface implemented by Kubelet, for testability
+// Kubelet实现了SyncHandler这个接口
 type SyncHandler interface {
 	HandlePodAdditions(pods []*v1.Pod)
 	HandlePodUpdates(pods []*v1.Pod)
@@ -277,6 +286,8 @@ type Dependencies struct {
 
 // makePodSourceConfig creates a config.PodConfig from the given
 // KubeletConfiguration or returns an error.
+// makePodSourceConfig根据给定的KubeletConfiguration创建一个config.PodConfig
+// 或者返回error
 func makePodSourceConfig(kubeCfg *kubeletconfiginternal.KubeletConfiguration, kubeDeps *Dependencies, nodeName types.NodeName, bootstrapCheckpointPath string) (*config.PodConfig, error) {
 	manifestURLHeader := make(http.Header)
 	if len(kubeCfg.ManifestURLHeader) > 0 {
@@ -1561,11 +1572,17 @@ func (kl *Kubelet) GetKubeClient() clientset.Interface {
 // * 杀死pod，如果它不能运行的话
 // * Create a mirror pod if the pod is a static pod, and does not
 //   already have a mirror pod
+// * 如果pod是一个static pod并且还没有mirror pod，则创建一个mirror pod
 // * Create the data directories for the pod if they do not exist
+// * 创建data目录，如果pod还没有的话
 // * Wait for volumes to attach/mount
+// * 等待volume的attach以及mount
 // * Fetch the pull secrets for the pod
+// * 获取pod的pull secrets
 // * Call the container runtime's SyncPod callback
+// * 调用容器运行时的SyncPod回调函数
 // * Update the traffic shaping for the pod's ingress and egress limits
+// * 更新traffic shaping用于pod的ingress以及egress limits
 //
 // If any step of this workflow errors, the error is returned, and is repeated
 // on the next syncPod call.
@@ -1591,6 +1608,7 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 		apiPodStatus := killPodOptions.PodStatusFunc(pod, podStatus)
 		kl.statusManager.SetPodStatus(pod, apiPodStatus)
 		// we kill the pod with the specified grace period since this is a termination
+		// 我们根据给定的grace period来kill pod，因为这是一个termination
 		if err := kl.killPod(pod, nil, podStatus, killPodOptions.PodTerminationGracePeriodSecondsOverride); err != nil {
 			kl.recorder.Eventf(pod, v1.EventTypeWarning, events.FailedToKillPod, "error killing pod: %v", err)
 			// there was an error killing the pod, so we return that error directly
@@ -1625,10 +1643,12 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 
 	// Generate final API pod status with pod and status manager status
 	// 根据pod manager以及status manager产生最终的API pod
+	// 对于Create来说，podStatus只有Pod ID这一个有效字段
 	apiPodStatus := kl.generateAPIPodStatus(pod, podStatus)
 	// The pod IP may be changed in generateAPIPodStatus if the pod is using host network. (See #24576)
 	// TODO(random-liu): After writing pod spec into container labels, check whether pod is using host network, and
 	// set pod IP to hostIP directly in runtime.GetPodStatus
+	// 如果pod使用host network，pod IP在generateAPIPodStatus可能会改变
 	podStatus.IP = apiPodStatus.PodIP
 
 	// Record the time it takes for the pod to become running.
@@ -1648,6 +1668,7 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 		// Waiting containers are not creating.
 		// 将正在等待的容器都设置为"Blocked"
 		const waitingReason = "Blocked"
+		// 设置各个container的waiting reason
 		for _, cs := range apiPodStatus.InitContainerStatuses {
 			if cs.State.Waiting != nil {
 				cs.State.Waiting.Reason = waitingReason
@@ -1665,6 +1686,7 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 	kl.statusManager.SetPodStatus(pod, apiPodStatus)
 
 	// Kill pod if it should not be running
+	// 如果pod不能运行，则kill pod
 	if !runnable.Admit || pod.DeletionTimestamp != nil || apiPodStatus.Phase == v1.PodFailed {
 		var syncErr error
 		if err := kl.killPod(pod, nil, podStatus, nil); err != nil {
@@ -1691,6 +1713,7 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 	// Create Cgroups for the pod and apply resource parameters
 	// to them if cgroups-per-qos flag is enabled.
 	// 如果使能了cgroups-per-qos，则为每个pod创建cgroups并且添加resouce parameter
+	// 否则设置为podContainerManagerNoop, 每次调用都做空操作
 	pcm := kl.containerManager.NewPodContainerManager()
 	// If pod has already been terminated then we need not create
 	// or update the pod's cgroup
@@ -1701,6 +1724,8 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 		// should be killed intermittently and brought back up
 		// under the qos cgroup hierarchy.
 		// Check if this is the pod's first sync
+		// 当kubelet被重启，且cgroups-per-qos使能的话，所有pod正在运行的
+		// 容器都应该被kill并且在qos cgroup hierarchy下被重启
 		firstSync := true
 		for _, containerStatus := range apiPodStatus.ContainerStatuses {
 			if containerStatus.State.Running != nil {
@@ -1724,14 +1749,16 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 		// the kubelet is restarted with the new flag as run once pods are
 		// expected to run only once and if the kubelet is restarted then
 		// they are not expected to run again.
+		// 对于run once的pod，如果在上面被kill掉的话，就不要重启了
 		// We don't create and apply updates to cgroup if its a run once pod and was killed above
 		// 我们不再创建或者更新cgroup，如果pod只运行一次，或者在上面被kill了
 		if !(podKilled && pod.Spec.RestartPolicy == v1.RestartPolicyNever) {
 			if !pcm.Exists(pod) {
-				// 更新qos cgroups
+				// 如果pod不在PodContainerManager中，更新qos cgroups
 				if err := kl.containerManager.UpdateQOSCgroups(); err != nil {
 					glog.V(2).Infof("Failed to update QoS cgroups while syncing pod: %v", err)
 				}
+				// 确保pod在PodContainerManager中
 				if err := pcm.EnsureExists(pod); err != nil {
 					kl.recorder.Eventf(pod, v1.EventTypeWarning, events.FailedToCreatePodContainer, "unable to ensure pod container exists: %v", err)
 					return fmt.Errorf("failed to ensure that the pod: %v cgroups exist and are correctly applied: %v", pod.UID, err)
@@ -1746,6 +1773,7 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 	if kubepod.IsStaticPod(pod) {
 		podFullName := kubecontainer.GetPodFullName(pod)
 		deleted := false
+		// 如果mirrorPod已经存在了，检测其是否合法
 		if mirrorPod != nil {
 			if mirrorPod.DeletionTimestamp != nil || !kl.podManager.IsMirrorPodOf(mirrorPod, pod) {
 				// The mirror pod is semantically different from the static pod. Remove
@@ -1759,6 +1787,7 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 				}
 			}
 		}
+		// 如果不存在mirrorPod或者已经被删除了
 		if mirrorPod == nil || deleted {
 			node, err := kl.GetNode()
 			if err != nil || node.DeletionTimestamp != nil {
@@ -1766,7 +1795,8 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 				glog.V(4).Infof("No need to create a mirror pod, since node %q has been removed from the cluster", kl.nodeName)
 			} else {
 				glog.V(4).Infof("Creating a mirror pod for static pod %q", format.Pod(pod))
-				// 为static pod创建mirror pod
+				// 为static pod创建mirror pod，其实就是对pod进行复制，并添加一个annotation，说明是
+				// mirror pod，再调用apiserver的client进行创建
 				if err := kl.podManager.CreateMirrorPod(pod); err != nil {
 					glog.Errorf("Failed creating a mirror pod for %q: %v", format.Pod(pod), err)
 				}
@@ -1844,9 +1874,13 @@ func (kl *Kubelet) getPodsToSync() []*v1.Pod {
 // deletePod deletes the pod from the internal state of the kubelet by:
 // 1.  stopping the associated pod worker asynchronously
 // 2.  signaling to kill the pod by sending on the podKillingCh channel
+// deletePod从kubelet的internal state中删除pod，通过：
+// 1.  异步地停止相关的pod worker
+// 2.  通过给podKillingCh发消息来kill pod
 //
 // deletePod returns an error if not all sources are ready or the pod is not
 // found in the runtime cache.
+// deletePod返回error，如果不是所有的sources都处于ready，或者pod没有在runtime cache中找到
 func (kl *Kubelet) deletePod(pod *v1.Pod) error {
 	if pod == nil {
 		return fmt.Errorf("deletePod does not allow nil pod")
@@ -1854,12 +1888,16 @@ func (kl *Kubelet) deletePod(pod *v1.Pod) error {
 	if !kl.sourcesReady.AllReady() {
 		// If the sources aren't ready, skip deletion, as we may accidentally delete pods
 		// for sources that haven't reported yet.
+		// 如果sources没有准备好，跳过deletion，因为我们可能会意外删除那些还没有report的sources
 		return fmt.Errorf("skipping delete because sources aren't ready yet")
 	}
+	// 将对应的podWorker移除
 	kl.podWorkers.ForgetWorker(pod.UID)
 
 	// Runtime cache may not have been updated to with the pod, but it's okay
 	// because the periodic cleanup routine will attempt to delete again later.
+	// Runtime cache可能不会和pod同步更新，但是这没有问题
+	// 因为阶段性的cleanup routine会在以后再次尝试删除
 	runningPods, err := kl.runtimeCache.GetPods()
 	if err != nil {
 		return fmt.Errorf("error listing containers: %v", err)
@@ -1870,15 +1908,19 @@ func (kl *Kubelet) deletePod(pod *v1.Pod) error {
 	}
 	podPair := kubecontainer.PodPair{APIPod: pod, RunningPod: &runningPod}
 
+	// 将podPair发送给kubelet的podKillingCh
 	kl.podKillingCh <- &podPair
 	// TODO: delete the mirror pod here?
 
 	// We leave the volume/directory cleanup to the periodic cleanup routine.
+	// 我们将volume/directory的cleanup放到阶段性的cleanup routine中去做
 	return nil
 }
 
 // rejectPod records an event about the pod with the given reason and message,
 // and updates the pod to the failed phase in the status manage.
+// rejectPod会用给定的reason和message，记录一个pod有关的event
+// 并且更新status manager中的pod到failed状态
 func (kl *Kubelet) rejectPod(pod *v1.Pod, reason, message string) {
 	kl.recorder.Eventf(pod, v1.EventTypeWarning, reason, message)
 	kl.statusManager.SetPodStatus(pod, v1.PodStatus{
@@ -1926,6 +1968,7 @@ func (kl *Kubelet) canRunPod(pod *v1.Pod) lifecycle.PodAdmitResult {
 	}
 
 	// TODO: Refactor as a soft admit handler.
+	// 检测我们是否有capability来运行pod
 	if err := canRunPod(pod); err != nil {
 		return lifecycle.PodAdmitResult{
 			Admit:   false,
@@ -1955,6 +1998,7 @@ func (kl *Kubelet) syncLoop(updates <-chan kubetypes.PodUpdate, handler SyncHand
 	// 一秒钟的间隔已经足够了因为sync interval默认为10s
 	syncTicker := time.NewTicker(time.Second)
 	defer syncTicker.Stop()
+	// housekeepingPeriod为2秒
 	housekeepingTicker := time.NewTicker(housekeepingPeriod)
 	defer housekeepingTicker.Stop()
 	plegCh := kl.pleg.Watch()
@@ -1977,12 +2021,18 @@ func (kl *Kubelet) syncLoop(updates <-chan kubetypes.PodUpdate, handler SyncHand
 
 // syncLoopIteration reads from various channels and dispatches pods to the
 // given handler.
+// syncLoopIteration从各个channel读取事件并且分发pods到给定的handler
 //
 // Arguments:
+// 读取config event的channel
 // 1.  configCh:       a channel to read config events from
+// 可以向handler中分发pods，它会进行处理
 // 2.  handler:        the SyncHandler to dispatch pods to
+// 可以从syncCh中读取阶段性的sync events
 // 3.  syncCh:         a channel to read periodic sync events from
+// 可以从houseKeepingCh中读取housekeeping events
 // 4.  houseKeepingCh: a channel to read housekeeping events from
+// 从plegCh中读取PLEG的更新
 // 5.  plegCh:         a channel to read PLEG updates from
 //
 // Events are also read from the kubelet liveness manager's update channel.
@@ -1998,6 +2048,7 @@ func (kl *Kubelet) syncLoop(updates <-chan kubetypes.PodUpdate, handler SyncHand
 // read from when the select is evaluated.  In other words, case statements
 // are evaluated in random order, and you can not assume that the case
 // statements evaluate in order if multiple channels have events.
+// select中的case语句的评估都是随机的，当有多个channels有事件发生时，我们不能假设这些case语句是按序评估的
 //
 // With that in mind, in truly no particular order, the different channels
 // are handled as follows:
@@ -2065,6 +2116,8 @@ func (kl *Kubelet) syncLoopIteration(configCh <-chan kubetypes.PodUpdate, handle
 			// If the update type is RESTORE, it means that the update is from
 			// the pod checkpoints and may be incomplete. Do not mark the
 			// source as ready.
+			// 如果update的类型为RESTORE，这意味着update来源于pod checkpoints，因此可能
+			// 并不完整，所以不能将source标记为ready
 
 			// Mark the source ready after receiving at least one update from the
 			// source. Once all the sources are marked ready, various cleanup
@@ -2079,6 +2132,7 @@ func (kl *Kubelet) syncLoopIteration(configCh <-chan kubetypes.PodUpdate, handle
 		}
 	case e := <-plegCh:
 		// 除了ContainerRemoved这一事件之外，其他都是值得的
+		// 因为ContainerRemoved不会影响pod的状态
 		if isSyncPodWorthy(e) {
 			// PLEG event for a pod; sync it.
 			if pod, ok := kl.podManager.GetPodByUID(e.ID); ok {
@@ -2091,6 +2145,7 @@ func (kl *Kubelet) syncLoopIteration(configCh <-chan kubetypes.PodUpdate, handle
 		}
 
 		if e.Type == pleg.ContainerDied {
+			// 如果PLEG的类型为ContainerDied，则获取container id并删除该container
 			if containerID, ok := e.Data.(string); ok {
 				kl.cleanUpContainersInPod(e.ID, containerID)
 			}
@@ -2106,9 +2161,11 @@ func (kl *Kubelet) syncLoopIteration(configCh <-chan kubetypes.PodUpdate, handle
 	case update := <-kl.livenessManager.Updates():
 		if update.Result == proberesults.Failure {
 			// The liveness manager detected a failure; sync the pod.
+			// liveness manager检测到一个failure，对pod进行同步
 
 			// We should not use the pod from livenessManager, because it is never updated after
 			// initialization.
+			// 我们不应该使用来自livenessManager的pod，因为它在初始化之后就不再更新了
 			pod, ok := kl.podManager.GetPodByUID(update.PodUID)
 			if !ok {
 				// If the pod no longer exists, ignore the update.
@@ -2122,6 +2179,8 @@ func (kl *Kubelet) syncLoopIteration(configCh <-chan kubetypes.PodUpdate, handle
 		if !kl.sourcesReady.AllReady() {
 			// If the sources aren't ready or volume manager has not yet synced the states,
 			// skip housekeeping, as we may accidentally delete pods from unready sources.
+			// 如果sources没有处于ready状态，或者volume manager还没有对states进行同步
+			// 则跳过housekeeping，因为我们可能会以外删除来自unready sources的pod
 			glog.V(4).Infof("SyncLoop (housekeeping, skipped): sources aren't ready yet.")
 		} else {
 			glog.V(4).Infof("SyncLoop (housekeeping)")
@@ -2151,12 +2210,14 @@ func (kl *Kubelet) dispatchWork(pod *v1.Pod, syncType kubetypes.SyncPodType, mir
 		return
 	}
 	// Run the sync in an async worker.
+	// 在一个异步的worker进行同步
 	kl.podWorkers.UpdatePod(&UpdatePodOptions{
 		Pod:        pod,
 		MirrorPod:  mirrorPod,
 		UpdateType: syncType,
 		OnCompleteFunc: func(err error) {
 			if err != nil {
+				// Pod worker的延时？
 				metrics.PodWorkerLatency.WithLabelValues(syncType.String()).Observe(metrics.SinceInMicroseconds(start))
 			}
 		},
@@ -2183,6 +2244,7 @@ func (kl *Kubelet) handleMirrorPod(mirrorPod *v1.Pod, start time.Time) {
 // HandlePodAdditions is the callback in SyncHandler for pods being added from
 // a config source.
 func (kl *Kubelet) HandlePodAdditions(pods []*v1.Pod) {
+	// 记录初始时间
 	start := kl.clock.Now()
 	// 将pod按创建的时间进行排序
 	sort.Sort(sliceutils.PodsByCreationTime(pods))
@@ -2196,6 +2258,7 @@ func (kl *Kubelet) HandlePodAdditions(pods []*v1.Pod) {
 		// 如果pod不存在在pod manager中，这意味着它已经从apiserver中删除了并且不会再需要任何行为（除了cleanup）
 		kl.podManager.AddPod(pod)
 
+		// 对mirror pod进行处理
 		if kubepod.IsMirrorPod(pod) {
 			kl.handleMirrorPod(pod, start)
 			continue
@@ -2221,14 +2284,16 @@ func (kl *Kubelet) HandlePodAdditions(pods []*v1.Pod) {
 		}
 		// 通过pod的full name找到mirror pod
 		mirrorPod, _ := kl.podManager.GetMirrorPodByPod(pod)
-		// 分发pod，进行具体的工作
+		// 分发pod，进行具体的工作, 类型为SyncPodCreate
 		kl.dispatchWork(pod, kubetypes.SyncPodCreate, mirrorPod, start)
+		// 加入probeManager对pod进行检测
 		kl.probeManager.AddPod(pod)
 	}
 }
 
 // HandlePodUpdates is the callback in the SyncHandler interface for pods
 // being updated from a config source.
+// HandlePodUpdates是SyncHandler接口的一个回调函数，用于处理来自config source的更新
 func (kl *Kubelet) HandlePodUpdates(pods []*v1.Pod) {
 	start := kl.clock.Now()
 	for _, pod := range pods {
@@ -2250,6 +2315,7 @@ func (kl *Kubelet) HandlePodUpdates(pods []*v1.Pod) {
 func (kl *Kubelet) HandlePodRemoves(pods []*v1.Pod) {
 	start := kl.clock.Now()
 	for _, pod := range pods {
+		// 删除podManager中的pod
 		kl.podManager.DeletePod(pod)
 		if kubepod.IsMirrorPod(pod) {
 			kl.handleMirrorPod(pod, start)
@@ -2261,6 +2327,7 @@ func (kl *Kubelet) HandlePodRemoves(pods []*v1.Pod) {
 		if err := kl.deletePod(pod); err != nil {
 			glog.V(2).Infof("Failed to delete pod %q, err: %v", format.Pod(pod), err)
 		}
+		// 从probeManager中移除pod
 		kl.probeManager.RemovePod(pod)
 	}
 }
@@ -2271,9 +2338,11 @@ func (kl *Kubelet) HandlePodReconcile(pods []*v1.Pod) {
 	for _, pod := range pods {
 		// Update the pod in pod manager, status manager will do periodically reconcile according
 		// to the pod manager.
+		// 更新pod manager中的pod，status manager会定期地根据pod manager进行reconcile
 		kl.podManager.UpdatePod(pod)
 
 		// After an evicted pod is synced, all dead containers in the pod can be removed.
+		// 在一个evicted pod已经被同步之后，pod中所有的dead containers都会被移除
 		if eviction.PodIsEvicted(pod.Status) {
 			if podStatus, err := kl.podCache.Get(pod.UID); err == nil {
 				kl.containerDeletor.deleteContainersInPod("", podStatus, true)
@@ -2397,6 +2466,7 @@ func (kl *Kubelet) ListenAndServeReadOnly(address net.IP, port uint) {
 }
 
 // Delete the eligible dead container instances in a pod. Depending on the configuration, the latest dead containers may be kept around.
+// 删除pod中合格的dead container。根据配置，最后一个dead container应该要保留
 func (kl *Kubelet) cleanUpContainersInPod(podID types.UID, exitedContainerID string) {
 	if podStatus, err := kl.podCache.Get(podID); err == nil {
 		removeAll := false

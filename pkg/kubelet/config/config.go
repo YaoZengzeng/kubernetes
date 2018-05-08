@@ -59,7 +59,7 @@ const (
 // PodConfig is a configuration mux that merges many sources of pod configuration into a single
 // consistent structure, and then delivers incremental change notifications to listeners
 // in order.
-// PodConfig是一个配置信息的复用器，它将各种来源的pod configuration合并到一个单独的并且一直的结构中
+// PodConfig是一个配置信息的复用器，它将各种来源的pod configuration合并到一个单独的并且一致的结构中
 // 并且将incremental notifications按序传递给listener
 type PodConfig struct {
 	pods *podStorage

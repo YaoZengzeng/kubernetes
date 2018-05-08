@@ -76,6 +76,8 @@ type Manager interface {
 	GetPodsAndMirrorPods() ([]*v1.Pod, []*v1.Pod)
 	// SetPods replaces the internal pods with the new pods.
 	// It is currently only used for testing.
+	// SetPods用新的pods替换internal pods
+	// 现在它只用于测试
 	SetPods(pods []*v1.Pod)
 	// AddPod adds the given pod to the manager.
 	AddPod(pod *v1.Pod)
@@ -141,6 +143,7 @@ type basicManager struct {
 	mirrorPodByFullName map[string]*v1.Pod
 
 	// Mirror pod UID to pod UID map.
+	// mirror pod UID到pod UID的映射
 	translationByUID map[kubetypes.MirrorPodUID]kubetypes.ResolvedPodUID
 
 	// basicManager is keeping secretManager and configMapManager up-to-date.
@@ -231,6 +234,7 @@ func (pm *basicManager) updatePodsInternal(pods ...*v1.Pod) {
 			resolvedPodUID := kubetypes.ResolvedPodUID(pod.UID)
 			pm.podByUID[resolvedPodUID] = pod
 			pm.podByFullName[podFullName] = pod
+			// 用podFullName获取mirror pod，再存储mirror pod到resolvedPodUID的映射
 			if mirror, ok := pm.mirrorPodByFullName[podFullName]; ok {
 				pm.translationByUID[kubetypes.MirrorPodUID(mirror.UID)] = resolvedPodUID
 			}

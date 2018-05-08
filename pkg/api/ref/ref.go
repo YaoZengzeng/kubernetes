@@ -37,6 +37,7 @@ var (
 // GetReference returns an ObjectReference which refers to the given
 // object, or an error if the object doesn't follow the conventions
 // that would allow this.
+// GetReference返回一个ObjectReference，它会引用给定的object
 // TODO: should take a meta.Interface see http://issue.k8s.io/7127
 func GetReference(scheme *runtime.Scheme, obj runtime.Object) (*api.ObjectReference, error) {
 	if obj == nil {

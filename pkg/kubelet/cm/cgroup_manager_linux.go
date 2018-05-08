@@ -199,11 +199,13 @@ func (l *libcontainerAdapter) adaptName(cgroupName CgroupName, outputToCgroupFs 
 // CgroupSubsystems保存了已挂载的cgroup子系统的信息
 type CgroupSubsystems struct {
 	// Cgroup subsystem mounts.
+	// Cgroup子系统的挂载点
 	// e.g.: "/sys/fs/cgroup/cpu" -> ["cpu", "cpuacct"]
 	Mounts []libcontainercgroups.Mount
 
 	// Cgroup subsystem to their mount location.
 	// e.g.: "cpu" -> "/sys/fs/cgroup/cpu"
+	// Cgroup子系统到它们的mount location之间的映射
 	MountPoints map[string]string
 }
 

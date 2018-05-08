@@ -32,6 +32,7 @@ import (
 )
 
 // createPodSandbox creates a pod sandbox and returns (podSandBoxID, message, error).
+// createPodSandbox创建一个pod sandbox并且返回（podSandBoxID, message, error）
 func (m *kubeGenericRuntimeManager) createPodSandbox(pod *v1.Pod, attempt uint32) (string, string, error) {
 	podSandboxConfig, err := m.generatePodSandboxConfig(pod, attempt)
 	if err != nil {
@@ -41,6 +42,7 @@ func (m *kubeGenericRuntimeManager) createPodSandbox(pod *v1.Pod, attempt uint32
 	}
 
 	// Create pod logs directory
+	// 创建pod的log目录
 	err = m.osInterface.MkdirAll(podSandboxConfig.LogDirectory, 0755)
 	if err != nil {
 		message := fmt.Sprintf("Create pod log directory for pod %q failed: %v", format.Pod(pod), err)
@@ -48,6 +50,7 @@ func (m *kubeGenericRuntimeManager) createPodSandbox(pod *v1.Pod, attempt uint32
 		return "", message, err
 	}
 
+	// 调用底层的容器运行时创建sandbox
 	podSandBoxID, err := m.runtimeService.RunPodSandbox(podSandboxConfig)
 	if err != nil {
 		message := fmt.Sprintf("CreatePodSandbox for pod %q failed: %v", format.Pod(pod), err)
@@ -59,6 +62,7 @@ func (m *kubeGenericRuntimeManager) createPodSandbox(pod *v1.Pod, attempt uint32
 }
 
 // generatePodSandboxConfig generates pod sandbox config from v1.Pod.
+// generatePodSandboxConfig根据v1.Pod创建pod sandbox config
 func (m *kubeGenericRuntimeManager) generatePodSandboxConfig(pod *v1.Pod, attempt uint32) (*runtimeapi.PodSandboxConfig, error) {
 	// TODO: deprecating podsandbox resource requirements in favor of the pod level cgroup
 	// Refer https://github.com/kubernetes/kubernetes/issues/29871
@@ -81,6 +85,7 @@ func (m *kubeGenericRuntimeManager) generatePodSandboxConfig(pod *v1.Pod, attemp
 	podSandboxConfig.DnsConfig = dnsConfig
 
 	if !kubecontainer.IsHostNetworkPod(pod) {
+		// 如果不是host network类型的pod，则添加设置hostname
 		// TODO: Add domain support in new runtime interface
 		hostname, _, err := m.runtimeHelper.GeneratePodHostNameAndDomain(pod)
 		if err != nil {
@@ -89,12 +94,13 @@ func (m *kubeGenericRuntimeManager) generatePodSandboxConfig(pod *v1.Pod, attemp
 		podSandboxConfig.Hostname = hostname
 	}
 
-	// 创建默认的logdir
+	// 创建默认的logdir为"/var/log/pods/$PODID"
 	logDir := buildPodLogsDirectory(pod.UID)
 	podSandboxConfig.LogDirectory = logDir
 
 	portMappings := []*runtimeapi.PortMapping{}
 	for _, c := range pod.Spec.Containers {
+		// 遍历容器的port mapping
 		containerPortMappings := kubecontainer.MakePortMappings(&c)
 
 		for idx := range containerPortMappings {
@@ -208,6 +214,7 @@ func (m *kubeGenericRuntimeManager) determinePodSandboxIP(podNamespace, podName 
 	if len(ip) != 0 && net.ParseIP(ip) == nil {
 		// ip could be an empty string if runtime is not responsible for the
 		// IP (e.g., host networking).
+		// ip可以是一个空字符串，如果运行时不负责IP
 		glog.Warningf("Pod Sandbox reported an unparseable IP %v", ip)
 		return ""
 	}

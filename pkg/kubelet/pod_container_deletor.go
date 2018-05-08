@@ -27,6 +27,7 @@ import (
 const (
 	// The limit on the number of buffered container deletion requests
 	// This number is a bit arbitrary and may be adjusted in the future.
+	// 缓存的容器删除请求的数目限制
 	containerDeletorBufferLimit = 50
 )
 
@@ -47,6 +48,7 @@ func newPodContainerDeletor(runtime kubecontainer.Runtime, containersToKeep int)
 		for {
 			select {
 			case id := <-buffer:
+				// 从buffer中获取容器ID，并调用运行时删除
 				runtime.DeleteContainer(id)
 			}
 		}

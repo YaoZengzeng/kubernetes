@@ -71,6 +71,7 @@ func (mc *basicMirrorClient) CreateMirrorPod(pod *v1.Pod) error {
 	}
 	// 每个static pod都有一个key为ConfigHashAnnotationKey
 	// 的annotations,hash就是它的value
+	// 用hash值标记一个mirror pod
 	hash := getPodHash(pod)
 	// 为mirror pod多增加一个annotation
 	copyPod.Annotations[kubetypes.ConfigMirrorAnnotationKey] = hash
@@ -78,6 +79,7 @@ func (mc *basicMirrorClient) CreateMirrorPod(pod *v1.Pod) error {
 	apiPod, err := mc.apiserverClient.CoreV1().Pods(copyPod.Namespace).Create(&copyPod)
 	if err != nil && errors.IsAlreadyExists(err) {
 		// Check if the existing pod is the same as the pod we want to create.
+		// 检查已经存在的pod是否和我们要创建的pod是同一个
 		if h, ok := apiPod.Annotations[kubetypes.ConfigMirrorAnnotationKey]; ok && h == hash {
 			return nil
 		}
@@ -104,6 +106,7 @@ func (mc *basicMirrorClient) DeleteMirrorPod(podFullName string) error {
 
 func IsStaticPod(pod *v1.Pod) bool {
 	source, err := kubetypes.GetPodSource(pod)
+	// 存在source且不为apiserver的pod为static pod
 	return err == nil && source != kubetypes.ApiserverSource
 }
 

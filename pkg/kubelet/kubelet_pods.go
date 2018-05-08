@@ -867,12 +867,15 @@ func (kl *Kubelet) killPod(pod *v1.Pod, runningPod *kubecontainer.Pod, status *k
 // makePodDataDirs creates the dirs for the pod datas.
 func (kl *Kubelet) makePodDataDirs(pod *v1.Pod) error {
 	uid := pod.UID
+	// 创建pod dir
 	if err := os.MkdirAll(kl.getPodDir(uid), 0750); err != nil && !os.IsExist(err) {
 		return err
 	}
+	// 创建pod volume dir
 	if err := os.MkdirAll(kl.getPodVolumesDir(uid), 0750); err != nil && !os.IsExist(err) {
 		return err
 	}
+	// 创建pod plugin dir
 	if err := os.MkdirAll(kl.getPodPluginsDir(uid), 0750); err != nil && !os.IsExist(err) {
 		return err
 	}
@@ -886,6 +889,7 @@ func (kl *Kubelet) getPullSecretsForPod(pod *v1.Pod) []v1.Secret {
 	pullSecrets := []v1.Secret{}
 
 	for _, secretRef := range pod.Spec.ImagePullSecrets {
+		// 遍历pod的ImagePullSecrets, 从secret manager中获取secret
 		secret, err := kl.secretManager.GetSecret(pod.Namespace, secretRef.Name)
 		if err != nil {
 			glog.Warningf("Unable to retrieve pull secret %s/%s for %s/%s due to %v.  The image pull may not succeed.", pod.Namespace, secretRef.Name, pod.Namespace, pod.Name, err)
@@ -912,6 +916,8 @@ func (kl *Kubelet) podIsTerminated(pod *v1.Pod) bool {
 		// 这对于刚刚重启的kubelet是很有用的
 		status = pod.Status
 	}
+	// 如果pod的状态为PodFailed, PodSucceeded或者pod的DeletionTimestamp不为nil并且不处于running状态
+	// 则pod的状态为terminated
 	return status.Phase == v1.PodFailed || status.Phase == v1.PodSucceeded || (pod.DeletionTimestamp != nil && notRunning(status.ContainerStatuses))
 }
 
@@ -1000,6 +1006,7 @@ func notRunning(statuses []v1.ContainerStatus) bool {
 
 // filterOutTerminatedPods returns the given pods which the status manager
 // does not consider failed or succeeded.
+// filterOutTerminatedPods返回status manager认为没有failed或者succeeded的pods
 func (kl *Kubelet) filterOutTerminatedPods(pods []*v1.Pod) []*v1.Pod {
 	var filteredPods []*v1.Pod
 	for _, p := range pods {
@@ -1442,6 +1449,8 @@ func (kl *Kubelet) generateAPIPodStatus(pod *v1.Pod, podStatus *kubecontainer.Po
 // convertStatusToAPIStatus creates an api PodStatus for the given pod from
 // the given internal pod status.  It is purely transformative and does not
 // alter the kubelet state at all.
+// convertStatusToAPIStatus为给定的internal pod status创建一个api PodStatus
+// 这仅仅只是一个转换并不会改变kubelet的状态
 func (kl *Kubelet) convertStatusToAPIStatus(pod *v1.Pod, podStatus *kubecontainer.PodStatus) *v1.PodStatus {
 	var apiPodStatus v1.PodStatus
 	apiPodStatus.PodIP = podStatus.IP

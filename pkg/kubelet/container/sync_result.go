@@ -73,6 +73,8 @@ type SyncResult struct {
 	//  * Container: Target should be container name
 	//  * Network: Target is useless now, we just set it as pod full name now
 	// action对应的target，现在target只能为Container或者Network
+	// 对于Container: Target为container name
+	// 对于Network: Target暂时没什么用，我们只是把它设置为pod full name
 	Target interface{}
 	// Brief error reason
 	Error error

@@ -42,6 +42,8 @@ type CgroupName string
 // This is common object which is used to specify
 // cgroup information to both systemd and raw cgroup fs
 // implementation of the Cgroup Manager interface.
+// CgroupConfig包含了cgroup配置信息
+// 这对于不论是systemd还是raw cgroup fs实现的Cgroup Manager接口都是一致的
 type CgroupConfig struct {
 	// Fully qualified name prior to any driver specific conversions.
 	Name CgroupName

@@ -286,8 +286,11 @@ func (m *kubeGenericRuntimeManager) Status() (*kubecontainer.RuntimeStatus, erro
 // GetPods returns a list of containers grouped by pods. The boolean parameter
 // specifies whether the runtime returns all containers including those already
 // exited and dead containers (used for garbage collection).
+// GetPods返回一系列以pods为组合的容器
+// 返回的布尔类型参数表示运行时是否返回所有的容器，包括那些已经exited或者deaded的容器
 func (m *kubeGenericRuntimeManager) GetPods(all bool) ([]*kubecontainer.Pod, error) {
 	pods := make(map[kubetypes.UID]*kubecontainer.Pod)
+	// 调用运行时的listSandboxes
 	sandboxes, err := m.getKubeletSandboxes(all)
 	if err != nil {
 		return nil, err
@@ -307,6 +310,7 @@ func (m *kubeGenericRuntimeManager) GetPods(all bool) ([]*kubecontainer.Pod, err
 			}
 		}
 		p := pods[podUID]
+		// 将runtimeapi.PodSandbox转换为kubecontainer.Container
 		converted, err := m.sandboxToKubeContainer(s)
 		if err != nil {
 			glog.V(4).Infof("Convert %q sandbox %v of pod %q failed: %v", m.runtimeName, s, podUID, err)
@@ -315,6 +319,7 @@ func (m *kubeGenericRuntimeManager) GetPods(all bool) ([]*kubecontainer.Pod, err
 		p.Sandboxes = append(p.Sandboxes, converted)
 	}
 
+	// 调用运行时的listContainers
 	containers, err := m.getKubeletContainers(all)
 	if err != nil {
 		return nil, err
@@ -366,18 +371,24 @@ type containerToKillInfo struct {
 }
 
 // podActions keeps information what to do for a pod.
+// podActions保留了该对一个pod做什么的信息
 type podActions struct {
 	// Stop all running (regular and init) containers and the sandbox for the pod.
+	// KillPod为true，则停止所有正在运行的pod的(regular以及init)容器以及sandbox
 	KillPod bool
 	// Whether need to create a new sandbox. If needed to kill pod and create a
 	// a new pod sandbox, all init containers need to be purged (i.e., removed).
+	// 是否需要创建一个新的sandbox, 如果需要kill pod并且创建一个新的pod sandbox
+	// 所有的init containers都需要被清除
 	CreateSandbox bool
 	// The id of existing sandbox. It is used for starting containers in ContainersToStart.
+	// 已经存在的sandbox的id，它用于在ContainersToStart里启动容器
 	SandboxID string
 	// The attempt number of creating sandboxes for the pod.
 	Attempt uint32
 
 	// The next init container to start.
+	// 下一个要启动的init container
 	NextInitContainerToStart *v1.Container
 	// ContainersToStart keeps a list of indexes for the containers to start,
 	// where the index is the index of the specific container in the pod spec (
@@ -478,6 +489,7 @@ func (m *kubeGenericRuntimeManager) computePodActions(pod *v1.Pod, podStatus *ku
 	if createPodSandbox {
 		if !shouldRestartOnFailure(pod) && attempt != 0 {
 			// Should not restart the pod, just return.
+			// 如果是run-once的pod，则直接返回
 			return changes
 		}
 		if len(pod.Spec.InitContainers) != 0 {
@@ -491,6 +503,7 @@ func (m *kubeGenericRuntimeManager) computePodActions(pod *v1.Pod, podStatus *ku
 		// 默认启动所有容器，除了那些已经成功运行并且RestartPolicy为OnFailure的容器
 		for idx, c := range pod.Spec.Containers {
 			if containerSucceeded(&c, podStatus) && pod.Spec.RestartPolicy == v1.RestartPolicyOnFailure {
+				// 跳过那些成功运行，并且RestartPolicy为OnFailure的pod
 				continue
 			}
 			changes.ContainersToStart = append(changes.ContainersToStart, idx)
@@ -596,6 +609,7 @@ func (m *kubeGenericRuntimeManager) computePodActions(pod *v1.Pod, podStatus *ku
 // 4、有必要的话，创建sandbox
 // 5、创建init container
 // 6、创建普通的container
+// 第二个参数为apiPodStatus
 func (m *kubeGenericRuntimeManager) SyncPod(pod *v1.Pod, _ v1.PodStatus, podStatus *kubecontainer.PodStatus, pullSecrets []v1.Secret, backOff *flowcontrol.Backoff) (result kubecontainer.PodSyncResult) {
 	// Step 1: Compute sandbox and container changes.
 	// 计算sandbox和container的改变
@@ -607,7 +621,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(pod *v1.Pod, _ v1.PodStatus, podStat
 			glog.Errorf("Couldn't make a ref to pod %q: '%v'", format.Pod(pod), err)
 		}
 		if podContainerChanges.SandboxID != "" {
-			// sandbox已经被改变了，它会被kill并且重启
+			// 如果CreateSandbox为true且SandboxID不为空，说明之前已经有一个sandbox了，它会被kill并且重启
 			m.recorder.Eventf(ref, v1.EventTypeNormal, events.SandboxChanged, "Pod sandbox changed, it will be killed and re-created.")
 		} else {
 			// SandboxID为空，则说明是一个新的pod，创建之
@@ -652,6 +666,8 @@ func (m *kubeGenericRuntimeManager) SyncPod(pod *v1.Pod, _ v1.PodStatus, podStat
 	// Keep terminated init containers fairly aggressively controlled
 	// This is an optmization because container removals are typically handled
 	// by container garbage collector.
+	// 保持terminated init container可控
+	// 容器的移除通常是由容器GC完成的
 	m.pruneInitContainersBeforeStart(pod, podStatus)
 
 	// We pass the value of the podIP down to generatePodSandboxConfig and
@@ -691,7 +707,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(pod *v1.Pod, _ v1.PodStatus, podStat
 		}
 		glog.V(4).Infof("Created PodSandbox %q for pod %q", podSandboxID, format.Pod(pod))
 
-		// 调用底层的容器运行时，创建sandbox
+		// 调用底层的容器运行时，获取sandbox的状态
 		podSandboxStatus, err := m.runtimeService.PodSandboxStatus(podSandboxID)
 		if err != nil {
 			ref, err := ref.GetReference(legacyscheme.Scheme, pod)
@@ -716,6 +732,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(pod *v1.Pod, _ v1.PodStatus, podStat
 	}
 
 	// Get podSandboxConfig for containers to start.
+	// 获取podSandboxConfig用于启动containers
 	configPodSandboxResult := kubecontainer.NewSyncResult(kubecontainer.ConfigPodSandbox, podSandboxID)
 	result.AddSyncResult(configPodSandboxResult)
 	podSandboxConfig, err := m.generatePodSandboxConfig(pod, podContainerChanges.Attempt)
@@ -730,6 +747,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(pod *v1.Pod, _ v1.PodStatus, podStat
 	// 启动init container
 	if container := podContainerChanges.NextInitContainerToStart; container != nil {
 		// Start the next init container.
+		// 启动下一个init container
 		startContainerResult := kubecontainer.NewSyncResult(kubecontainer.StartContainer, container.Name)
 		result.AddSyncResult(startContainerResult)
 		isInBackOff, msg, err := m.doBackOff(pod, container, podStatus, backOff)
@@ -740,6 +758,7 @@ func (m *kubeGenericRuntimeManager) SyncPod(pod *v1.Pod, _ v1.PodStatus, podStat
 		}
 
 		glog.V(4).Infof("Creating init container %+v in pod %v", container, format.Pod(pod))
+		// 启动容器
 		if msg, err := m.startContainer(podSandboxID, podSandboxConfig, container, pod, podStatus, pullSecrets, podIP); err != nil {
 			startContainerResult.Fail(err, msg)
 			utilruntime.HandleError(fmt.Errorf("init container start failed: %v: %s", err, msg))
@@ -827,7 +846,9 @@ func (m *kubeGenericRuntimeManager) KillPod(pod *v1.Pod, runningPod kubecontaine
 }
 
 // killPodWithSyncResult kills a runningPod and returns SyncResult.
+// killPodWithSyncResult杀死runningPod并且返回SyncResult
 // Note: The pod passed in could be *nil* when kubelet restarted.
+// 当kubelet重启的时候，传入的pod可以为nil
 func (m *kubeGenericRuntimeManager) killPodWithSyncResult(pod *v1.Pod, runningPod kubecontainer.Pod, gracePeriodOverride *int64) (result kubecontainer.PodSyncResult) {
 	killContainerResults := m.killContainersWithSyncResult(pod, runningPod, gracePeriodOverride)
 	for _, containerResult := range killContainerResults {
@@ -838,6 +859,7 @@ func (m *kubeGenericRuntimeManager) killPodWithSyncResult(pod *v1.Pod, runningPo
 	killSandboxResult := kubecontainer.NewSyncResult(kubecontainer.KillPodSandbox, runningPod.ID)
 	result.AddSyncResult(killSandboxResult)
 	// Stop all sandboxes belongs to same pod
+	// 停止所有属于同一个pod的sandbox
 	for _, podSandbox := range runningPod.Sandboxes {
 		if err := m.runtimeService.StopPodSandbox(podSandbox.ID.ID); err != nil {
 			killSandboxResult.Fail(kubecontainer.ErrKillPodSandbox, err.Error())

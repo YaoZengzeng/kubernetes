@@ -33,6 +33,7 @@ const (
 )
 
 // PodOperation defines what changes will be made on a pod configuration.
+// PodOperation定义了会对一个pod configuration做什么改变
 type PodOperation int
 
 const (
@@ -48,8 +49,10 @@ const (
 	UPDATE
 	// Pods with the given ids have unexpected status in this source,
 	// kubelet should reconcile status with this source
+	// 该source中，给定id的pod有着不符合预期的状态，kubelet应该对它进行调整
 	RECONCILE
 	// Pods with the given ids have been restored from a checkpoint.
+	// 给定id的pods从checkpoint中恢复过来
 	RESTORE
 
 	// These constants identify the sources of pods
@@ -79,6 +82,7 @@ const (
 // functionally similar, this helps our unit tests properly check that the correct PodUpdates
 // are generated.
 // Pods永远不能为nil，它应该指向一个empty slice
+// 尽管功能是相似的，它能帮助我们的单元测试更好地检查，正确的PodUpdates已经被创建了
 type PodUpdate struct {
 	Pods   []*v1.Pod
 	Op     PodOperation
@@ -105,6 +109,7 @@ func GetValidatedSources(sources []string) ([]string, error) {
 }
 
 // GetPodSource returns the source of the pod based on the annotation.
+// GetPodSource根据annotation返回pod的source
 func GetPodSource(pod *v1.Pod) (string, error) {
 	if pod.Annotations != nil {
 		if source, ok := pod.Annotations[ConfigSourceAnnotationKey]; ok {
@@ -115,17 +120,23 @@ func GetPodSource(pod *v1.Pod) (string, error) {
 }
 
 // SyncPodType classifies pod updates, eg: create, update.
+// SyncPodType区分pod updates的类型
 type SyncPodType int
 
 const (
 	// SyncPodSync is when the pod is synced to ensure desired state
+	// 需要将pod同步到期望的状态
 	SyncPodSync SyncPodType = iota
 	// SyncPodUpdate is when the pod is updated from source
+	// 从source获取到pod的更新
 	SyncPodUpdate
 	// SyncPodCreate is when the pod is created from source
+	// 从source获取到pod被创建
 	SyncPodCreate
 	// SyncPodKill is when the pod is killed based on a trigger internal to the kubelet for eviction.
+	// kubelet用于驱逐的内部的trigger
 	// If a SyncPodKill request is made to pod workers, the request is never dropped, and will always be processed.
+	// 如果一个SyncPodKill请求发送到pod workers，该请求不会被丢弃，它永远都会被处理
 	SyncPodKill
 )
 

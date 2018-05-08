@@ -65,9 +65,12 @@ type UpdatePodOptions struct {
 	// drop update requests if it was fulfilling a previous request.  this is
 	// only guaranteed to be invoked in response to a kill pod request which is
 	// always delivered.
+	// OnCompleteFunc并不保证会执行，因为pod worker可能会丢弃update requests，如果它已经
+	// 充满了pervious request
 	// OnCompleteFunc只有在请求是kill pod时才会肯定被执行
 	OnCompleteFunc OnCompleteFunc
 	// if update type is kill, use the specified options to kill the pod.
+	// 如果更新的类型为kill，使用特定的options用于kill the pod
 	KillPodOptions *KillPodOptions
 }
 
@@ -140,6 +143,7 @@ type podWorkers struct {
 	recorder record.EventRecorder
 
 	// backOffPeriod is the duration to back off when there is a sync error.
+	// backoffPeriod是当sync error发生时的回退时间
 	backOffPeriod time.Duration
 
 	// resyncInterval is the duration to wait until the next sync.
@@ -182,6 +186,8 @@ func (p *podWorkers) managePodLoop(podUpdates <-chan UpdatePodOptions) {
 			if err != nil {
 				// This is the legacy event thrown by manage pod loop
 				// all other events are now dispatched from syncPodFn
+				// 这是唯一通过manage pod loop发送的event
+				// 其他所有的event现在都是通过syncPodFn发送的
 				p.recorder.Eventf(update.Pod, v1.EventTypeWarning, events.FailedSync, "error determining status: %v", err)
 				return err
 			}
@@ -232,6 +238,9 @@ func (p *podWorkers) UpdatePod(options *UpdatePodOptions) {
 		// puts an update into channel is called from the same goroutine where
 		// the channel is consumed. However, it is guaranteed that in such case
 		// the channel is empty, so buffer of size 1 is enough.
+		// podUpdates这个channel缓存的大小为1，因为checkForUpdates()方法会将一个update
+		// 写入channel，这个方法和channel被消费的地方是处于同一个goroutine的
+		// 不过在那个时候可以确保channel为空，这样大小为1的buffer就足够了
 		podUpdates = make(chan UpdatePodOptions, 1)
 		// podUpdates是一个map[id]chan，能够从该channel中获取某个pod最新的UpdatePodOptions
 		p.podUpdates[uid] = podUpdates
@@ -259,6 +268,7 @@ func (p *podWorkers) UpdatePod(options *UpdatePodOptions) {
 		update, found := p.lastUndeliveredWorkUpdate[pod.UID]
 		if !found || update.UpdateType != kubetypes.SyncPodKill {
 			// 将最后一个未发送的update请求放在lastUndeliveredWorkUpdate中
+			// 如果lastUndeliveredWorkUpdate找到了，并且类型不是SyncPodKill，就会被覆盖
 			p.lastUndeliveredWorkUpdate[pod.UID] = *options
 		}
 	}
@@ -294,6 +304,7 @@ func (p *podWorkers) ForgetNonExistingPodWorkers(desiredPods map[types.UID]empty
 
 func (p *podWorkers) wrapUp(uid types.UID, syncErr error) {
 	// Requeue the last update if the last sync returned error.
+	// 如果上一次同步遇到了error, 则将上一次update重新加入队列
 	switch {
 	case syncErr == nil:
 		// No error; requeue at the regular resync interval.
@@ -309,9 +320,11 @@ func (p *podWorkers) checkForUpdates(uid types.UID) {
 	p.podLock.Lock()
 	defer p.podLock.Unlock()
 	if workUpdate, exists := p.lastUndeliveredWorkUpdate[uid]; exists {
+		// 将上一次undeliveredWorkUpdate写入p.podUpdates[uid]
 		p.podUpdates[uid] <- workUpdate
 		delete(p.lastUndeliveredWorkUpdate, uid)
 	} else {
+		// 否则，如果没有undelivered updates，则将p.isWorking[uid]设置为false
 		p.isWorking[uid] = false
 	}
 }

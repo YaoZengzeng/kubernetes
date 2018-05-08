@@ -28,6 +28,7 @@ const (
 	ContainerRemoved PodLifeCycleEventType = "ContainerRemoved"
 	// PodSync is used to trigger syncing of a pod when the observed change of
 	// the state of the pod cannot be captured by any single event above.
+	// 如果观察到的pod的变化不能被上述任何一种单一的event描述，则触发一次对pod的同步
 	PodSync PodLifeCycleEventType = "PodSync"
 	// Do not use the events below because they are disabled in GenericPLEG.
 	ContainerChanged PodLifeCycleEventType = "ContainerChanged"

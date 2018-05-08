@@ -43,13 +43,19 @@ type ContainerManager interface {
 	// Runs the container manager's housekeeping.
 	// - Ensures that the Docker daemon is in a container.
 	// - Creates the system container where all non-containerized processes run.
+	// 运行container manager的housekeeping
+	// - 确保Docker daemon在一个容器中
+	// - 创建system container，所有的non-containerized进程都运行在里面
 	Start(*v1.Node, ActivePodsFunc, config.SourcesReady, status.PodStatusProvider, internalapi.RuntimeService) error
 
 	// SystemCgroupsLimit returns resources allocated to system cgroups in the machine.
 	// These cgroups include the system and Kubernetes services.
+	// SystemCgroupsLimit返回机器上给system cgroups分配的资源
+	// 这些cgroups包括system以及Kubernetes services
 	SystemCgroupsLimit() v1.ResourceList
 
 	// GetNodeConfig returns a NodeConfig that is being used by the container manager.
+	// GetNodeConfig返回container manager使用的NodeConfig
 	GetNodeConfig() NodeConfig
 
 	// Status returns internal Status.
@@ -70,9 +76,11 @@ type ContainerManager interface {
 	GetQOSContainersInfo() QOSContainersInfo
 
 	// GetNodeAllocatableReservation returns the amount of compute resources that have to be reserved from scheduling.
+	// GetNodeAllocatableReservation返回在调度时需要保留的计算资源的数量
 	GetNodeAllocatableReservation() v1.ResourceList
 
 	// GetCapacity returns the amount of compute resources tracked by container manager available on the node.
+	// GetCapacity返回container manager追踪的本节点的计算资源可以获取的数目
 	GetCapacity() v1.ResourceList
 
 	// GetDevicePluginResourceCapacity returns the amount of device plugin resources available on the node
@@ -81,6 +89,8 @@ type ContainerManager interface {
 
 	// UpdateQOSCgroups performs housekeeping updates to ensure that the top
 	// level QoS containers have their desired state in a thread-safe way
+	// UpdateQOSCgroups会进行housekeeping udpates从而确保top level Qos Container
+	// 达到预期的状态
 	UpdateQOSCgroups() error
 
 	// GetResources returns RunContainerOptions with devices, mounts, and env fields populated for

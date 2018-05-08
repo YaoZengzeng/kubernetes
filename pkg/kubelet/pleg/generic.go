@@ -48,6 +48,8 @@ import (
 // guarantee that kubelet can handle missing container events, it is
 // recommended to set the relist period short and have an auxiliary, longer
 // periodic sync in kubelet as the safety net.
+// GenericPLEG假设一个容器不会再一个relist period中被创建，删除以及GC
+// 如果这种情况发生，GenenricPLEG会丢失该容器所有的events
 type GenericPLEG struct {
 	// The period for relisting.
 	relistPeriod time.Duration
@@ -56,15 +58,19 @@ type GenericPLEG struct {
 	// The channel from which the subscriber listens events.
 	eventChannel chan *PodLifecycleEvent
 	// The internal cache for pod/container information.
+	// 内部的cache用于缓存pod/container信息
 	podRecords podRecords
 	// Time of the last relisting.
+	// 上一次relisting的时间
 	relistTime atomic.Value
 	// Cache for storing the runtime states required for syncing pods.
+	// Cache缓存了一些同步pods所需的runtime states
 	cache kubecontainer.Cache
 	// For testability.
 	clock clock.Clock
 	// Pods that failed to have their status retrieved during a relist. These pods will be
 	// retried during the next relisting.
+	// 在relist中，获取status失败的pods，这些pods会在下一次relisting的时候再次获取
 	podsToReinspect map[types.UID]*kubecontainer.Pod
 }
 
@@ -122,12 +128,14 @@ func NewGenericPLEG(runtime kubecontainer.Runtime, channelCapacity int,
 
 // Returns a channel from which the subscriber can receive PodLifecycleEvent
 // events.
+// Watch()仅仅只是返回一个channel, subscriber可以接收PodLifecycleEvent
 // TODO: support multiple subscribers.
 func (g *GenericPLEG) Watch() chan *PodLifecycleEvent {
 	return g.eventChannel
 }
 
 // Start spawns a goroutine to relist periodically.
+// Start启动一个goroutine，阶段性地进行relist
 func (g *GenericPLEG) Start() {
 	go wait.Until(g.relist, g.relistPeriod, wait.NeverStop)
 }
@@ -182,6 +190,8 @@ func (g *GenericPLEG) updateRelistTime(timestamp time.Time) {
 
 // relist queries the container runtime for list of pods/containers, compare
 // with the internal pods/containers, and generates events accordingly.
+// relist请求容器运行时list pod以及容器，并且和内部的pods/containers进行比较
+// 并据此产生events
 func (g *GenericPLEG) relist() {
 	glog.V(5).Infof("GenericPLEG: Relisting")
 
@@ -195,6 +205,7 @@ func (g *GenericPLEG) relist() {
 	}()
 
 	// Get all the pods.
+	// 从运行时获取所有的pods
 	podList, err := g.runtime.GetPods(true)
 	if err != nil {
 		glog.Errorf("GenericPLEG: Unable to retrieve pods: %v", err)
@@ -207,6 +218,7 @@ func (g *GenericPLEG) relist() {
 	g.podRecords.setCurrent(pods)
 
 	// Compare the old and the current pods, and generate events.
+	// 比较old以及current pods，并且据此产生events
 	eventsByPodID := map[types.UID][]*PodLifecycleEvent{}
 	for pid := range g.podRecords {
 		oldPod := g.podRecords.getOld(pid)
