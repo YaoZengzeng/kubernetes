@@ -23,6 +23,7 @@ import (
 
 // Clock allows for injecting fake or real clocks into code that
 // needs to do arbitrary things based on time.
+// Clock允许注入fake或者real clock，当有些时候需要基于时间去做一些事的时候
 type Clock interface {
 	Now() time.Time
 	Since(time.Time) time.Duration
@@ -153,6 +154,7 @@ func (f *FakeClock) Tick(d time.Duration) <-chan time.Time {
 }
 
 // Move clock by Duration, notify anyone that's called After, Tick, or NewTimer
+// 将clock移动Duration，并且通知任何调用了After, Tick或者NewTimer的
 func (f *FakeClock) Step(d time.Duration) {
 	f.lock.Lock()
 	defer f.lock.Unlock()

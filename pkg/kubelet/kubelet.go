@@ -119,6 +119,7 @@ const (
 	ContainerLogsDir = "/var/log/containers"
 
 	// MaxContainerBackOff is the max backoff period, exported for the e2e test
+	// MaxContainerBackOff是最大的回退间隔
 	MaxContainerBackOff = 300 * time.Second
 
 	// Capacity of the channel for storing pods to kill. A small number should
@@ -161,6 +162,8 @@ const (
 	// backOffPeriod is the period to back off when pod syncing results in an
 	// error. It is also used as the base period for the exponential backoff
 	// container restarts and image pulls.
+	// backOffPeriod是回退的时间间隔，当pod的syncing results处于error状态的话
+	// 同时这也能作为容器重启以及拉取镜像的指数回退的base period
 	backOffPeriod = time.Second * 10
 
 	// ContainerGCPeriod is the period for performing container garbage collection.
@@ -1590,6 +1593,7 @@ func (kl *Kubelet) GetKubeClient() clientset.Interface {
 // This operation writes all events that are dispatched in order to provide
 // the most accurate information possible about an error situation to aid debugging.
 // Callers should not throw an event if this operation returns an error.
+// 只有在syncPod方法内，才会调用statusManager的SetPodStatus方法
 func (kl *Kubelet) syncPod(o syncPodOptions) error {
 	// pull out the required options
 	pod := o.pod

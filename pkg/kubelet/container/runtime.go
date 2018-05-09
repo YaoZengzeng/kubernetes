@@ -175,6 +175,8 @@ type ContainerAttacher interface {
 type ContainerCommandRunner interface {
 	// RunInContainer synchronously executes the command in the container, and returns the output.
 	// If the command completes with a non-0 exit code, a pkg/util/exec.ExitError will be returned.
+	// RunInContainer在容器里同步地执行命令，并且返回output
+	// 如果命令完成之后的退出码非零，会返回pkg/util/exec.ExitError
 	RunInContainer(id ContainerID, cmd []string, timeout time.Duration) ([]byte, error)
 }
 

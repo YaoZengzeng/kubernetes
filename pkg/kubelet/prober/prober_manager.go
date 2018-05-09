@@ -68,11 +68,13 @@ type Manager interface {
 
 type manager struct {
 	// Map of active workers for probes
+	// 用于探测的active workers
 	workers map[probeKey]*worker
 	// Lock for accessing & mutating workers
 	workerLock sync.RWMutex
 
 	// The statusManager cache provides pod IP and container IDs for probing.
+	// statusManager cache提供pod IP以及container IDs用于probing
 	statusManager status.Manager
 
 	// readinessManager manages the results of readiness probes
@@ -107,8 +109,10 @@ func NewManager(
 }
 
 // Start syncing probe status. This should only be called once.
+// Start同步probe status, 本函数只能被调用一次
 func (m *manager) Start() {
 	// Start syncing readiness.
+	// 开始同步readiness
 	go wait.Forever(m.updateReadiness, 0)
 }
 
@@ -152,18 +156,21 @@ func (m *manager) AddPod(pod *v1.Pod) {
 		// 如果定义了ReadinessProbe或者LivenessProbe
 		// 则创建一个worker
 		if c.ReadinessProbe != nil {
+			// 设置probeKey的probeType为readiness
 			key.probeType = readiness
 			if _, ok := m.workers[key]; ok {
 				glog.Errorf("Readiness probe already exists! %v - %v",
 					format.Pod(pod), c.Name)
 				return
 			}
+			// 创建新的worker
 			w := newWorker(m, readiness, pod, c)
 			m.workers[key] = w
 			go w.run()
 		}
 
 		if c.LivenessProbe != nil {
+			// 设置probe类型为liveness
 			key.probeType = liveness
 			if _, ok := m.workers[key]; ok {
 				glog.Errorf("Liveness probe already exists! %v - %v",
@@ -245,6 +252,7 @@ func (m *manager) getWorker(podUID types.UID, containerName string, probeType pr
 func (m *manager) removeWorker(podUID types.UID, containerName string, probeType probeType) {
 	m.workerLock.Lock()
 	defer m.workerLock.Unlock()
+	// 仅仅只是从m.workers中移除而已
 	delete(m.workers, probeKey{podUID, containerName, probeType})
 }
 
@@ -262,6 +270,7 @@ func (m *manager) workerCount() int {
 func (m *manager) updateReadiness() {
 	update := <-m.readinessManager.Updates()
 
+	// 判断readiness探测的结果是否为Success
 	ready := update.Result == results.Success
 	// 设置status manager的container readiness
 	m.statusManager.SetContainerReadiness(update.PodUID, update.ContainerID, ready)

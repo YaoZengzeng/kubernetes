@@ -53,6 +53,7 @@ type worker struct {
 	probeType probeType
 
 	// The probe value during the initial delay.
+	// 在initial delay的probe value
 	initialValue results.Result
 
 	// Where to store this workers results.
@@ -70,11 +71,12 @@ type worker struct {
 	resultRun int
 
 	// If set, skip probing.
-	// 如果onHold设置的haul，则跳过probing
+	// 如果onHold设置的话，跳过probing
 	onHold bool
 }
 
 // Creates and starts a new probe worker.
+// 创建一个新的probe worker
 func newWorker(
 	m *manager,
 	probeType probeType,
@@ -82,7 +84,7 @@ func newWorker(
 	container v1.Container) *worker {
 
 	w := &worker{
-		// 一个1的缓存，因此stop()函数就不会被阻塞
+		// 大小为1的缓存，因此stop()函数就不会被阻塞
 		stopCh:       make(chan struct{}, 1), // Buffer so stop() can be non-blocking.
 		pod:          pod,
 		container:    container,
@@ -108,6 +110,7 @@ func newWorker(
 }
 
 // run periodically probes the container.
+// 阶段性地对容器进行探测
 func (w *worker) run() {
 	probeTickerPeriod := time.Duration(w.spec.PeriodSeconds) * time.Second
 
@@ -121,6 +124,7 @@ func (w *worker) run() {
 		// Clean up.
 		probeTicker.Stop()
 		if !w.containerID.IsEmpty() {
+			// 从resultManager中移除containerID
 			w.resultsManager.Remove(w.containerID)
 		}
 
@@ -135,6 +139,7 @@ probeLoop:
 		case <-w.stopCh:
 			break probeLoop
 		case <-probeTicker.C:
+			// 等待probeTickerPeriod秒
 			// continue
 		}
 	}
@@ -161,7 +166,7 @@ func (w *worker) doProbe() (keepGoing bool) {
 	// HandleCrash()会负责处理日志的工作
 	defer runtime.HandleCrash(func(_ interface{}) { keepGoing = true })
 
-	// 获取pod的status
+	// 从statusManager获取pod的status
 	status, ok := w.probeManager.statusManager.GetPodStatus(w.pod.UID)
 	// 从status manager中找不到status，则pod还未被创建，或者已经删除了
 	if !ok {
@@ -171,6 +176,7 @@ func (w *worker) doProbe() (keepGoing bool) {
 	}
 
 	// Worker should terminate if pod is terminated.
+	// 如果pod已经终结了，Worker也要结束
 	if status.Phase == v1.PodFailed || status.Phase == v1.PodSucceeded {
 		glog.V(3).Infof("Pod %v %v, exiting probe worker",
 			format.Pod(w.pod), status.Phase)
@@ -181,6 +187,7 @@ func (w *worker) doProbe() (keepGoing bool) {
 	c, ok := podutil.GetContainerStatus(status.ContainerStatuses, w.container.Name)
 	if !ok || len(c.ContainerID) == 0 {
 		// Either the container has not been created yet, or it was deleted.
+		// 容器要么没创建，要么已经被删除了，返回true，等待更多的信息
 		glog.V(3).Infof("Probe target container not found: %v - %v",
 			format.Pod(w.pod), w.container.Name)
 		return true // Wait for more information.
@@ -192,8 +199,10 @@ func (w *worker) doProbe() (keepGoing bool) {
 			w.resultsManager.Remove(w.containerID)
 		}
 		w.containerID = kubecontainer.ParseContainerID(c.ContainerID)
+		// 更新容器时，首先设置resultManager的初始状态
 		w.resultsManager.Set(w.containerID, w.initialValue, w.pod)
 		// We've got a new container; resume probing.
+		// 我们获取了一个新的容器，继续进行探测
 		w.onHold = false
 	}
 
@@ -244,7 +253,7 @@ func (w *worker) doProbe() (keepGoing bool) {
 		return true
 	}
 
-	// 设置result manager
+	// 只有多次探测容器为同一状态，才能设置result manager
 	w.resultsManager.Set(w.containerID, result, w.pod)
 
 	if w.probeType == liveness && result == results.Failure {
@@ -253,6 +262,9 @@ func (w *worker) doProbe() (keepGoing bool) {
 		// Stop probing until we see a new container ID. This is to reduce the
 		// chance of hitting #21751, where running `docker exec` when a
 		// container is being stopped may lead to corrupted container state.
+		// 直到我们见到一个新的container ID才结束探测
+		// 这是为了避免#21751,在运行`docker exec`的时候，当一个容器正在被stopped的时候
+		// 可能会导致容器状态的损坏
 		w.onHold = true
 		w.resultRun = 1
 	}

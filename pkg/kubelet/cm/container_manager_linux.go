@@ -642,6 +642,7 @@ func (cm *containerManagerImpl) GetResources(pod *v1.Pod, container *v1.Containe
 	if devOpts == nil {
 		return opts, nil
 	}
+	// 对Device, Mounts以及Envs进行设置
 	opts.Devices = append(opts.Devices, devOpts.Devices...)
 	opts.Mounts = append(opts.Mounts, devOpts.Mounts...)
 	opts.Envs = append(opts.Envs, devOpts.Envs...)

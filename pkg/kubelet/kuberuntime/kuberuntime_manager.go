@@ -114,6 +114,7 @@ type kubeGenericRuntimeManager struct {
 	versionCache *cache.ObjectCache
 
 	// The directory path for seccomp profiles.
+	// seccomp profiles的目录路径
 	seccompProfileRoot string
 
 	// Internal lifecycle event handlers for container resource management.

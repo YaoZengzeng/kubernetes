@@ -205,6 +205,8 @@ func visitContainerConfigmapNames(container *v1.Container, visitor Visitor) bool
 
 // GetContainerStatus extracts the status of container "name" from "statuses".
 // It also returns if "name" exists.
+// 从"statuses"中抽取出名字为"name"的容器的status
+// 并且返回"name"是否存在
 func GetContainerStatus(statuses []v1.ContainerStatus, name string) (v1.ContainerStatus, bool) {
 	for i := range statuses {
 		if statuses[i].Name == name {

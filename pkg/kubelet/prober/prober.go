@@ -102,6 +102,7 @@ func (pb *prober) probe(probeType probeType, pod *v1.Pod, status v1.PodStatus, c
 		return results.Success, nil
 	}
 
+	// maxProbeRetries，默认最大的重试次数为3次
 	result, output, err := pb.runProbeWithRetries(probeType, probeSpec, pod, status, container, containerID, maxProbeRetries)
 	if err != nil || result != probe.Success {
 		// Probe failed in one way or another.
@@ -135,6 +136,7 @@ func (pb *prober) runProbeWithRetries(probeType probeType, p *v1.Probe, pod *v1.
 	var result probe.Result
 	var output string
 	for i := 0; i < retries; i++ {
+		// 返回的仅仅是result, output以及error
 		result, output, err = pb.runProbe(probeType, p, pod, status, container, containerID)
 		if err == nil {
 			return result, output, nil
@@ -156,8 +158,10 @@ func buildHeader(headerList []v1.HTTPHeader) http.Header {
 func (pb *prober) runProbe(probeType probeType, p *v1.Probe, pod *v1.Pod, status v1.PodStatus, container v1.Container, containerID kubecontainer.ContainerID) (probe.Result, string, error) {
 	timeout := time.Duration(p.TimeoutSeconds) * time.Second
 	// 直接用pb中的配置进行调用
+	// probe执行的优先级为Exec, Http以及TCP socket
 	if p.Exec != nil {
 		glog.V(4).Infof("Exec-Probe Pod: %v, Container: %v, Command: %v", pod, container, p.Exec.Command)
+		// 创建command
 		command := kubecontainer.ExpandContainerCommandOnlyStatic(p.Exec.Command, container.Env)
 		return pb.exec.Probe(pb.newExecInContainer(container, containerID, command, timeout))
 	}
@@ -247,6 +251,8 @@ func formatURL(scheme string, host string, port int, path string) *url.URL {
 type execInContainer struct {
 	// run executes a command in a container. Combined stdout and stderr output is always returned. An
 	// error is returned if one occurred.
+	// run在容器中执行一条命令，总是会返回Combined stdout以及stderr
+	// 如果遇到错误的话，也会返回
 	run func() ([]byte, error)
 }
 

@@ -51,6 +51,7 @@ type httpProber struct {
 }
 
 // Probe returns a ProbeRunner capable of running an http check.
+// Probe返回一个ProbeRunner，它能够运行一个http check
 func (pr httpProber) Probe(url *url.URL, headers http.Header, timeout time.Duration) (probe.Result, string, error) {
 	return DoHTTPProbe(url, headers, &http.Client{Timeout: timeout, Transport: pr.transport})
 }
@@ -60,7 +61,9 @@ type HTTPGetInterface interface {
 }
 
 // DoHTTPProbe checks if a GET request to the url succeeds.
+// DoHTTPProbe检查到一个url的GET请求是否成功
 // If the HTTP response code is successful (i.e. 400 > code >= 200), it returns Success.
+// 当一个HTTP请求的返回码大于等于200，小于400，则认为是成功的，否则都是失败
 // If the HTTP response code is unsuccessful or HTTP communication fails, it returns Failure.
 // This is exported because some other packages may want to do direct HTTP probes.
 func DoHTTPProbe(url *url.URL, headers http.Header, client HTTPGetInterface) (probe.Result, string, error) {

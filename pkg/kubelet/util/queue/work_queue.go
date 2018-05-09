@@ -30,8 +30,10 @@ import (
 // 当timestamp耗尽的时候，item就认为可以处理了
 type WorkQueue interface {
 	// GetWork dequeues and returns all ready items.
+	// GetWork出队并且返回所有处于ready状态的items
 	GetWork() []types.UID
 	// Enqueue inserts a new item or overwrites an existing item.
+	// Enqueue插入一个新的item或者覆盖一个已经存在的item
 	Enqueue(item types.UID, delay time.Duration)
 }
 

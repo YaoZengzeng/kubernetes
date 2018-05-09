@@ -1970,10 +1970,12 @@ type ExecAction struct {
 // alive or ready to receive traffic.
 type Probe struct {
 	// The action taken to determine the health of a container
+	// 用于检测容器健康状况所采取的行动
 	Handler `json:",inline" protobuf:"bytes,1,opt,name=handler"`
 	// Number of seconds after the container has started before liveness probes are initiated.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
 	// +optional
+	// 当容器启动以后，livenss probe探测启动之前的时间间隔
 	InitialDelaySeconds int32 `json:"initialDelaySeconds,omitempty" protobuf:"varint,2,opt,name=initialDelaySeconds"`
 	// Number of seconds after which the probe times out.
 	// Defaults to 1 second. Minimum value is 1.
@@ -1985,11 +1987,15 @@ type Probe struct {
 	// +optional
 	PeriodSeconds int32 `json:"periodSeconds,omitempty" protobuf:"varint,4,opt,name=periodSeconds"`
 	// Minimum consecutive successes for the probe to be considered successful after having failed.
+	// 最小的连续探测成功的次数，到达之后才能认为是成功的，如果之前的状态为失败的话
 	// Defaults to 1. Must be 1 for liveness. Minimum value is 1.
+	// 默认为1，对于liveness必须是1，最小值也为1
 	// +optional
 	SuccessThreshold int32 `json:"successThreshold,omitempty" protobuf:"varint,5,opt,name=successThreshold"`
 	// Minimum consecutive failures for the probe to be considered failed after having succeeded.
+	// 最小的连续探测失败的次数，到达之后才能认为是失败的，如果之前的状态是成功的话
 	// Defaults to 3. Minimum value is 1.
+	// 默认为3，最小值为1
 	// +optional
 	FailureThreshold int32 `json:"failureThreshold,omitempty" protobuf:"varint,6,opt,name=failureThreshold"`
 }
@@ -2292,17 +2298,23 @@ type ContainerStateTerminated struct {
 }
 
 // ContainerState holds a possible state of container.
+// ContainerState维护了一个容器可能的状态
 // Only one of its members may be specified.
+// 只能指定其中的一个成员
 // If none of them is specified, the default one is ContainerStateWaiting.
+// 如果一个都没有指定，则默认的状态为ContainerStateWaiting
 type ContainerState struct {
 	// Details about a waiting container
 	// +optional
+	// 容器处于waiting状态的reason以及message
 	Waiting *ContainerStateWaiting `json:"waiting,omitempty" protobuf:"bytes,1,opt,name=waiting"`
 	// Details about a running container
 	// +optional
+	// 其中包含了容器启动的时间
 	Running *ContainerStateRunning `json:"running,omitempty" protobuf:"bytes,2,opt,name=running"`
 	// Details about a terminated container
 	// +optional
+	// 容器的ID, exit code, Reason, Message，启动时间，结束时间等等
 	Terminated *ContainerStateTerminated `json:"terminated,omitempty" protobuf:"bytes,3,opt,name=terminated"`
 }
 
@@ -2324,6 +2336,7 @@ type ContainerStatus struct {
 	// the number of dead containers that have not yet been removed.
 	// Note that this is calculated from dead containers. But those containers are subject to
 	// garbage collection. This value will get capped at 5 by GC.
+	// 容器重启的次数是根据已经处于dead状态的容器的数目决定的
 	RestartCount int32 `json:"restartCount" protobuf:"varint,5,opt,name=restartCount"`
 	// The image the container is running.
 	// More info: https://kubernetes.io/docs/concepts/containers/images
@@ -3017,6 +3030,7 @@ type PodStatus struct {
 	// +optional
 	Message string `json:"message,omitempty" protobuf:"bytes,3,opt,name=message"`
 	// A brief CamelCase message indicating details about why the pod is in this state.
+	// 关于容器为何处于当前状态的简短的信息
 	// e.g. 'Evicted'
 	// +optional
 	Reason string `json:"reason,omitempty" protobuf:"bytes,4,opt,name=reason"`
@@ -3051,6 +3065,7 @@ type PodStatus struct {
 	// See PodQOSClass type for available QOS classes
 	// More info: https://github.com/kubernetes/kubernetes/blob/master/docs/design/resource-qos.md
 	// +optional
+	// Guaranteed, Burstable或者BestEffor
 	QOSClass PodQOSClass `json:"qosClass,omitempty" protobuf:"bytes,9,rep,name=qosClass"`
 }
 

@@ -53,6 +53,7 @@ type versionedPodStatus struct {
 	podNamespace string
 }
 
+// 一个podStatusSyncRequest中包含了pod的ID以及versionedPodStatus
 type podStatusSyncRequest struct {
 	podUID types.UID
 	status versionedPodStatus
@@ -65,12 +66,13 @@ type manager struct {
 	kubeClient clientset.Interface
 	podManager kubepod.Manager
 	// Map from pod UID to sync status of the corresponding pod.
+	// 从pod UID到对应pod的sync status的映射
 	podStatuses      map[types.UID]versionedPodStatus
 	podStatusesLock  sync.RWMutex
 	podStatusChannel chan podStatusSyncRequest
 	// Map from (mirror) pod UID to latest status version successfully sent to the API server.
 	// apiStatusVersions must only be accessed from the sync thread.
-	// pod UID到上一次同步到API server的status的映射
+	// pod UID到上一次同步到API server的status version的映射
 	apiStatusVersions map[kubetypes.MirrorPodUID]uint64
 	podDeletionSafety PodDeletionSafetyProvider
 }
@@ -90,6 +92,7 @@ type PodStatusProvider interface {
 // 一个对象，用于保证一个pod能够被安全删除
 type PodDeletionSafetyProvider interface {
 	// A function which returns true if the pod can safely be deleted
+	// 本函数返回true，如果pod可以被安全删除的话
 	PodResourcesAreReclaimed(pod *v1.Pod, status v1.PodStatus) bool
 }
 
@@ -105,7 +108,7 @@ type Manager interface {
 	Start()
 
 	// SetPodStatus caches updates the cached status for the given pod, and triggers a status update.
-	// SetPodStatus更新给定pod缓存的statuss并且触发一个status update
+	// SetPodStatus更新给定pod缓存的status并且触发一个status update
 	SetPodStatus(pod *v1.Pod, status v1.PodStatus)
 
 	// SetContainerReadiness updates the cached container status with the given readiness, and
@@ -126,6 +129,7 @@ type Manager interface {
 
 const syncPeriod = 10 * time.Second
 
+// 第三个参数PodDeletionSafetyProvider其实还是kubelet
 func NewManager(kubeClient clientset.Interface, podManager kubepod.Manager, podDeletionSafety PodDeletionSafetyProvider) Manager {
 	return &manager{
 		kubeClient:        kubeClient,
@@ -191,6 +195,7 @@ func (m *manager) SetPodStatus(pod *v1.Pod, status v1.PodStatus) {
 	m.podStatusesLock.Lock()
 	defer m.podStatusesLock.Unlock()
 	// Make sure we're caching a deep copy.
+	// 首先对v1.PodStatus做一次深度拷贝
 	status = *status.DeepCopy()
 
 	// Force a status update if deletion timestamp is set. This is necessary
@@ -302,6 +307,8 @@ func (m *manager) TerminatePod(pod *v1.Pod) {
 // checkContainerStateTransition ensures that no container is trying to transition
 // from a terminated to non-terminated state, which is illegal and indicates a
 // logical error in the kubelet.
+// checkContainerStateTransition确保没有容器从terminated的状态转换到non-terminated状态
+// 这是非法的，并且说明kubelet里面有逻辑错误
 func checkContainerStateTransition(oldStatuses, newStatuses []v1.ContainerStatus, restartPolicy v1.RestartPolicy) error {
 	// If we should always restart, containers are allowed to leave the terminated state
 	if restartPolicy == v1.RestartPolicyAlways {
@@ -332,6 +339,7 @@ func checkContainerStateTransition(oldStatuses, newStatuses []v1.ContainerStatus
 // This method IS NOT THREAD SAFE and must be called from a locked function.
 func (m *manager) updateStatusInternal(pod *v1.Pod, status v1.PodStatus, forceUpdate bool) bool {
 	var oldStatus v1.PodStatus
+	// 获取在manager中缓存的PodStatus
 	cachedStatus, isCached := m.podStatuses[pod.UID]
 	if isCached {
 		oldStatus = cachedStatus.status
@@ -394,6 +402,7 @@ func (m *manager) updateStatusInternal(pod *v1.Pod, status v1.PodStatus, forceUp
 		return false // No new status.
 	}
 
+	// 创建versionedPodStatus
 	newStatus := versionedPodStatus{
 		status:       status,
 		// 更新版本状态
@@ -534,16 +543,19 @@ func (m *manager) syncPod(uid types.UID, status versionedPodStatus) {
 	m.apiStatusVersions[kubetypes.MirrorPodUID(pod.UID)] = status.version
 
 	// We don't handle graceful deletion of mirror pods.
+	// 对于mirror pods，没有graceful deletion
 	if m.canBeDeleted(pod, status.status) {
 		deleteOptions := metav1.NewDeleteOptions(0)
 		// Use the pod UID as the precondition for deletion to prevent deleting a newly created pod with the same name and namespace.
 		// 使用pod UID作为删除的前提，从而防止删除刚创建的，name和namespace相同的pod
 		deleteOptions.Preconditions = metav1.NewUIDPreconditions(string(pod.UID))
+		// 从apiserver删除pod
 		err = m.kubeClient.CoreV1().Pods(pod.Namespace).Delete(pod.Name, deleteOptions)
 		if err != nil {
 			glog.Warningf("Failed to delete status for pod %q: %v", format.Pod(pod), err)
 			return
 		}
+		// pod已经终止了，从etcd中移除
 		glog.V(3).Infof("Pod %q fully terminated and removed from etcd", format.Pod(pod))
 		m.deletePodStatus(uid)
 	}
@@ -551,9 +563,12 @@ func (m *manager) syncPod(uid types.UID, status versionedPodStatus) {
 
 // needsUpdate returns whether the status is stale for the given pod UID.
 // This method is not thread safe, and must only be accessed by the sync thread.
+// needsUpdate返回对于给定的pod UID，status是否过于陈旧
 func (m *manager) needsUpdate(uid types.UID, status versionedPodStatus) bool {
 	latest, ok := m.apiStatusVersions[kubetypes.MirrorPodUID(uid)]
 	if !ok || latest < status.version {
+		// 如果找不到对应的pod status的version或者找到的version比现有status的version小
+		// 则说明需要更新
 		return true
 	}
 	pod, ok := m.podManager.GetPodByUID(uid)
@@ -619,8 +634,11 @@ func (m *manager) needsReconcile(uid types.UID, status v1.PodStatus) bool {
 // apiserver has no nanosecond information. However, the timestamp returned by metav1.Now() contains nanosecond,
 // so when we do comparison between status from apiserver and cached status, isStatusEqual() will always return false.
 // There is related issue #15262 and PR #15263 about this.
+// apiserver返回的timestamp信息没有nanosecond信息，但是，metav1.Now()返回的timestamp是包含nanosecond信息的
+// 因此当我们比较apiserver返回的status和我们缓存status的时候，isStatusEqual()总是会返回false
 // In fact, the best way to solve this is to do it on api side. However, for now, we normalize the status locally in
 // kubelet temporarily.
+// 事实上，我们应该在api端解决这个问题，但是我们现在在kubelet对status进行normalize，从而解决问题
 // TODO(random-liu): Remove timestamp related logic after apiserver supports nanosecond or makes it consistent.
 func normalizeStatus(pod *v1.Pod, status *v1.PodStatus) *v1.PodStatus {
 	bytesPerStatus := kubecontainer.MaxPodTerminationMessageLogLength
