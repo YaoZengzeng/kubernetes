@@ -147,18 +147,21 @@ func TestScheduler(t *testing.T) {
 		eventReason      string
 	}{
 		{
+			// 创建一个调度成功的case
 			sendPod:          podWithID("foo", ""),
 			algo:             mockScheduler{testNode.Name, nil},
 			expectBind:       &v1.Binding{ObjectMeta: metav1.ObjectMeta{Name: "foo"}, Target: v1.ObjectReference{Kind: "Node", Name: testNode.Name}},
 			expectAssumedPod: podWithID("foo", testNode.Name),
 			eventReason:      "Scheduled",
 		}, {
+			// 创建一个调度失败的case
 			sendPod:        podWithID("foo", ""),
 			algo:           mockScheduler{testNode.Name, errS},
 			expectError:    errS,
 			expectErrorPod: podWithID("foo", ""),
 			eventReason:    "FailedScheduling",
 		}, {
+			// 创建一个bind error的case
 			sendPod:          podWithID("foo", ""),
 			algo:             mockScheduler{testNode.Name, nil},
 			expectBind:       &v1.Binding{ObjectMeta: metav1.ObjectMeta{Name: "foo"}, Target: v1.ObjectReference{Kind: "Node", Name: testNode.Name}},
@@ -181,8 +184,10 @@ func TestScheduler(t *testing.T) {
 		var gotForgetPod *v1.Pod
 		var gotAssumedPod *v1.Pod
 		var gotBinding *v1.Binding
+		// 创建fake configurator
 		configurator := &FakeConfigurator{
 			Config: &Config{
+				// 创建scheduler cache
 				SchedulerCache: &schedulertesting.FakeCache{
 					ForgetFunc: func(pod *v1.Pod) {
 						gotForgetPod = pod
@@ -191,10 +196,13 @@ func TestScheduler(t *testing.T) {
 						gotAssumedPod = pod
 					},
 				},
+				// 创建node lister
 				NodeLister: schedulertesting.FakeNodeLister(
 					[]*v1.Node{&testNode},
 				),
+				// 创建用到的algorithm
 				Algorithm: item.algo,
+				// 创建binder
 				Binder: fakeBinder{func(b *v1.Binding) error {
 					gotBinding = b
 					return item.injectBindError
@@ -204,6 +212,7 @@ func TestScheduler(t *testing.T) {
 					gotPod = p
 					gotError = err
 				},
+				// 获取下一个pod
 				NextPod: func() *v1.Pod {
 					return item.sendPod
 				},

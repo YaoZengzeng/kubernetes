@@ -65,6 +65,7 @@ type Cache interface {
 	AssumePod(pod *v1.Pod) error
 
 	// FinishBinding signals that cache for assumed pod can be expired
+	// FinishBinding表示assumed pod可以过期了
 	FinishBinding(pod *v1.Pod) error
 
 	// ForgetPod removes an assumed pod from cache.

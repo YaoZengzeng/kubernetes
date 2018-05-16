@@ -96,6 +96,7 @@ func newProxyServer(
 	ipsetInterface = utilipset.New(execer)
 
 	// We omit creation of pretty much everything if we run in cleanup mode
+	// 如果运行在cleanup mode，基本什么都不创建
 	if cleanupAndExit {
 		return &ProxyServer{
 			execer:         execer,
@@ -112,6 +113,7 @@ func newProxyServer(
 	}
 
 	// Create event recorder
+	// 创建event recorder
 	hostname := utilnode.GetHostname(config.HostnameOverride)
 	eventBroadcaster := record.NewBroadcaster()
 	recorder := eventBroadcaster.NewRecorder(scheme, v1.EventSource{Component: "kube-proxy", Host: hostname})

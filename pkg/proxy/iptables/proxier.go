@@ -142,6 +142,7 @@ const sysctlRouteLocalnet = "net/ipv4/conf/all/route_localnet"
 const sysctlBridgeCallIPTables = "net/bridge/bridge-nf-call-iptables"
 
 // internal struct for string service information
+// service信息的内部表示
 type serviceInfo struct {
 	clusterIP                net.IP
 	port                     int
@@ -155,6 +156,7 @@ type serviceInfo struct {
 	onlyNodeLocalEndpoints   bool
 	healthCheckNodePort      int
 	// The following fields are computed and stored for performance reasons.
+	// 以下字段都是为性能考虑而计算和存储的
 	serviceNameString        string
 	servicePortChainName     utiliptables.Chain
 	serviceFirewallChainName utiliptables.Chain
@@ -162,6 +164,7 @@ type serviceInfo struct {
 }
 
 // internal struct for endpoints information
+// endpoints信息的内部表示
 type endpointsInfo struct {
 	endpoint string // TODO: should be an endpointString type
 	isLocal  bool
@@ -256,6 +259,7 @@ type serviceChange struct {
 
 type serviceChangeMap struct {
 	lock  sync.Mutex
+	// NamespacedName是namespace和name的组合
 	items map[types.NamespacedName]*serviceChange
 }
 
@@ -381,6 +385,7 @@ type Proxier struct {
 	serviceChanges   serviceChangeMap
 
 	mu           sync.Mutex // protects the following fields
+	// service信息以及endpoints信息
 	serviceMap   proxyServiceMap
 	endpointsMap proxyEndpointsMap
 	portsMap     map[utilproxy.LocalPort]utilproxy.Closeable
@@ -396,6 +401,7 @@ type Proxier struct {
 	syncRunner      *async.BoundedFrequencyRunner // governs calls to syncProxyRules
 
 	// These are effectively const and do not need the mutex to be held.
+	// 这些字段都是稳定的，不需要用锁保护
 	iptables       utiliptables.Interface
 	masqueradeAll  bool
 	masqueradeMark string
@@ -411,6 +417,8 @@ type Proxier struct {
 	// Since converting probabilities (floats) to strings is expensive
 	// and we are using only probabilities in the format of 1/n, we are
 	// precomputing some number of those and cache for future reuse.
+	// 将概率转换为字符串是很昂贵的操作，而且我们只使用形如1/n的概率
+	// 我们提前对它们进行计算，并保存在cache中
 	precomputedProbabilities []string
 
 	// The following buffers are used to reuse memory and avoid allocations
@@ -511,6 +519,7 @@ func NewProxier(ipt utiliptables.Interface,
 	}
 	burstSyncs := 2
 	glog.V(3).Infof("minSyncPeriod: %v, syncPeriod: %v, burstSyncs: %d", minSyncPeriod, syncPeriod, burstSyncs)
+	// 周期性地调用proxier.syncProxyRules函数
 	proxier.syncRunner = async.NewBoundedFrequencyRunner("sync-runner", proxier.syncProxyRules, minSyncPeriod, syncPeriod, burstSyncs)
 	return proxier, nil
 }
@@ -662,6 +671,7 @@ func (proxier *Proxier) SyncLoop() {
 	if proxier.healthzServer != nil {
 		proxier.healthzServer.UpdateTimestamp()
 	}
+	// 调用BoundedFrequencyRunner的Loop函数
 	proxier.syncRunner.Loop(wait.NeverStop)
 }
 
@@ -1019,6 +1029,7 @@ func (proxier *Proxier) syncProxyRules() {
 
 	staleServices := serviceUpdateResult.staleServices
 	// merge stale services gathered from updateEndpointsMap
+	// 合并从updateEndpointsMap获取的陈旧的services
 	for svcPortName := range endpointUpdateResult.staleServiceNames {
 		if svcInfo, ok := proxier.serviceMap[svcPortName]; ok && svcInfo != nil && svcInfo.protocol == api.ProtocolUDP {
 			glog.V(2).Infof("Stale udp service %v -> %s", svcPortName, svcInfo.clusterIP.String())
@@ -1026,6 +1037,7 @@ func (proxier *Proxier) syncProxyRules() {
 		}
 	}
 
+	// 对iptables进行同步
 	glog.V(3).Infof("Syncing iptables rules")
 
 	// Create and link the kube services chain.
@@ -1033,6 +1045,7 @@ func (proxier *Proxier) syncProxyRules() {
 	{
 		tablesNeedServicesChain := []utiliptables.Table{utiliptables.TableFilter, utiliptables.TableNAT}
 		for _, table := range tablesNeedServicesChain {
+			// 确保在filter和nat这两个table中，"KUBE-SERVICES"这条chain是存在的
 			if _, err := proxier.iptables.EnsureChain(table, kubeServicesChain); err != nil {
 				glog.Errorf("Failed to ensure that %s chain %s exists: %v", table, kubeServicesChain, err)
 				return
@@ -1051,6 +1064,7 @@ func (proxier *Proxier) syncProxyRules() {
 		comment := "kubernetes service portals"
 		args := []string{"-m", "comment", "--comment", comment, "-j", string(kubeServicesChain)}
 		for _, tc := range tableChainsNeedJumpServices {
+			// 确保filter表的INPUT和OUTPUT，以及nat表的PREROUTING和OUTPUT中都有"KUBE-SERVICES"这条chain
 			if _, err := proxier.iptables.EnsureRule(utiliptables.Prepend, tc.table, tc.chain, args...); err != nil {
 				glog.Errorf("Failed to ensure that %s chain %s jumps to %s: %v", tc.table, tc.chain, kubeServicesChain, err)
 				return
@@ -1058,8 +1072,11 @@ func (proxier *Proxier) syncProxyRules() {
 		}
 	}
 
+	// (1) 在filter表的INPUT和OUTPUT，nat表的PREROUTING和OUTPUT创建"KUBE-SERVICE"
+
 	// Create and link the kube postrouting chain.
 	{
+		// 确保nat表中，"KUBE-POSTROUTING"这条chain的存在
 		if _, err := proxier.iptables.EnsureChain(utiliptables.TableNAT, kubePostroutingChain); err != nil {
 			glog.Errorf("Failed to ensure that %s chain %s exists: %v", utiliptables.TableNAT, kubePostroutingChain, err)
 			return
@@ -1067,14 +1084,20 @@ func (proxier *Proxier) syncProxyRules() {
 
 		comment := "kubernetes postrouting rules"
 		args := []string{"-m", "comment", "--comment", comment, "-j", string(kubePostroutingChain)}
+		// utiliptables.Prepend即为`-I`
+		// 将经过nat表的POSTROUTING的包，都流入KUBE-POSTROUTING这条链中
+		// 显然要在这里做snat
 		if _, err := proxier.iptables.EnsureRule(utiliptables.Prepend, utiliptables.TableNAT, utiliptables.ChainPostrouting, args...); err != nil {
 			glog.Errorf("Failed to ensure that %s chain %s jumps to %s: %v", utiliptables.TableNAT, utiliptables.ChainPostrouting, kubePostroutingChain, err)
 			return
 		}
 	}
 
+	// 经过nat的POSTROUTING的包都会经过KUBE-POSTROUTING
+
 	// Create and link the kube forward chain.
 	{
+		// 确保"KUBE-FORWARD"这条chain的存在
 		if _, err := proxier.iptables.EnsureChain(utiliptables.TableFilter, kubeForwardChain); err != nil {
 			glog.Errorf("Failed to ensure that %s chain %s exists: %v", utiliptables.TableFilter, kubeForwardChain, err)
 			return
@@ -1082,18 +1105,23 @@ func (proxier *Proxier) syncProxyRules() {
 
 		comment := "kubernetes forward rules"
 		args := []string{"-m", "comment", "--comment", comment, "-j", string(kubeForwardChain)}
+		// 将经过filter表的FORWARD链的包，都流入KUBE-FORWARD这条链中
 		if _, err := proxier.iptables.EnsureRule(utiliptables.Prepend, utiliptables.TableFilter, utiliptables.ChainForward, args...); err != nil {
 			glog.Errorf("Failed to ensure that %s chain %s jumps to %s: %v", utiliptables.TableFilter, utiliptables.ChainForward, kubeForwardChain, err)
 			return
 		}
 	}
 
+	// 经过filter表的FORWARD，都会经过KUBE-FORWARD
+
 	//
 	// Below this point we will not return until we try to write the iptables rules.
 	//
+	// 从这里开始，我们不会返回，直到写入iptables规则
 
 	// Get iptables-save output so we can check for existing chains and rules.
 	// This will be a map of chain name to chain with rules as stored in iptables-save/iptables-restore
+	// 调用iptables-save，将所有的filter和nat表中的chain都分别存入existingFilterChains和existingNATChains中
 	existingFilterChains := make(map[utiliptables.Chain]string)
 	proxier.iptablesData.Reset()
 	err := proxier.iptables.SaveInto(utiliptables.TableFilter, proxier.iptablesData)
@@ -1114,6 +1142,10 @@ func (proxier *Proxier) syncProxyRules() {
 
 	// Reset all buffers used later.
 	// This is to avoid memory reallocations and thus improve performance.
+	// 重置所有之后会用到的buffers
+	// 这用来避免内存的重新分配申请，用以提高性能
+	// kubernetes会往这四个buffer中写入大量iptables规则
+	// 最后调用iptables-restore写回到当前节点的iptables中
 	proxier.filterChains.Reset()
 	proxier.filterRules.Reset()
 	proxier.natChains.Reset()
@@ -1125,6 +1157,8 @@ func (proxier *Proxier) syncProxyRules() {
 
 	// Make sure we keep stats for the top-level chains, if they existed
 	// (which most should have because we created them above).
+	// 确保KUBE-SERVICE，KUBE-FORWARD, KUBE-NODEPORT, KUBE-POSTROUTING，KUBE-MARK-MASQ
+	// 各个chain的存在
 	if chain, ok := existingFilterChains[kubeServicesChain]; ok {
 		writeLine(proxier.filterChains, chain)
 	} else {
@@ -1159,8 +1193,10 @@ func (proxier *Proxier) syncProxyRules() {
 	// Install the kubernetes-specific postrouting rules. We use a whole chain for
 	// this so that it is easier to flush and change, for example if the mark
 	// value should ever change.
+	// 对nat表的KUBE-POSTROUTING写入规则
 	writeLine(proxier.natRules, []string{
 		"-A", string(kubePostroutingChain),
+		// 经过KUBE-MARK的包都要masq
 		"-m", "comment", "--comment", `"kubernetes service traffic requiring SNAT"`,
 		"-m", "mark", "--mark", proxier.masqueradeMark,
 		"-j", "MASQUERADE",
@@ -1169,10 +1205,15 @@ func (proxier *Proxier) syncProxyRules() {
 	// Install the kubernetes-specific masquerade mark rule. We use a whole chain for
 	// this so that it is easier to flush and change, for example if the mark
 	// value should ever change.
+	// 对nat表的KUBE-MARK-MASQ写入规则
 	writeLine(proxier.natRules, []string{
 		"-A", string(KubeMarkMasqChain),
 		"-j", "MARK", "--set-xmark", proxier.masqueradeMark,
 	}...)
+
+	// 上述两条规则的作用是让所有kubernetes集群内部的包流经nat表定义的链“KUBE-MARK-MASQ”
+	// 在这里对这些数据包打上一个标记(0x4000/0x4000)，接着在nat表的"POST-ROUTING"中根据上述标记
+	// 匹配kubernetes集群内部的数据包，匹配的目的是对这些包做snat
 
 	// Accumulate NAT chains to keep.
 	activeNATChains := map[utiliptables.Chain]bool{} // use a map as a set
@@ -1202,6 +1243,7 @@ func (proxier *Proxier) syncProxyRules() {
 		svcNameString = svcInfo.serviceNameString
 
 		// Create the per-service chain, retaining counters if possible.
+		// 为每个service创建一个链
 		svcChain := svcInfo.servicePortChainName
 		if chain, ok := existingNATChains[svcChain]; ok {
 			writeLine(proxier.natChains, chain)
@@ -1234,7 +1276,9 @@ func (proxier *Proxier) syncProxyRules() {
 			"-d", utilproxy.ToCIDR(svcInfo.clusterIP),
 			"--dport", strconv.Itoa(svcInfo.port),
 		)
+		// 将service的信息写入iptables
 		if proxier.masqueradeAll {
+			// 如果masqueradeAll则将所有的流量都masq
 			writeLine(proxier.natRules, append(args, "-j", string(KubeMarkMasqChain))...)
 		} else if len(proxier.clusterCIDR) > 0 {
 			// This masquerades off-cluster traffic to a service VIP.  The idea
@@ -1242,8 +1286,10 @@ func (proxier *Proxier) syncProxyRules() {
 			// routing to any node, and that node will bridge into the Service
 			// for you.  Since that might bounce off-node, we masquerade here.
 			// If/when we support "Local" policy for VIPs, we should update this.
+			// 只对非clusterCIDR的流量进行masq
 			writeLine(proxier.natRules, append(args, "! -s", proxier.clusterCIDR, "-j", string(KubeMarkMasqChain))...)
 		}
+		// 将发往cluster IP和相应端口的包转发至service chain
 		writeLine(proxier.natRules, append(args, "-j", string(svcChain))...)
 
 		// Capture externalIPs.
@@ -1390,6 +1436,7 @@ func (proxier *Proxier) syncProxyRules() {
 		// Capture nodeports.  If we had more than 2 rules it might be
 		// worthwhile to make a new per-service chain for nodeport rules, but
 		// with just 2 rules it ends up being a waste and a cognitive burden.
+		// 捕获nodeports
 		if svcInfo.nodePort != 0 {
 			// Hold the local port open so no other process can open it
 			// (because the socket might open but it would never work).
@@ -1430,8 +1477,10 @@ func (proxier *Proxier) syncProxyRules() {
 			)
 			if !svcInfo.onlyNodeLocalEndpoints {
 				// Nodeports need SNAT, unless they're local.
+				// Nodeports需要SNAT，除非它们都是local的
 				writeLine(proxier.natRules, append(args, "-j", string(KubeMarkMasqChain))...)
 				// Jump to the service chain.
+				// 跳转到service chain
 				writeLine(proxier.natRules, append(args, "-j", string(svcChain))...)
 			} else {
 				// TODO: Make all nodePorts jump to the firewall chain.
@@ -1443,6 +1492,7 @@ func (proxier *Proxier) syncProxyRules() {
 			// table doesn't currently have the same per-service structure that
 			// the nat table does, so we just stick this into the kube-services
 			// chain.
+			// 如果service没有endpoints，则拒绝packet
 			if len(proxier.endpointsMap[svcName]) == 0 {
 				writeLine(proxier.filterRules,
 					"-A", string(kubeServicesChain),
@@ -1470,6 +1520,7 @@ func (proxier *Proxier) syncProxyRules() {
 		}
 
 		// From here on, we assume there are active endpoints.
+		// 从这里开始，我们假设service都有active endpoints
 
 		// Generate the per-endpoint chains.  We do this in multiple passes so we
 		// can group rules together.
@@ -1480,10 +1531,12 @@ func (proxier *Proxier) syncProxyRules() {
 		var endpointChain utiliptables.Chain
 		for _, ep := range proxier.endpointsMap[svcName] {
 			endpoints = append(endpoints, ep)
+			// 用给定的endpointsInfo返回endpoint chain name
 			endpointChain = ep.endpointChain(svcNameString, protocol)
 			endpointChains = append(endpointChains, endpointChain)
 
 			// Create the endpoint chain, retaining counters if possible.
+			// 创建endpoint chain
 			if chain, ok := existingNATChains[utiliptables.Chain(endpointChain)]; ok {
 				writeLine(proxier.natChains, chain)
 			} else {
@@ -1534,6 +1587,7 @@ func (proxier *Proxier) syncProxyRules() {
 				"-m", "comment", "--comment", svcNameString,
 			)
 			// Handle traffic that loops back to the originator with SNAT.
+			// 如果一个pod访问自己代表的service，就要进行SNAT
 			writeLine(proxier.natRules, append(args,
 				"-s", utilproxy.ToCIDR(net.ParseIP(epIP)),
 				"-j", string(KubeMarkMasqChain))...)
@@ -1542,6 +1596,7 @@ func (proxier *Proxier) syncProxyRules() {
 				args = append(args, "-m", "recent", "--name", string(endpointChain), "--set")
 			}
 			// DNAT to final destination.
+			// DNAT到最终的目的地
 			args = append(args, "-m", protocol, "-p", protocol, "-j", "DNAT", "--to-destination", endpoints[i].endpoint)
 			writeLine(proxier.natRules, args...)
 		}
@@ -1623,6 +1678,7 @@ func (proxier *Proxier) syncProxyRules() {
 	}
 
 	// Delete chains no longer in use.
+	// 删除不再使用的nat chains
 	for chain := range existingNATChains {
 		if !activeNATChains[chain] {
 			chainString := string(chain)
@@ -1640,6 +1696,7 @@ func (proxier *Proxier) syncProxyRules() {
 
 	// Finally, tail-call to the nodeports chain.  This needs to be after all
 	// other service portal rules.
+	// 将所有目的地为local的包发往KUBE-NODEPORTS
 	writeLine(proxier.natRules,
 		"-A", string(kubeServicesChain),
 		"-m", "comment", "--comment", `"kubernetes service nodeports; NOTE: this must be the last rule in this chain"`,
@@ -1686,6 +1743,7 @@ func (proxier *Proxier) syncProxyRules() {
 
 	// Sync rules.
 	// NOTE: NoFlushTables is used so we don't flush non-kubernetes chains in the table
+	// 对iptables规则进行同步
 	proxier.iptablesData.Reset()
 	proxier.iptablesData.Write(proxier.filterChains.Bytes())
 	proxier.iptablesData.Write(proxier.filterRules.Bytes())

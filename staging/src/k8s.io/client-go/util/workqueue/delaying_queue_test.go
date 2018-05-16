@@ -29,6 +29,7 @@ import (
 
 func TestSimpleQueue(t *testing.T) {
 	fakeClock := clock.NewFakeClock(time.Now())
+	// 创建delaying queue
 	q := newDelayingQueue(fakeClock, "")
 
 	first := "foo"
@@ -53,6 +54,7 @@ func TestSimpleQueue(t *testing.T) {
 	// step past the next heartbeat
 	fakeClock.Step(10 * time.Second)
 
+	// 直接等待超时
 	err := wait.Poll(1*time.Millisecond, 30*time.Millisecond, func() (done bool, err error) {
 		if q.Len() > 0 {
 			return false, fmt.Errorf("added to queue")
@@ -236,6 +238,7 @@ func BenchmarkDelayingQueue_AddAfter(b *testing.B) {
 
 func waitForAdded(q DelayingInterface, depth int) error {
 	return wait.Poll(1*time.Millisecond, 10*time.Second, func() (done bool, err error) {
+		// 等待DelayingInterface的长度变为depth
 		if q.Len() == depth {
 			return true, nil
 		}
@@ -246,6 +249,7 @@ func waitForAdded(q DelayingInterface, depth int) error {
 
 func waitForWaitingQueueToFill(q DelayingInterface) error {
 	return wait.Poll(1*time.Millisecond, 10*time.Second, func() (done bool, err error) {
+		// 直到channel的长度为0
 		if len(q.(*delayingType).waitingForAddCh) == 0 {
 			return true, nil
 		}

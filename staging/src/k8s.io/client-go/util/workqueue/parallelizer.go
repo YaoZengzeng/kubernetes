@@ -26,6 +26,7 @@ type DoWorkPieceFunc func(piece int)
 
 // Parallelize is a very simple framework that allow for parallelizing
 // N independent pieces of work.
+// Parallelize是一个非常简单的框架，它能够让N个独立的工作并行执行
 func Parallelize(workers, pieces int, doWorkPiece DoWorkPieceFunc) {
 	toProcess := make(chan int, pieces)
 	for i := 0; i < pieces; i++ {

@@ -40,6 +40,7 @@ const (
 
 func init() {
 	// Register functions that extract metadata used by predicates and priorities computations.
+	// 注册函数，它们能抽取出predicates和priorities使用的metadata
 	factory.RegisterPredicateMetadataProducerFactory(
 		func(args factory.PluginFactoryArgs) algorithm.PredicateMetadataProducer {
 			return predicates.NewPredicateMetadataFactory(args.PodLister)
@@ -49,6 +50,7 @@ func init() {
 			return priorities.NewPriorityMetadataFactory(args.ServiceLister, args.ControllerLister, args.ReplicaSetLister, args.StatefulSetLister)
 		})
 
+	// 注册algorithm provider
 	registerAlgorithmProvider(defaultPredicates(), defaultPriorities())
 
 	// IMPORTANT NOTES for predicate developers:
@@ -208,6 +210,7 @@ func ApplyFeatureGates() {
 func registerAlgorithmProvider(predSet, priSet sets.String) {
 	// Registers algorithm providers. By default we use 'DefaultProvider', but user can specify one to be used
 	// by specifying flag.
+	// 注册algorithm providers, 我们默认使用`DefaultProvider`, 但用户可以通过指定flag来使用特定的algorithm provider
 	factory.RegisterAlgorithmProvider(factory.DefaultProvider, predSet, priSet)
 	// Cluster autoscaler friendly scheduling algorithm.
 	factory.RegisterAlgorithmProvider(ClusterAutoscalerProvider, predSet,

@@ -106,6 +106,7 @@ type genericScheduler struct {
 // Schedule tries to schedule the given pod to one of node in the node list.
 // If it succeeds, it will return the name of the node.
 // If it fails, it will return a Fiterror error with reasons.
+// Schedule会试着将给定的pod调度到node list中的给定节点，如果成功，就会返回节点的名字
 func (g *genericScheduler) Schedule(pod *v1.Pod, nodeLister algorithm.NodeLister) (string, error) {
 	trace := utiltrace.New(fmt.Sprintf("Scheduling %s/%s", pod.Namespace, pod.Name))
 	defer trace.LogIfLong(100 * time.Millisecond)
@@ -119,12 +120,14 @@ func (g *genericScheduler) Schedule(pod *v1.Pod, nodeLister algorithm.NodeLister
 	}
 
 	// Used for all fit and priority funcs.
+	// 使用所有的predicate和priority函数
 	err = g.cache.UpdateNodeNameToInfoMap(g.cachedNodeInfoMap)
 	if err != nil {
 		return "", err
 	}
 
 	trace.Step("Computing predicates")
+	// 进行predicate
 	filteredNodes, failedPredicateMap, err := findNodesThatFit(pod, g.cachedNodeInfoMap, nodes, g.predicates, g.extenders, g.predicateMetaProducer, g.equivalenceCache, g.schedulingQueue)
 	if err != nil {
 		return "", err
@@ -142,10 +145,12 @@ func (g *genericScheduler) Schedule(pod *v1.Pod, nodeLister algorithm.NodeLister
 
 	// When only one node after predicate, just use it.
 	if len(filteredNodes) == 1 {
+		// 如果只有一个节点通过了删选，则直接使用它
 		return filteredNodes[0].Name, nil
 	}
 
 	metaPrioritiesInterface := g.priorityMetaProducer(pod, g.cachedNodeInfoMap)
+	// 将删选出来的节点按优先级排序
 	priorityList, err := PrioritizeNodes(pod, g.cachedNodeInfoMap, metaPrioritiesInterface, g.prioritizers, filteredNodes, g.extenders)
 	if err != nil {
 		return "", err
@@ -169,6 +174,8 @@ func (g *genericScheduler) Predicates() map[string]algorithm.FitPredicate {
 
 // selectHost takes a prioritized list of nodes and then picks one
 // in a round-robin manner from the nodes that had the highest score.
+// selectHost获取一个按优先级排序的节点列表，并且按照round-robin的方式，从取得最高分的节点
+// 中选取一个
 func (g *genericScheduler) selectHost(priorityList schedulerapi.HostPriorityList) (string, error) {
 	if len(priorityList) == 0 {
 		return "", fmt.Errorf("empty priorityList")
@@ -275,6 +282,8 @@ func (g *genericScheduler) getLowerPriorityNominatedPods(pod *v1.Pod, nodeName s
 
 // Filters the nodes to find the ones that fit based on the given predicate functions
 // Each node is passed through the predicate functions to determine if it is a fit
+// 过滤节点，基于那些给定的predicate函数
+// 每个节点都会经过predicate函数，用以确定它是否合适
 func findNodesThatFit(
 	pod *v1.Pod,
 	nodeNameToInfo map[string]*schedulercache.NodeInfo,
@@ -289,6 +298,7 @@ func findNodesThatFit(
 	failedPredicateMap := FailedPredicateMap{}
 
 	if len(predicateFuncs) == 0 {
+		// 如果没有定义predicate函数
 		filtered = nodes
 	} else {
 		// Create filtered list with enough space to avoid growing it
@@ -317,6 +327,7 @@ func findNodesThatFit(
 				predicateResultLock.Unlock()
 			}
 		}
+		// 并行地对节点进行检查
 		workqueue.Parallelize(16, len(nodes), checkNode)
 		filtered = filtered[:filteredLen]
 		if len(errs) > 0 {
@@ -325,6 +336,7 @@ func findNodesThatFit(
 	}
 
 	if len(filtered) > 0 && len(extenders) != 0 {
+		// 遍历extenders，进一步进行过滤
 		for _, extender := range extenders {
 			filteredList, failedMap, err := extender.Filter(pod, filtered, nodeNameToInfo)
 			if err != nil {
@@ -381,9 +393,15 @@ func addNominatedPods(podPriority int32, meta algorithm.PredicateMetadata,
 // When it is called from Schedule, we want to test whether the pod is schedulable
 // on the node with all the existing pods on the node plus higher and equal priority
 // pods nominated to run on the node.
+// podFitsOnNode检查一个由NodeInfo代表的节点是否能满足给定的predicate函数
+// 这个函数会从两个不同的地方被调用：Schedule和Preempt
+// 当我们从Schedule被调用的时候，我们想要测试pod是否是可以调度到该节点，在该节点所有
+// 已经存在的pod以及那些有着相等或者更高优先级的，被提名要到该节点运行的pod
 // When it is called from Preempt, we should remove the victims of preemption and
 // add the nominated pods. Removal of the victims is done by SelectVictimsOnNode().
 // It removes victims from meta and NodeInfo before calling this function.
+// 当从Preempt被调用时，我们应该移除被抢占的受害者并且添加被提名的pod
+// 受害者的移除通过调用SelectVictimsOnNode()，它在调用本函数前，从元数据和NodeInfo移除受害者
 func podFitsOnNode(
 	pod *v1.Pod,
 	meta algorithm.PredicateMetadata,
@@ -430,6 +448,7 @@ func podFitsOnNode(
 		metaToUse := meta
 		nodeInfoToUse := info
 		if i == 0 {
+		// 第一轮，添加nominated pods
 			podsAdded, metaToUse, nodeInfoToUse = addNominatedPods(util.GetPodPriority(pod), meta, info, queue)
 		} else if !podsAdded || len(failedPredicates) != 0 {
 			break
@@ -438,6 +457,7 @@ func podFitsOnNode(
 		// TODO(bsalamat): consider using eCache and adding proper eCache invalidations
 		// when pods are nominated or their nominations change.
 		eCacheAvailable = eCacheAvailable && !podsAdded
+		// 遍历predicate函数
 		for predicateKey, predicate := range predicateFuncs {
 			if eCacheAvailable {
 				// PredicateWithECache will return its cached predicate results.
@@ -491,6 +511,11 @@ func podFitsOnNode(
 // Each priority function can also have its own weight
 // The node scores returned by the priority function are multiplied by the weights to get weighted scores
 // All scores are finally combined (added) to get the total weighted scores of all nodes
+// 通过并行地运行priority函数来确定节点的优先级
+// 0是最低的优先级得分，10是最高的优先级得分
+// 每个priority函数都有它们自己的权重
+// priority函数返回的node scores，通过和权重相乘来获得weighted scores
+// 每个函数的权重得分相加，最来获取最后得分
 func PrioritizeNodes(
 	pod *v1.Pod,
 	nodeNameToInfo map[string]*schedulercache.NodeInfo,
@@ -501,6 +526,7 @@ func PrioritizeNodes(
 ) (schedulerapi.HostPriorityList, error) {
 	// If no priority configs are provided, then the EqualPriority function is applied
 	// This is required to generate the priority list in the required format
+	// 如果提供了priority configs，则会使用EqualPriority函数
 	if len(priorityConfigs) == 0 && len(extenders) == 0 {
 		result := make(schedulerapi.HostPriorityList, 0, len(nodes))
 		for i := range nodes {
@@ -526,6 +552,7 @@ func PrioritizeNodes(
 
 	results := make([]schedulerapi.HostPriorityList, len(priorityConfigs), len(priorityConfigs))
 
+	// 遍历priority函数，并行执行
 	for i, priorityConfig := range priorityConfigs {
 		if priorityConfig.Function != nil {
 			// DEPRECATED
@@ -549,6 +576,7 @@ func PrioritizeNodes(
 			if priorityConfigs[i].Function != nil {
 				continue
 			}
+			// Map
 			results[i][index], err = priorityConfigs[i].Map(pod, meta, nodeInfo)
 			if err != nil {
 				appendError(err)
@@ -564,6 +592,7 @@ func PrioritizeNodes(
 		wg.Add(1)
 		go func(index int, config algorithm.PriorityConfig) {
 			defer wg.Done()
+			// Reduce
 			if err := config.Reduce(pod, meta, nodeNameToInfo, results[index]); err != nil {
 				appendError(err)
 			}
@@ -585,6 +614,7 @@ func PrioritizeNodes(
 
 	for i := range nodes {
 		result = append(result, schedulerapi.HostPriority{Host: nodes[i].Name, Score: 0})
+		// 为每个节点汇总得分
 		for j := range priorityConfigs {
 			result[i].Score += results[j][i].Score * priorityConfigs[j].Weight
 		}

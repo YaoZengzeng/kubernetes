@@ -28,6 +28,7 @@ import (
 
 // BoundedFrequencyRunner manages runs of a user-provided function.
 // See NewBoundedFrequencyRunner for examples.
+// BoundedFrequencyRunner用于管理用户提供的函数的运行
 type BoundedFrequencyRunner struct {
 	name        string        // the name of this instance
 	minInterval time.Duration // the min time between runs, modulo bursts
@@ -36,9 +37,11 @@ type BoundedFrequencyRunner struct {
 	run chan struct{} // try an async run
 
 	mu      sync.Mutex  // guards runs of fn and all mutations
+	// 运行的函数
 	fn      func()      // function to run
 	lastRun time.Time   // time of last run
 	timer   timer       // timer for deferred runs
+	// on-demand runs的rate limiter
 	limiter rateLimiter // rate limiter for on-demand runs
 }
 
@@ -135,6 +138,7 @@ var _ timer = realTimer{}
 //
 // The maxInterval must be greater than or equal to the minInterval,  If the
 // caller passes a maxInterval less than minInterval, this function will panic.
+// 最多运行burstRuns次
 func NewBoundedFrequencyRunner(name string, fn func(), minInterval, maxInterval time.Duration, burstRuns int) *BoundedFrequencyRunner {
 	timer := realTimer{Timer: time.NewTimer(0)} // will tick immediately
 	<-timer.C()                                 // consume the first tick
@@ -219,6 +223,7 @@ func (bfr *BoundedFrequencyRunner) tryRun() {
 
 	if bfr.limiter.TryAccept() {
 		// We're allowed to run the function right now.
+		// 调用fn函数
 		bfr.fn()
 		bfr.lastRun = bfr.timer.Now()
 		bfr.timer.Stop()

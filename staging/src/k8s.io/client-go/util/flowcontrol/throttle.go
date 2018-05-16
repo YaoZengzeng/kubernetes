@@ -34,6 +34,8 @@ type RateLimiter interface {
 	// this rate limiter is.
 	// Usually we use token bucket rate limiter. In that case,
 	// 1.0 means no tokens are available; 0.0 means we have a full bucket of tokens to use.
+	// Saturation代表rate limiter的饱和度
+	// 1.0表示已经rate limiter已经满了，0.0表示rate limiter是空的
 	Saturation() float64
 	// QPS returns QPS of this rate limiter
 	QPS() float32

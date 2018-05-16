@@ -82,10 +82,13 @@ var (
 type configFactory struct {
 	client clientset.Interface
 	// queue for pods that need scheduling
+	// 将需要调度的pods加入队列
 	podQueue core.SchedulingQueue
 	// a means to list all known scheduled pods.
+	// scheduledPodLister能够列出所有已经被调度的pods
 	scheduledPodLister corelisters.PodLister
 	// a means to list all known scheduled pods and pods assumed to have been scheduled.
+	// podLister能够列出所有已经被调度的pods以及那些假设已经被调度的pods
 	podLister algorithm.PodLister
 	// a means to list all nodes
 	nodeLister corelisters.NodeLister
@@ -151,6 +154,7 @@ func NewConfigFactory(
 	enableEquivalenceClassCache bool,
 ) scheduler.Configurator {
 	stopEverything := make(chan struct{})
+	// 创建一个scheduler cache
 	schedulerCache := schedulercache.New(30*time.Second, stopEverything)
 
 	// storageClassInformer is only enabled through VolumeScheduling feature gate
@@ -162,7 +166,9 @@ func NewConfigFactory(
 	c := &configFactory{
 		client:                         client,
 		podLister:                      schedulerCache,
+		// 创建pod Queue
 		podQueue:                       core.NewSchedulingQueue(),
+		// 创建一系列的lister, 获取集群中的各种信息
 		pVLister:                       pvInformer.Lister(),
 		pVCLister:                      pvcInformer.Lister(),
 		serviceLister:                  serviceInformer.Lister(),
@@ -171,6 +177,7 @@ func NewConfigFactory(
 		statefulSetLister:              statefulSetInformer.Lister(),
 		pdbLister:                      pdbInformer.Lister(),
 		storageClassLister:             storageClassLister,
+
 		schedulerCache:                 schedulerCache,
 		StopEverything:                 stopEverything,
 		schedulerName:                  schedulerName,
@@ -180,6 +187,7 @@ func NewConfigFactory(
 
 	c.scheduledPodsHasSynced = podInformer.Informer().HasSynced
 	// scheduled pod cache
+	// 创建一系列handler函数
 	podInformer.Informer().AddEventHandler(
 		cache.FilteringResourceEventHandler{
 			FilterFunc: func(obj interface{}) bool {
@@ -833,13 +841,16 @@ func (f *configFactory) Create() (*scheduler.Config, error) {
 }
 
 // Creates a scheduler from the name of a registered algorithm provider.
+// 根据注册的algorithm provider的名字，创建一个scheduler
 func (f *configFactory) CreateFromProvider(providerName string) (*scheduler.Config, error) {
 	glog.V(2).Infof("Creating scheduler from algorithm provider '%v'", providerName)
+	// 获取algorithm provider
 	provider, err := GetAlgorithmProvider(providerName)
 	if err != nil {
 		return nil, err
 	}
 
+	// 根据注册的algorithm provider，获取其中相应的FitPredicateKeys以及PriorityFunctionKeys，构建scheduler.Config
 	return f.CreateFromKeys(provider.FitPredicateKeys, provider.PriorityFunctionKeys, []algorithm.SchedulerExtender{})
 }
 
@@ -901,27 +912,32 @@ func (f *configFactory) CreateFromKeys(predicateKeys, priorityKeys sets.String, 
 		return nil, fmt.Errorf("invalid hardPodAffinitySymmetricWeight: %d, must be in the range 1-100", f.GetHardPodAffinitySymmetricWeight())
 	}
 
+	// 获取predicate函数
 	predicateFuncs, err := f.GetPredicates(predicateKeys)
 	if err != nil {
 		return nil, err
 	}
 
+	// 获取priorityConfig函数
 	priorityConfigs, err := f.GetPriorityFunctionConfigs(priorityKeys)
 	if err != nil {
 		return nil, err
 	}
 
+	// 获取PriorityMeta Producer
 	priorityMetaProducer, err := f.GetPriorityMetadataProducer()
 	if err != nil {
 		return nil, err
 	}
 
+	// 创建predicateMeta Producer
 	predicateMetaProducer, err := f.GetPredicateMetadataProducer()
 	if err != nil {
 		return nil, err
 	}
 
 	// Init equivalence class cache
+	// 初始化equivalence clase cache
 	if f.enableEquivalenceClassCache && getEquivalencePodFuncFactory != nil {
 		pluginArgs, err := f.getPluginArgs()
 		if err != nil {
@@ -933,6 +949,7 @@ func (f *configFactory) CreateFromKeys(predicateKeys, priorityKeys sets.String, 
 		glog.Info("Created equivalence class cache")
 	}
 
+	// 创建generic scheduler
 	algo := core.NewGenericScheduler(f.schedulerCache, f.equivalencePodCache, f.podQueue, predicateFuncs, predicateMetaProducer, priorityConfigs, priorityMetaProducer, extenders, f.volumeBinder)
 
 	podBackoff := util.CreateDefaultPodBackoff()
@@ -940,6 +957,7 @@ func (f *configFactory) CreateFromKeys(predicateKeys, priorityKeys sets.String, 
 		SchedulerCache: f.schedulerCache,
 		Ecache:         f.equivalencePodCache,
 		// The scheduler only needs to consider schedulable nodes.
+		// scheduler只需要考虑能够被调度的nodes
 		NodeLister:          &nodeLister{f.nodeLister},
 		Algorithm:           algo,
 		Binder:              f.getBinder(extenders),

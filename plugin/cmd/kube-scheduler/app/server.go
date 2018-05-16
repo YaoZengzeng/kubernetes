@@ -110,6 +110,7 @@ func AddFlags(options *Options, fs *pflag.FlagSet) {
 
 	fs.Int32Var(&options.healthzPort, "port", ports.SchedulerPort, "The port that the scheduler's http service runs on")
 	fs.StringVar(&options.healthzAddress, "address", options.healthzAddress, "The IP address to serve on (set to 0.0.0.0 for all interfaces)")
+	// 使用的algorithm provider
 	fs.StringVar(&options.algorithmProvider, "algorithm-provider", options.algorithmProvider, "The scheduling algorithm provider to use, one of: "+factory.ListAlgorithmProviders())
 	fs.StringVar(&options.policyConfigFile, "policy-config-file", options.policyConfigFile, "File with scheduler policy configuration. This file is used if policy ConfigMap is not provided or --use-legacy-policy-config==true")
 	usage := fmt.Sprintf("Name of the ConfigMap object that contains scheduler's policy configuration. It must exist in the system namespace before scheduler initialization if --use-legacy-policy-config==false. The config must be provided as the value of an element in 'Data' map with the key='%v'", componentconfig.SchedulerPolicyConfigMapKey)
@@ -304,6 +305,7 @@ func (o *Options) Run() error {
 	// TODO: make configurable?
 	algorithmprovider.ApplyFeatureGates()
 
+	// 创建scheduler server
 	server, err := NewSchedulerServer(config, o.master)
 	if err != nil {
 		return err
@@ -363,6 +365,7 @@ type SchedulerServer struct {
 	EventClient                    v1core.EventsGetter
 	Recorder                       record.EventRecorder
 	Broadcaster                    record.EventBroadcaster
+	// LeaderElection, HealthzServer, MetricsServer都是可选的
 	// LeaderElection is optional.
 	LeaderElection *leaderelection.LeaderElectionConfig
 	// HealthzServer is optional.
@@ -372,6 +375,7 @@ type SchedulerServer struct {
 }
 
 // NewSchedulerServer creates a runnable SchedulerServer from configuration.
+// NewSchedulerServer从配置中创建一个可以运行的SchedulerServer
 func NewSchedulerServer(config *componentconfig.KubeSchedulerConfiguration, master string) (*SchedulerServer, error) {
 	if config == nil {
 		return nil, errors.New("config is required")
@@ -396,6 +400,7 @@ func NewSchedulerServer(config *componentconfig.KubeSchedulerConfiguration, mast
 	recorder := eventBroadcaster.NewRecorder(legacyscheme.Scheme, v1.EventSource{Component: config.SchedulerName})
 
 	// Set up leader election if enabled.
+	// 在创建高可用集群的时候，需要设置leader election
 	var leaderElectionConfig *leaderelection.LeaderElectionConfig
 	if config.LeaderElection.LeaderElect {
 		leaderElectionConfig, err = makeLeaderElectionConfig(config.LeaderElection, leaderElectionClient, recorder)
@@ -625,6 +630,7 @@ func (s *SchedulerServer) Run(stop chan struct{}) error {
 	}
 
 	// Leader election is disabled, so run inline until done.
+	// 运行scheduler
 	run(stop)
 	return fmt.Errorf("finished without leader elect")
 }
@@ -660,6 +666,7 @@ func (s *SchedulerServer) SchedulerConfig() (*scheduler.Config, error) {
 	switch {
 	case source.Provider != nil:
 		// Create the config from a named algorithm provider.
+		// 从一个命名的algorithm provider创建config
 		sc, err := configurator.CreateFromProvider(*source.Provider)
 		if err != nil {
 			return nil, fmt.Errorf("couldn't create scheduler using provider %q: %v", *source.Provider, err)

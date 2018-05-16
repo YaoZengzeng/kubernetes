@@ -88,6 +88,7 @@ const (
 )
 
 // Options contains everything necessary to create and run a proxy server.
+// Options包含了创建以及运行proxy server所需的所有信息
 type Options struct {
 	// ConfigFile is the location of the proxy server's configuration file.
 	ConfigFile string
@@ -429,6 +430,7 @@ func createClients(config kubeproxyconfig.ClientConnectionConfiguration, masterO
 }
 
 // Run runs the specified ProxyServer.  This should never exit (unless CleanupAndExit is set).
+// Run运行指定的ProxyServer，它应该永远不退出
 func (s *ProxyServer) Run() error {
 	// To help debugging, immediately log version
 	glog.Infof("Version: %+v", version.Get())

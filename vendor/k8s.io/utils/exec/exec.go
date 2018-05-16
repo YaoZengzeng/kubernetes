@@ -28,6 +28,8 @@ var ErrExecutableNotFound = osexec.ErrNotFound
 
 // Interface is an interface that presents a subset of the os/exec API. Use this
 // when you want to inject fakeable/mockable exec behavior.
+// Interface是一个接口，代表了os/exec API的一个子集
+// 当我们需要注入fakeable/mockable exec行为的时候，就可以使用它
 type Interface interface {
 	// Command returns a Cmd instance which can be used to run a single command.
 	// This follows the pattern of package os/exec.

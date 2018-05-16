@@ -357,6 +357,8 @@ func IsPriorityFunctionRegistered(name string) bool {
 
 // RegisterAlgorithmProvider registers a new algorithm provider with the algorithm registry. This should
 // be called from the init function in a provider plugin.
+// RegisterAlgorithmProvider注册一个新的algorithm provider
+// 这应该在provider plugin的init函数中被调用
 func RegisterAlgorithmProvider(name string, predicateKeys, priorityKeys sets.String) string {
 	schedulerFactoryMutex.Lock()
 	defer schedulerFactoryMutex.Unlock()

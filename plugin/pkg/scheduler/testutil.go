@@ -95,6 +95,7 @@ func (fc *FakeConfigurator) Run() {
 }
 
 // Create returns FakeConfigurator.Config
+// FakeConfigurator的Create函数就是直接返回FakeConfigurator.Config
 func (fc *FakeConfigurator) Create() (*Config, error) {
 	return fc.Config, nil
 }

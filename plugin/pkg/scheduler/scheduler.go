@@ -77,6 +77,7 @@ func (sched *Scheduler) StopEverything() {
 // Configurator defines I/O, caching, and other functionality needed to
 // construct a new scheduler. An implementation of this can be seen in
 // factory.go.
+// Configurator定义了IO, 缓存以及其他构建一个新的scheduler所需的功能
 type Configurator interface {
 	GetPriorityFunctionConfigs(priorityKeys sets.String) ([]algorithm.PriorityConfig, error)
 	GetPriorityMetadataProducer() (algorithm.MetadataProducer, error)
@@ -102,6 +103,7 @@ type Configurator interface {
 type Config struct {
 	// It is expected that changes made via SchedulerCache will be observed
 	// by NodeLister and Algorithm.
+	// SchedulerCache的改变要能被NodeLister以及Algorithm观察到
 	SchedulerCache schedulercache.Cache
 	// Ecache is used for optimistically invalid affected cache items after
 	// successfully binding a pod
@@ -149,6 +151,8 @@ type Config struct {
 
 // NewFromConfigurator returns a new scheduler that is created entirely by the Configurator.  Assumes Create() is implemented.
 // Supports intermediate Config mutation for now if you provide modifier functions which will run after Config is created.
+// NewFromConfigurator返回一个新的scheduler，它完全由Configurator创建而成, 假设Create()已经实现了
+// 如果提供了modifier函数，就可以在Config创建完成之后对Config进行改变
 func NewFromConfigurator(c Configurator, modifiers ...func(c *Config)) (*Scheduler, error) {
 	cfg, err := c.Create()
 	if err != nil {
@@ -159,6 +163,7 @@ func NewFromConfigurator(c Configurator, modifiers ...func(c *Config)) (*Schedul
 		modifier(cfg)
 	}
 	// From this point on the config is immutable to the outside.
+	// 从此开始，config就不会再改变了
 	s := &Scheduler{
 		config: cfg,
 	}
@@ -195,6 +200,7 @@ func (sched *Scheduler) Config() *Config {
 
 // schedule implements the scheduling algorithm and returns the suggested host.
 func (sched *Scheduler) schedule(pod *v1.Pod) (string, error) {
+	// schedule函数直接对config.Algorithm的Schedule函数进行调用
 	host, err := sched.config.Algorithm.Schedule(pod, sched.config.NodeLister)
 	if err != nil {
 		glog.V(1).Infof("Failed to schedule pod: %v/%v", pod.Namespace, pod.Name)
@@ -371,12 +377,16 @@ func (sched *Scheduler) bindVolumesWorker() {
 
 // assume signals to the cache that a pod is already in the cache, so that binding can be asynchronous.
 // assume modifies `assumed`.
+// assume通知cache，pod已经在cache中了，所以binding可以异步进行了
 func (sched *Scheduler) assume(assumed *v1.Pod, host string) error {
 	// Optimistically assume that the binding will succeed and send it to apiserver
 	// in the background.
+	// 乐观地假设binding是会成功的并且会在后台将它发送给apiserver
 	// If the binding fails, scheduler will release resources allocated to assumed pod
 	// immediately.
+	// 如果binding失败了，scheduler会立即释放分配给assumed pod的资源
 	assumed.Spec.NodeName = host
+	// 调用SchedulerCache的AssumePod
 	if err := sched.config.SchedulerCache.AssumePod(assumed); err != nil {
 		glog.Errorf("scheduler cache AssumePod failed: %v", err)
 
@@ -407,6 +417,8 @@ func (sched *Scheduler) assume(assumed *v1.Pod, host string) error {
 
 // bind binds a pod to a given node defined in a binding object.  We expect this to run asynchronously, so we
 // handle binding metrics internally.
+// bind将一个pod绑定到binding object中指定的node中
+// 我们期望这个函数能异步执行
 func (sched *Scheduler) bind(assumed *v1.Pod, b *v1.Binding) error {
 	bindingStart := time.Now()
 	// If binding succeeded then PodScheduled condition will be updated in apiserver so that
@@ -431,6 +443,7 @@ func (sched *Scheduler) bind(assumed *v1.Pod, b *v1.Binding) error {
 	}
 
 	metrics.BindingLatency.Observe(metrics.SinceInMicroseconds(bindingStart))
+	// pod正式被scheduled
 	sched.config.Recorder.Eventf(assumed, v1.EventTypeNormal, "Scheduled", "Successfully assigned %v to %v", assumed.Name, b.Target.Name)
 	return nil
 }
@@ -464,6 +477,8 @@ func (sched *Scheduler) scheduleOne() {
 
 	// Tell the cache to assume that a pod now is running on a given node, even though it hasn't been bound yet.
 	// This allows us to keep scheduling without waiting on binding to occur.
+	// 告诉cache，假设pod现在已经在一个给定的节点上运行了，即使它还没被绑定
+	// 这可以让我们一直进行调度而不用等待binding的发生
 	assumedPod := pod.DeepCopy()
 
 	// Assume volumes first before assuming the pod.
@@ -483,13 +498,16 @@ func (sched *Scheduler) scheduleOne() {
 	}
 
 	// assume modifies `assumedPod` by setting NodeName=suggestedHost
+	// 通过将NodeName设置为suggestedHost来修改`assumedPod`
 	err = sched.assume(assumedPod, suggestedHost)
 	if err != nil {
 		return
 	}
 	// bind the pod to its host asynchronously (we can do this b/c of the assumption step above).
 	go func() {
+		// 异步地将pod绑定到host
 		err := sched.bind(assumedPod, &v1.Binding{
+			// 创建Binding对象
 			ObjectMeta: metav1.ObjectMeta{Namespace: assumedPod.Namespace, Name: assumedPod.Name, UID: assumedPod.UID},
 			Target: v1.ObjectReference{
 				Kind: "Node",

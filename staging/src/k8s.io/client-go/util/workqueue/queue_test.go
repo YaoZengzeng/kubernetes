@@ -29,13 +29,17 @@ func TestBasic(t *testing.T) {
 	q := workqueue.New()
 
 	// Start producers
+	// 启动producer
 	const producers = 50
 	producerWG := sync.WaitGroup{}
 	producerWG.Add(producers)
 	for i := 0; i < producers; i++ {
+		// 创建50个producer
 		go func(i int) {
 			defer producerWG.Done()
 			for j := 0; j < 50; j++ {
+				// 每隔一毫秒，将producer重复加入队列
+				// 加入50次
 				q.Add(i)
 				time.Sleep(time.Millisecond)
 			}
@@ -46,17 +50,21 @@ func TestBasic(t *testing.T) {
 	const consumers = 10
 	consumerWG := sync.WaitGroup{}
 	consumerWG.Add(consumers)
+	// 创建10个consumers
 	for i := 0; i < consumers; i++ {
 		go func(i int) {
 			defer consumerWG.Done()
 			for {
+				// 从队列中获取item
 				item, quit := q.Get()
 				if item == "added after shutdown!" {
 					t.Errorf("Got an item added after shutdown.")
 				}
+				// 队列关闭时退出
 				if quit {
 					return
 				}
+				// 模拟worker对item进行处理
 				t.Logf("Worker %v: begin processing %v", i, item)
 				time.Sleep(3 * time.Millisecond)
 				t.Logf("Worker %v: done processing %v", i, item)
@@ -65,6 +73,7 @@ func TestBasic(t *testing.T) {
 		}(i)
 	}
 
+	// 等待producer全部加入队列
 	producerWG.Wait()
 	q.ShutDown()
 	q.Add("added after shutdown!")
@@ -94,6 +103,8 @@ func TestAddWhileProcessing(t *testing.T) {
 			defer consumerWG.Done()
 			// Every worker will re-add every item up to two times.
 			// This tests the dirty-while-processing case.
+			// 每个worker都会将每个item重复添加两次
+			// 这是用来测试dirty-while-processing的情况
 			counters := map[interface{}]int{}
 			for {
 				item, quit := q.Get()

@@ -99,6 +99,7 @@ type KubeProxyConfiguration struct {
 
 	// featureGates is a comma-separated list of key=value pairs that control
 	// which alpha/beta features are enabled.
+	// featureGates是一个以逗号划分的一系列key=value的对，用来控制哪些alpha/beta特性是使能的
 	//
 	// TODO this really should be a map but that requires refactoring all
 	// components to use config files because local-up-cluster.sh only supports
@@ -135,6 +136,7 @@ type KubeProxyConfiguration struct {
 	// the range [-1000, 1000]
 	OOMScoreAdj *int32
 	// mode specifies which proxy mode to use.
+	// 使用的proxy mode
 	Mode ProxyMode
 	// portRange is the range of host ports (beginPort-endPort, inclusive) that may be consumed
 	// in order to proxy service traffic. If unspecified (0-0) then ports will be randomly chosen.
@@ -149,6 +151,7 @@ type KubeProxyConfiguration struct {
 	Conntrack KubeProxyConntrackConfiguration
 	// configSyncPeriod is how often configuration from the apiserver is refreshed. Must be greater
 	// than 0.
+	// configSyncPeriod是来自apiserver的配置更新的频率
 	ConfigSyncPeriod metav1.Duration
 }
 
