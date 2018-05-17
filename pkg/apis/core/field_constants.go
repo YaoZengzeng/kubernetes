@@ -21,6 +21,7 @@ package core
 const (
 	NodeUnschedulableField = "spec.unschedulable"
 	ObjectNameField        = "metadata.name"
+	// pod被bind的节点名
 	PodHostField           = "spec.nodeName"
 	PodStatusField         = "status.phase"
 	SecretTypeField        = "type"

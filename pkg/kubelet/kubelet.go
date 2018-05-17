@@ -329,6 +329,7 @@ func makePodSourceConfig(kubeCfg *kubeletconfiginternal.KubeletConfiguration, ku
 	if bootstrapCheckpointPath != "" {
 		glog.Infof("Adding checkpoint path: %v", bootstrapCheckpointPath)
 		updatechannel = cfg.Channel(kubetypes.ApiserverSource)
+		// 从checkpoint中返回pod配置
 		err := cfg.Restore(bootstrapCheckpointPath, updatechannel)
 		if err != nil {
 			return nil, err

@@ -59,6 +59,7 @@ type Mux struct {
 // NewMux创建一个新的mux，它能够从多个source整合changes
 func NewMux(merger Merger) *Mux {
 	mux := &Mux{
+		// 在Mux中有各个sources相关的channel
 		sources: make(map[string]chan interface{}),
 		merger:  merger,
 	}

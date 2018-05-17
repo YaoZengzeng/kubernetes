@@ -84,8 +84,11 @@ const (
 // Pods永远不能为nil，它应该指向一个empty slice
 // 尽管功能是相似的，它能帮助我们的单元测试更好地检查，正确的PodUpdates已经被创建了
 type PodUpdate struct {
+	// 完整的Pods信息
 	Pods   []*v1.Pod
+	// 具体的操作
 	Op     PodOperation
+	// PodUpdate的来源
 	Source string
 }
 

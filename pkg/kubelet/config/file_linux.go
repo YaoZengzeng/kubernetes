@@ -47,22 +47,26 @@ func (s *sourceFile) watch() error {
 			return err
 		}
 		// Emit an update with an empty PodList to allow FileSource to be marked as seen
+		// 发送一个update，其中的PodList设置为空，从而能让FileSource被标记为可见
 		s.updates <- kubetypes.PodUpdate{Pods: []*v1.Pod{}, Op: kubetypes.SET, Source: kubetypes.FileSource}
 		return fmt.Errorf("path does not exist, ignoring")
 	}
 
+	// 创建inotify，用来监听文件
 	w, err := inotify.NewWatcher()
 	if err != nil {
 		return fmt.Errorf("unable to create inotify: %v", err)
 	}
 	defer w.Close()
 
+	// 对path目录下各种文件事件进行监听
 	err = w.AddWatch(s.path, inotify.IN_DELETE_SELF|inotify.IN_CREATE|inotify.IN_MOVED_TO|inotify.IN_MODIFY|inotify.IN_MOVED_FROM|inotify.IN_DELETE)
 	if err != nil {
 		return fmt.Errorf("unable to create inotify for path %q: %v", s.path, err)
 	}
 
 	// Reset store with manifest files already existing when starting
+	// 在启动时，用已经存在的manifest files去重置store
 	if err := s.resetStoreFromPath(); err != nil {
 		return fmt.Errorf("unable to read manifest path %q: %v", s.path, err)
 	}

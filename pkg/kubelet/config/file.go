@@ -48,8 +48,10 @@ func NewSourceFile(path string, nodeName types.NodeName, period time.Duration, u
 	// "golang.org/x/exp/inotify" requires a path without trailing "/"
 	path = strings.TrimRight(path, string(os.PathSeparator))
 
+	// 创建source file的config
 	config := new(path, nodeName, period, updates)
 	glog.V(1).Infof("Watching path %q", path)
+	// 每隔period时间，运行config.run函数
 	go wait.Forever(config.run, period)
 }
 
@@ -60,9 +62,11 @@ func new(path string, nodeName types.NodeName, period time.Duration, updates cha
 		for _, o := range objs {
 			pods = append(pods, o.(*v1.Pod))
 		}
-		// 最终封装到PodUpdate中，且Op设置为SET，Source设置为FileSource
+		// 最终封装到PodUpdate中，且Op设置都为SET，Source设置为FileSource
 		updates <- kubetypes.PodUpdate{Pods: pods, Op: kubetypes.SET, Source: kubetypes.FileSource}
 	}
+	// 创建缓存
+	// 当缓存发生变化，就会调用send函数，参数其实都是store.List()
 	store := cache.NewUndeltaStore(send, cache.MetaNamespaceKeyFunc)
 	return &sourceFile{
 		path:           path,
@@ -95,6 +99,7 @@ func (s *sourceFile) resetStoreFromPath() error {
 		return fmt.Errorf("path does not exist, ignoring")
 	}
 
+	// 从目录或者文件中读取pod信息
 	switch {
 	case statInfo.Mode().IsDir():
 		pods, err := s.extractFromDir(path)

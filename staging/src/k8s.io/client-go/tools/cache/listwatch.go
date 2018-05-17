@@ -71,6 +71,7 @@ type Getter interface {
 
 // NewListWatchFromClient creates a new ListWatch from the specified client, resource, namespace and field selector.
 // NewListWatchFromClient根据给定的client, resource, namespace以及field selector创建一个新的ListWatch
+// 当监听的对象为pod时，resource被设置为"pods"
 func NewListWatchFromClient(c Getter, resource string, namespace string, fieldSelector fields.Selector) *ListWatch {
 	listFunc := func(options metav1.ListOptions) (runtime.Object, error) {
 		options.FieldSelector = fieldSelector.String()

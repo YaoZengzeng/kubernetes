@@ -77,6 +77,7 @@ type PodConfig struct {
 
 // NewPodConfig creates an object that can merge many configuration sources into a stream
 // of normalized updates to a pod configuration.
+// NewPodConfig创建了一个对象，它能够将多个configuration sources合并到一个关于pod配置更新的流当中
 func NewPodConfig(mode PodConfigNotificationMode, recorder record.EventRecorder) *PodConfig {
 	// 创建一个PodUpate的channel
 	updates := make(chan kubetypes.PodUpdate, 50)
@@ -84,6 +85,7 @@ func NewPodConfig(mode PodConfigNotificationMode, recorder record.EventRecorder)
 	podConfig := &PodConfig{
 		pods:    storage,
 		// 传输给NewMux的是PodStorage
+		// mux能从多个sources整合pod的change
 		mux:     config.NewMux(storage),
 		updates: updates,
 		sources: sets.String{},
@@ -158,7 +160,7 @@ type podStorage struct {
 	updates    chan<- kubetypes.PodUpdate
 
 	// contains the set of all sources that have sent at least one SET
-	// sourcesSeen包含了所有已经可读的source
+	// sourcesSeen包含了所有已经至少发送了SET的source
 	sourcesSeenLock sync.RWMutex
 	sourcesSeen     sets.String
 
@@ -197,8 +199,9 @@ func (s *podStorage) Merge(source string, change interface{}) error {
 
 	// deliver update notifications
 	switch s.mode {
+	// kubelet创建的podStorage的mode为PodConfigNotificationIncremental
 	case PodConfigNotificationIncremental:
-		// 将所有信息都发送到updates中
+		// 将所有信息都发送到podStorage这个总的updates channel中
 		if len(removes.Pods) > 0 {
 			s.updates <- *removes
 		}
@@ -218,6 +221,8 @@ func (s *podStorage) Merge(source string, change interface{}) error {
 			// Send an empty update when first seeing the source and there are
 			// no ADD or UPDATE or DELETE pods from the source. This signals kubelet that
 			// the source is ready.
+			// 在第一次见到sources的时候，发送一个空的update，source里没有任何的Add, UPDATE, DELETE pods
+			// 这只是用来告诉kubelet，source已经准备好了
 			s.updates <- *adds
 		}
 		// Only add reconcile support here, because kubelet doesn't support Snapshot update now.
@@ -262,6 +267,7 @@ func (s *podStorage) merge(source string, change interface{}) (adds, updates, de
 	restorePods := []*v1.Pod{}
 
 	// pods为指定source已经缓存的pods
+	// 可用于在下一次merge的时候，和新来的pods进行比较，用来对它们进行划分类型
 	pods := s.pods[source]
 	if pods == nil {
 		pods = make(map[types.UID]*v1.Pod)
@@ -282,12 +288,15 @@ func (s *podStorage) merge(source string, change interface{}) (adds, updates, de
 			if ref.Annotations == nil {
 				ref.Annotations = make(map[string]string)
 			}
+			// 给每个pod的annotation中添加source的信息
 			ref.Annotations[kubetypes.ConfigSourceAnnotationKey] = source
 			// 检查pod是否已经存在
 			if existing, found := oldPods[ref.UID]; found {
+				// 将pod加入pods
 				pods[ref.UID] = existing
 				// 再分析应该对pod怎么处理
 				needUpdate, needReconcile, needGracefulDelete := checkAndUpdatePod(existing, ref)
+				// 判断需要对pods做如何处理，Update, Reconcile或者Delete
 				if needUpdate {
 					updatePods = append(updatePods, existing)
 				} else if needReconcile {
@@ -297,7 +306,9 @@ func (s *podStorage) merge(source string, change interface{}) (adds, updates, de
 				}
 				continue
 			}
+			// 如果是第一次看到的pod，在annotation中加入第一次看到的时间
 			recordFirstSeenTime(ref)
+			// 添加pod信息到pods
 			pods[ref.UID] = ref
 			// 在oldPods中找不到的话，直接加入addPods
 			addPods = append(addPods, ref)
@@ -316,6 +327,7 @@ func (s *podStorage) merge(source string, change interface{}) (adds, updates, de
 		} else {
 			glog.V(4).Infof("Updating pods from source %s : %v", source, update.Pods)
 		}
+		// 第一个参数为新加入的pods的信息
 		updatePodsFunc(update.Pods, pods, pods)
 
 	case kubetypes.REMOVE:
@@ -325,6 +337,7 @@ func (s *podStorage) merge(source string, change interface{}) (adds, updates, de
 			if existing, found := pods[value.UID]; found {
 				// this is a delete
 				delete(pods, value.UID)
+				// 直接加入removePods中
 				removePods = append(removePods, existing)
 				continue
 			}
@@ -333,8 +346,10 @@ func (s *podStorage) merge(source string, change interface{}) (adds, updates, de
 
 	case kubetypes.SET:
 		glog.V(4).Infof("Setting pods for source %s", source)
+		// 将source加入s的sourcesSeen
 		s.markSourceSet(source)
 		// Clear the old map entries by just creating a new map
+		// 清除之前老的pods，并且直接创建一个新的map
 		oldPods := pods
 		pods = make(map[types.UID]*v1.Pod)
 		updatePodsFunc(update.Pods, oldPods, pods)
@@ -383,6 +398,8 @@ func filterInvalidPods(pods []*v1.Pod, source string, recorder record.EventRecor
 	for i, pod := range pods {
 		// Pods from each source are assumed to have passed validation individually.
 		// This function only checks if there is any naming conflict.
+		// 从各个sources来的Pods都假设已经各自通过检测了
+		// 本函数只是用于检测，是否存在名字冲突
 		name := kubecontainer.GetPodFullName(pod)
 		if names.Has(name) {
 			glog.Warningf("Pod[%d] (%s) from %s failed validation due to duplicate pod name %q, ignoring", i+1, format.Pod(pod), source, pod.Name)

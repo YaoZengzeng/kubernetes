@@ -55,11 +55,12 @@ func NewSourceURL(url string, header http.Header, nodeName types.NodeName, perio
 		client: &http.Client{Timeout: 10 * time.Second},
 	}
 	glog.V(1).Infof("Watching URL %s", url)
-	// 定期拉取镜像
+	// 定期从http获取pod信息
 	go wait.Until(config.run, period, wait.NeverStop)
 }
 
 func (s *sourceURL) run() {
+	// 定期从URL拉取pod信息
 	if err := s.extractFromURL(); err != nil {
 		// Don't log this multiple times per minute. The first few entries should be
 		// enough to get the point across.
@@ -74,6 +75,7 @@ func (s *sourceURL) run() {
 	} else {
 		if s.failureLogs > 0 {
 			glog.Info("Successfully read pods from URL.")
+			// 将failureLogs清空
 			s.failureLogs = 0
 		}
 	}
@@ -107,23 +109,27 @@ func (s *sourceURL) extractFromURL() error {
 		return fmt.Errorf("zero-length data received from %v", s.url)
 	}
 	// Short circuit if the data has not changed since the last time it was read.
+	// 如果这次获取的数据和上次获取的数据相同，则直接返回
 	if bytes.Compare(data, s.data) == 0 {
 		return nil
 	}
 	s.data = data
 
 	// First try as it is a single pod.
+	// 首先尝试解析是否为单个的pod
 	parsed, pod, singlePodErr := tryDecodeSinglePod(data, s.applyDefaults)
 	if parsed {
 		if singlePodErr != nil {
 			// It parsed but could not be used.
 			return singlePodErr
 		}
+		// 同样设置为SET类型的podUpdate
 		s.updates <- kubetypes.PodUpdate{Pods: []*v1.Pod{pod}, Op: kubetypes.SET, Source: kubetypes.HTTPSource}
 		return nil
 	}
 
 	// That didn't work, so try a list of pods.
+	// 尝试解析pod list
 	parsed, podList, multiPodErr := tryDecodePodList(data, s.applyDefaults)
 	if parsed {
 		if multiPodErr != nil {
