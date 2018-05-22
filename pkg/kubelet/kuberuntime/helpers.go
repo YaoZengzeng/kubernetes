@@ -153,6 +153,7 @@ func (m *kubeGenericRuntimeManager) getImageUser(image string) (*int64, string, 
 }
 
 // isContainerFailed returns true if container has exited and exitcode is not zero.
+// isContainerFailed返回true，如果容器已经退出了，但是退出码不为0
 func isContainerFailed(status *kubecontainer.ContainerStatus) bool {
 	if status.State == kubecontainer.ContainerStateExited && status.ExitCode != 0 {
 		return true

@@ -97,8 +97,10 @@ func (r *SyncResult) Fail(err error, msg string) {
 // PodSyncResult包含了SyncPod()和KillPod()的结果
 type PodSyncResult struct {
 	// Result of different sync actions
+	// 不同的sync action的Result
 	SyncResults []*SyncResult
 	// Error encountered in SyncPod() and KillPod() that is not already included in SyncResults
+	// 那些还未包含在SyncResult中的，在SyncPod()和KillPod()中遇到的问题
 	SyncError error
 }
 

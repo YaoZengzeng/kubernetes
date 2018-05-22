@@ -637,6 +637,7 @@ func (m *kubeGenericRuntimeManager) killContainer(pod *v1.Pod, containerID kubec
 }
 
 // killContainersWithSyncResult kills all pod's containers with sync results.
+// killContainersWithSyncResult kill所有pod的容器
 func (m *kubeGenericRuntimeManager) killContainersWithSyncResult(pod *v1.Pod, runningPod kubecontainer.Pod, gracePeriodOverride *int64) (syncResults []*kubecontainer.SyncResult) {
 	containerResults := make(chan *kubecontainer.SyncResult, len(runningPod.Containers))
 	wg := sync.WaitGroup{}
@@ -648,6 +649,7 @@ func (m *kubeGenericRuntimeManager) killContainersWithSyncResult(pod *v1.Pod, ru
 			defer wg.Done()
 
 			killContainerResult := kubecontainer.NewSyncResult(kubecontainer.KillContainer, container.Name)
+			// kill掉pod中的每一个容器
 			if err := m.killContainer(pod, container.ID, container.Name, "Need to kill Pod", gracePeriodOverride); err != nil {
 				killContainerResult.Fail(kubecontainer.ErrKillContainer, err.Error())
 			}
@@ -674,6 +676,8 @@ func (m *kubeGenericRuntimeManager) killContainersWithSyncResult(pod *v1.Pod, ru
 func (m *kubeGenericRuntimeManager) pruneInitContainersBeforeStart(pod *v1.Pod, podStatus *kubecontainer.PodStatus) {
 	// only the last execution of each init container should be preserved, and only preserve it if it is in the
 	// list of init containers to keep.
+	// 只有每个init container最后一次执行的容器才会被保留
+	// 并且只有当它处于要保留的init container列表时才保留
 	initContainerNames := sets.NewString()
 	for _, container := range pod.Spec.InitContainers {
 		initContainerNames.Insert(container.Name)
@@ -681,6 +685,7 @@ func (m *kubeGenericRuntimeManager) pruneInitContainersBeforeStart(pod *v1.Pod, 
 	for name := range initContainerNames {
 		count := 0
 		for _, status := range podStatus.ContainerStatuses {
+			// 移除任何状态为exited的init容器
 			if status.Name != name || !initContainerNames.Has(status.Name) || status.State != kubecontainer.ContainerStateExited {
 				continue
 			}
@@ -720,6 +725,7 @@ func (m *kubeGenericRuntimeManager) purgeInitContainers(pod *v1.Pod, podStatus *
 	}
 	for name := range initContainerNames {
 		count := 0
+		// 遍历从容器运行时获取而来的pod status
 		for _, status := range podStatus.ContainerStatuses {
 			if status.Name != name || !initContainerNames.Has(status.Name) {
 				continue
@@ -727,6 +733,7 @@ func (m *kubeGenericRuntimeManager) purgeInitContainers(pod *v1.Pod, podStatus *
 			count++
 			// Purge all init containers that match this container name
 			glog.V(4).Infof("Removing init container %q instance %q %d", status.Name, status.ID.ID, count)
+			// 删除容器
 			if err := m.removeContainer(status.ID.ID); err != nil {
 				utilruntime.HandleError(fmt.Errorf("failed to remove pod init container %q: %v; Skipping pod %q", status.Name, err, format.Pod(pod)))
 				continue
@@ -746,14 +753,19 @@ func (m *kubeGenericRuntimeManager) purgeInitContainers(pod *v1.Pod, podStatus *
 // next init container to start, or done if there are no further init containers.
 // Status is only returned if an init container is failed, in which case next will
 // point to the current container.
+// findNextInitContainerToRun返回上一个failed的容器，下一个要启动的init container
+// 或者done，如果不需要再启动init container了
+// Status只有在有init container failed的时候才会返回true，在这种情况下，next会指向当前的容器
 func findNextInitContainerToRun(pod *v1.Pod, podStatus *kubecontainer.PodStatus) (status *kubecontainer.ContainerStatus, next *v1.Container, done bool) {
 	if len(pod.Spec.InitContainers) == 0 {
 		return nil, nil, true
 	}
 
 	// If there are failed containers, return the status of the last failed one.
+	// 如果有处于failed状态的容器，返回最后一个状态为failed的容器
 	for i := len(pod.Spec.InitContainers) - 1; i >= 0; i-- {
 		container := &pod.Spec.InitContainers[i]
+		// 从podStatus找failed的容器
 		status := podStatus.FindContainerStatusByName(container.Name)
 		if status != nil && isContainerFailed(status) {
 			return status, container, false
@@ -761,6 +773,7 @@ func findNextInitContainerToRun(pod *v1.Pod, podStatus *kubecontainer.PodStatus)
 	}
 
 	// There are no failed containers now.
+	// 现在没有failed容器
 	for i := len(pod.Spec.InitContainers) - 1; i >= 0; i-- {
 		container := &pod.Spec.InitContainers[i]
 		status := podStatus.FindContainerStatusByName(container.Name)
@@ -769,21 +782,25 @@ func findNextInitContainerToRun(pod *v1.Pod, podStatus *kubecontainer.PodStatus)
 		}
 
 		// container is still running, return not done.
+		// 有init container还在运行，返回done为false
 		if status.State == kubecontainer.ContainerStateRunning {
 			return nil, nil, false
 		}
 
 		if status.State == kubecontainer.ContainerStateExited {
 			// all init containers successful
+			// 所有init 容器都已经运行完毕了，返回done为true
 			if i == (len(pod.Spec.InitContainers) - 1) {
 				return nil, nil, true
 			}
 
 			// all containers up to i successful, go to i+1
+			// 所有到i为止的容器都成功运行了，返回i + 1
 			return nil, &pod.Spec.InitContainers[i+1], false
 		}
 	}
 
+	// 否则，从第一个init容器开始运行
 	return nil, &pod.Spec.InitContainers[0], false
 }
 

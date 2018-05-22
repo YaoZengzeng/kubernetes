@@ -59,6 +59,7 @@ type UpdatePodOptions struct {
 	// the mirror pod for the pod to update, if it is a static pod
 	MirrorPod *v1.Pod
 	// the type of update (create, update, sync, kill)
+	// update的类型，包括create, update，sync以及kill
 	UpdateType kubetypes.SyncPodType
 	// optional callback function when operation completes
 	// this callback is not guaranteed to be completed since a pod worker may
@@ -163,6 +164,7 @@ func newPodWorkers(syncPodFn syncPodFnType, recorder record.EventRecorder, workQ
 		lastUndeliveredWorkUpdate: map[types.UID]UpdatePodOptions{},
 		syncPodFn:                 syncPodFn,
 		recorder:                  recorder,
+		// PodWorker中的workQueue就是kubelet中的workQueue
 		workQueue:                 workQueue,
 		resyncInterval:            resyncInterval,
 		backOffPeriod:             backOffPeriod,
@@ -181,7 +183,7 @@ func (p *podWorkers) managePodLoop(podUpdates <-chan UpdatePodOptions) {
 			// Time. This ensures the worker doesn't start syncing until
 			// after the cache is at least newer than the finished time of
 			// the previous sync.
-			// 确保cache比上次sync的finished time更新，才进行同步
+			// 确保从运行时获取的pod status比上次sync的finished time更新，才进行同步
 			status, err := p.podCache.GetNewerThan(podUID, lastSyncTime)
 			if err != nil {
 				// This is the legacy event thrown by manage pod loop
@@ -214,6 +216,7 @@ func (p *podWorkers) managePodLoop(podUpdates <-chan UpdatePodOptions) {
 			// 不要在此处记录error，syncPodFn会负责记录错误
 			glog.Errorf("Error syncing pod %s (%q), skipping: %v", update.Pod.UID, format.Pod(update.Pod), err)
 		}
+		// 每次同步完，都将pod重新加入到work queue中
 		p.wrapUp(update.Pod.UID, err)
 	}
 }
@@ -253,9 +256,13 @@ func (p *podWorkers) UpdatePod(options *UpdatePodOptions) {
 		// 在任意情况下，kubelet都会愿意在第一个pod worker的sync中，相信pod的状态
 		go func() {
 			defer runtime.HandleCrash()
+			// 创建一个pod worker，通过传入的管道podUpdates来获取更新
 			p.managePodLoop(podUpdates)
 		}()
 	}
+	// 如果pod worker已经存在了，那么每次sync只是给podUpdates这个channel
+	// 发送更新的内容
+
 	// 如果该pod还不在isWorking这个map中
 	if !p.isWorking[pod.UID] {
 		// 将pod加入isWorking这个map中
@@ -306,11 +313,14 @@ func (p *podWorkers) wrapUp(uid types.UID, syncErr error) {
 	// Requeue the last update if the last sync returned error.
 	// 如果上一次同步遇到了error, 则将上一次update重新加入队列
 	switch {
+	// 后入队列的会将之前入队的覆盖
 	case syncErr == nil:
 		// No error; requeue at the regular resync interval.
+		// 没有错误，则以正常的同步时间间隔入队
 		p.workQueue.Enqueue(uid, wait.Jitter(p.resyncInterval, workerResyncIntervalJitterFactor))
 	default:
 		// Error occurred during the sync; back off and then retry.
+		// 在同步期间遇到了问题，回退并且重试
 		p.workQueue.Enqueue(uid, wait.Jitter(p.backOffPeriod, workerBackOffPeriodJitterFactor))
 	}
 	p.checkForUpdates(uid)

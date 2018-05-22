@@ -38,6 +38,7 @@ import (
 const (
 	unsupportedEvictionSignal = "unsupported eviction signal %v"
 	// the reason reported back in status.
+	// 当pod被驱逐时的reason
 	reason = "Evicted"
 	// the message associated with the reason.
 	message = "The node was low on resource: %v."

@@ -290,6 +290,7 @@ func (m *manager) TerminatePod(pod *v1.Pod) {
 	if cachedStatus, ok := m.podStatuses[pod.UID]; ok {
 		oldStatus = &cachedStatus.status
 	}
+	// 拷贝一份pod的status，并且将里面容器的状态都设置为Terminated
 	status := *oldStatus.DeepCopy()
 	for i := range status.ContainerStatuses {
 		status.ContainerStatuses[i].State = v1.ContainerState{

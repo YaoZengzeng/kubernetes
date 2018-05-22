@@ -912,7 +912,7 @@ func (kl *Kubelet) podIsTerminated(pod *v1.Pod) bool {
 		// If there is no cached status, use the status from the
 		// apiserver. This is useful if kubelet has recently been
 		// restarted.
-		// 如果没有缓存的status，则使用从apiserver获取的apiserver
+		// 如果没有缓存的status，则使用从apiserver获取的status
 		// 这对于刚刚重启的kubelet是很有用的
 		status = pod.Status
 	}
@@ -997,6 +997,7 @@ func (kl *Kubelet) podResourcesAreReclaimed(pod *v1.Pod) bool {
 
 // notRunning returns true if every status is terminated or waiting, or the status list
 // is empty.
+// notRunning返回true，如果每个status都被terminated或者处于waiting，或者status list为空
 func notRunning(statuses []v1.ContainerStatus) bool {
 	for _, status := range statuses {
 		if status.State.Terminated == nil && status.State.Waiting == nil {
@@ -1022,6 +1023,8 @@ func (kl *Kubelet) filterOutTerminatedPods(pods []*v1.Pod) []*v1.Pod {
 
 // removeOrphanedPodStatuses removes obsolete entries in podStatus where
 // the pod is no longer considered bound to this node.
+// removeOrphanedPodStatuses移除podStatus中过时的entreis
+// 这些pod将不再认为和本node相关联
 func (kl *Kubelet) removeOrphanedPodStatuses(pods []*v1.Pod, mirrorPods []*v1.Pod) {
 	podUIDs := make(map[types.UID]bool)
 	for _, pod := range pods {
@@ -1036,8 +1039,12 @@ func (kl *Kubelet) removeOrphanedPodStatuses(pods []*v1.Pod, mirrorPods []*v1.Po
 // HandlePodCleanups performs a series of cleanup work, including terminating
 // pod workers, killing unwanted pods, and removing orphaned volumes/pod
 // directories.
+// HandlePodCleanups会进行一系列的清理工作，包括终结pod workers，kill掉不再需要的pods
+// 以及移除孤儿volumes/pods目录
+// 
 // NOTE: This function is executed by the main sync loop, so it
 // should not contain any blocking calls.
+// 本函数在main sync loop中执行，因此不能包含任何blocking calls
 func (kl *Kubelet) HandlePodCleanups() error {
 	// The kubelet lacks checkpointing, so we need to introspect the set of pods
 	// in the cgroup tree prior to inspecting the set of pods in our pod manager.
@@ -1059,6 +1066,9 @@ func (kl *Kubelet) HandlePodCleanups() error {
 	// Pod phase progresses monotonically. Once a pod has reached a final state,
 	// it should never leave regardless of the restart policy. The statuses
 	// of such pods should not be changed, and there is no need to sync them.
+	// Pod的状态是单调变化的，一旦pod到达final state，它就不会离开，不管restart policy是怎么样的
+	// 这些pod的状态是不会发生变化的，因此没有必要再对它们进行同步了
+	//
 	// TODO: the logic here does not handle two cases:
 	//   1. If the containers were removed immediately after they died, kubelet
 	//      may fail to generate correct statuses, let alone filtering correctly.
@@ -1074,9 +1084,11 @@ func (kl *Kubelet) HandlePodCleanups() error {
 	}
 	// Stop the workers for no-longer existing pods.
 	// TODO: is here the best place to forget pod workers?
+	// 停止所有不再存在的pod worker
 	kl.podWorkers.ForgetNonExistingPodWorkers(desiredPods)
 	kl.probeManager.CleanupPods(activePods)
 
+	// 从runtimeCache中获取所有的runningPods
 	runningPods, err := kl.runtimeCache.GetPods()
 	if err != nil {
 		glog.Errorf("Error listing containers: %#v", err)
@@ -1084,14 +1096,18 @@ func (kl *Kubelet) HandlePodCleanups() error {
 	}
 	for _, pod := range runningPods {
 		if _, found := desiredPods[pod.ID]; !found {
+			// 将那些不再running的pod发送到podKillingCh中
 			kl.podKillingCh <- &kubecontainer.PodPair{APIPod: nil, RunningPod: pod}
 		}
 	}
 
+	// 从status manager中删除那些孤儿PodStatus
 	kl.removeOrphanedPodStatuses(allPods, mirrorPods)
 	// Note that we just killed the unwanted pods. This may not have reflected
 	// in the cache. We need to bypass the cache to get the latest set of
 	// running pods to clean up the volumes.
+	// 我们已经刚刚kill那些不再需要的pods，这可能还没来得及反映到cache中
+	// 我们需要绕过cache来获取最新的正在running的pods，并且去删除那些不需要的volumes
 	// TODO: Evaluate the performance impact of bypassing the runtime cache.
 	runningPods, err = kl.containerRuntime.GetPods(false)
 	if err != nil {
@@ -1112,9 +1128,11 @@ func (kl *Kubelet) HandlePodCleanups() error {
 	}
 
 	// Remove any orphaned mirror pods.
+	// 删除任何孤儿mirror pods
 	kl.podManager.DeleteOrphanedMirrorPods()
 
 	// Remove any cgroups in the hierarchy for pods that are no longer running.
+	// 移除那些不再运行的pods的cgroups
 	if kl.cgroupsPerQOS {
 		kl.cleanupOrphanedPodCgroups(cgroupPods, activePods)
 	}
@@ -1403,6 +1421,7 @@ func (kl *Kubelet) generateAPIPodStatus(pod *v1.Pod, podStatus *kubecontainer.Po
 	glog.V(3).Infof("Generating status for %q", format.Pod(pod))
 
 	// check if an internal module has requested the pod is evicted.
+	// 确认是否有一个内部模块请求pod被驱逐
 	for _, podSyncHandler := range kl.PodSyncHandlers {
 		if result := podSyncHandler.ShouldEvict(pod); result.Evict {
 			return v1.PodStatus{

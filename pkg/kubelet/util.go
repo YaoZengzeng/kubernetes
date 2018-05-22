@@ -30,6 +30,8 @@ import (
 // 检查我们是否还有capabilities来运行特定的pod
 func canRunPod(pod *v1.Pod) error {
 	if !capabilities.Get().AllowPrivileged {
+		// 如果kubelet禁止创建有privileged权限的容器
+		// 则过去掉所有包含要求privileged权限的容器的pod
 		for _, container := range pod.Spec.Containers {
 			if securitycontext.HasPrivilegedRequest(&container) {
 				return fmt.Errorf("pod with UID %q specified privileged container, but is disallowed", pod.UID)

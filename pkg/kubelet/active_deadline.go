@@ -33,6 +33,7 @@ const (
 )
 
 // activeDeadlineHandler knows how to enforce active deadlines on pods.
+// activeDeadlineHandler知道怎么在pods上实行active deadlines
 type activeDeadlineHandler struct {
 	// the clock to use for deadline enforcement
 	clock clock.Clock
@@ -61,6 +62,7 @@ func newActiveDeadlineHandler(
 }
 
 // ShouldSync returns true if the pod is past its active deadline.
+// ShouldSync返回true，如果pod已经过了它的active deadline
 func (m *activeDeadlineHandler) ShouldSync(pod *v1.Pod) bool {
 	return m.pastActiveDeadline(pod)
 }
@@ -73,6 +75,7 @@ func (m *activeDeadlineHandler) ShouldEvict(pod *v1.Pod) lifecycle.ShouldEvictRe
 	if !m.pastActiveDeadline(pod) {
 		return lifecycle.ShouldEvictResponse{Evict: false}
 	}
+	// 如果pod已经过了active deadline
 	m.recorder.Eventf(pod, v1.EventTypeNormal, reason, message)
 	return lifecycle.ShouldEvictResponse{Evict: true, Reason: reason, Message: message}
 }
@@ -80,10 +83,12 @@ func (m *activeDeadlineHandler) ShouldEvict(pod *v1.Pod) lifecycle.ShouldEvictRe
 // pastActiveDeadline returns true if the pod has been active for more than its ActiveDeadlineSeconds
 func (m *activeDeadlineHandler) pastActiveDeadline(pod *v1.Pod) bool {
 	// no active deadline was specified
+	// 如果pod的配置里指定了Active Deadline
 	if pod.Spec.ActiveDeadlineSeconds == nil {
 		return false
 	}
 	// get the latest status to determine if it was started
+	// 获取pod的最新状态
 	podStatus, ok := m.podStatusProvider.GetPodStatus(pod.UID)
 	if !ok {
 		podStatus = pod.Status
@@ -96,5 +101,6 @@ func (m *activeDeadlineHandler) pastActiveDeadline(pod *v1.Pod) bool {
 	start := podStatus.StartTime.Time
 	duration := m.clock.Since(start)
 	allowedDuration := time.Duration(*pod.Spec.ActiveDeadlineSeconds) * time.Second
+	// 确定deadline是否超过
 	return duration >= allowedDuration
 }

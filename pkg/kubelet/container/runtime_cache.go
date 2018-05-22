@@ -66,11 +66,12 @@ type runtimeCache struct {
 // GetPods returns the cached pods if they are not outdated; otherwise, it
 // retrieves the latest pods and return them.
 // GetPods返回缓存的pods，如果它们没有过期的话
-// 佛足额获取最新的pods并返回它们
+// 否则获取最新的pods并返回它们
 func (r *runtimeCache) GetPods() ([]*Pod, error) {
 	r.Lock()
 	defer r.Unlock()
 	if time.Since(r.cacheTime) > defaultCachePeriod {
+		// 如果超过2秒没有更新了，则调用r.updateCache()进行更新
 		if err := r.updateCache(); err != nil {
 			return nil, err
 		}

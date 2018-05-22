@@ -55,6 +55,7 @@ func (q *basicWorkQueue) GetWork() []types.UID {
 	defer q.lock.Unlock()
 	now := q.clock.Now()
 	var items []types.UID
+	// 遍历queue这个map，获取其中的timestamp早于now的item
 	for k, v := range q.queue {
 		if v.Before(now) {
 			items = append(items, k)

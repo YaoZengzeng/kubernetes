@@ -97,7 +97,7 @@ type PodSyncHandler interface {
 	// ShouldEvict在每次sync pod操作中被调用，用于确定pod是否需要从kubelet中驱逐出去
 	// 如果是的话，pod status会被更新并且标记它的phase为因为指定的reason和message而fail
 	// 并且pod会马上被kill
-	// 本操作必须马上被移除，因为它会被每个同步的pod所调用
+	// 本操作必须马上返回，因为它会被每个同步的pod所调用
 	// 提供的pod不能被修改
 	ShouldEvict(pod *v1.Pod) ShouldEvictResponse
 }

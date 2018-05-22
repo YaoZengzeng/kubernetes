@@ -77,6 +77,8 @@ type Runtime interface {
 	// GetPods returns a list of containers grouped by pods. The boolean parameter
 	// specifies whether the runtime returns all containers including those already
 	// exited and dead containers (used for garbage collection).
+	// GetPods返回根据pods进行分组的容器，返回的布尔值表示运行时是否返回了所有的容器，包括
+	// 那些已经退出或者dead的容器（用于GC）
 	GetPods(all bool) ([]*Pod, error)
 	// GarbageCollect removes dead containers using the specified container gc policy
 	// 用指定的容器gc policy移除dead containers	

@@ -186,6 +186,7 @@ func (kl *Kubelet) GetRuntime() kubecontainer.Runtime {
 }
 
 // GetNode returns the node info for the configured node name of this Kubelet.
+// GetNode返回本Kubelet配置的node name的node信息
 func (kl *Kubelet) GetNode() (*v1.Node, error) {
 	if kl.kubeClient == nil {
 		return kl.initialNode()

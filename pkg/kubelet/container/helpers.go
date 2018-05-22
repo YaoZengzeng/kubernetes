@@ -71,6 +71,8 @@ func ShouldContainerBeRestarted(container *v1.Container, pod *v1.Pod, podStatus 
 	if status == nil {
 		return true
 	}
+
+	// 以下情况都说明容器已经创建过了
 	// Check whether container is running
 	if status.State == ContainerStateRunning {
 		return false
@@ -213,6 +215,7 @@ func IsHostNetworkPod(pod *v1.Pod) bool {
 }
 
 // TODO(random-liu): Convert PodStatus to running Pod, should be deprecated soon
+// 将PodStatus转换为running Pod
 func ConvertPodStatusToRunningPod(runtimeName string, podStatus *PodStatus) Pod {
 	runningPod := Pod{
 		ID:        podStatus.ID,
@@ -221,6 +224,7 @@ func ConvertPodStatusToRunningPod(runtimeName string, podStatus *PodStatus) Pod 
 	}
 	for _, containerStatus := range podStatus.ContainerStatuses {
 		if containerStatus.State != ContainerStateRunning {
+			// 获取所有正在运行的容器
 			continue
 		}
 		container := &Container{
@@ -236,6 +240,7 @@ func ConvertPodStatusToRunningPod(runtimeName string, podStatus *PodStatus) Pod 
 
 	// Populate sandboxes in kubecontainer.Pod
 	for _, sandbox := range podStatus.SandboxStatuses {
+		// 获取所有的sandbox
 		runningPod.Sandboxes = append(runningPod.Sandboxes, &Container{
 			ID:    ContainerID{Type: runtimeName, ID: sandbox.Id},
 			State: SandboxToContainerState(sandbox.State),

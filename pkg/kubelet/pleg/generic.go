@@ -56,6 +56,7 @@ type GenericPLEG struct {
 	// The container runtime.
 	runtime kubecontainer.Runtime
 	// The channel from which the subscriber listens events.
+	// 订阅者可以从eventChannel中监听事件
 	eventChannel chan *PodLifecycleEvent
 	// The internal cache for pod/container information.
 	// 内部的cache用于缓存pod/container信息
@@ -112,6 +113,7 @@ type podRecord struct {
 	current *kubecontainer.Pod
 }
 
+// podRecords中包含了old pod以及current pod的情况
 type podRecords map[types.UID]*podRecord
 
 func NewGenericPLEG(runtime kubecontainer.Runtime, channelCapacity int,
@@ -121,6 +123,7 @@ func NewGenericPLEG(runtime kubecontainer.Runtime, channelCapacity int,
 		runtime:      runtime,
 		eventChannel: make(chan *PodLifecycleEvent, channelCapacity),
 		podRecords:   make(podRecords),
+		// cache中缓存了从运行时获取的pod status
 		cache:        cache,
 		clock:        clock,
 	}
@@ -137,6 +140,7 @@ func (g *GenericPLEG) Watch() chan *PodLifecycleEvent {
 // Start spawns a goroutine to relist periodically.
 // Start启动一个goroutine，阶段性地进行relist
 func (g *GenericPLEG) Start() {
+	// 每隔1秒，调用一次g.relist函数
 	go wait.Until(g.relist, g.relistPeriod, wait.NeverStop)
 }
 
@@ -156,6 +160,7 @@ func generateEvents(podID types.UID, cid string, oldState, newState plegContaine
 	}
 
 	glog.V(4).Infof("GenericPLEG: %v/%v: %v -> %v", podID, cid, oldState, newState)
+	// 根据容器新的状态，产生PodLifecycleEvent
 	switch newState {
 	case plegContainerRunning:
 		return []*PodLifecycleEvent{{ID: podID, Type: ContainerStarted, Data: cid}}
@@ -164,11 +169,14 @@ func generateEvents(podID types.UID, cid string, oldState, newState plegContaine
 	case plegContainerUnknown:
 		return []*PodLifecycleEvent{{ID: podID, Type: ContainerChanged, Data: cid}}
 	case plegContainerNonExistent:
+		// 如果容器不存在了，根据之前的状态产生PodLifecycleEvent
 		switch oldState {
 		case plegContainerExited:
 			// We already reported that the container died before.
+			// 如果我们之前已经汇报了container died，则将container移除
 			return []*PodLifecycleEvent{{ID: podID, Type: ContainerRemoved, Data: cid}}
 		default:
+			// 否则接连产生ContainerDied和ContainerRemoved两个事件
 			return []*PodLifecycleEvent{{ID: podID, Type: ContainerDied, Data: cid}, {ID: podID, Type: ContainerRemoved, Data: cid}}
 		}
 	default:
@@ -219,15 +227,18 @@ func (g *GenericPLEG) relist() {
 
 	// Compare the old and the current pods, and generate events.
 	// 比较old以及current pods，并且据此产生events
+	// 根据pod uid对event进行分类
 	eventsByPodID := map[types.UID][]*PodLifecycleEvent{}
 	for pid := range g.podRecords {
 		oldPod := g.podRecords.getOld(pid)
 		pod := g.podRecords.getCurrent(pid)
 		// Get all containers in the old and the new pod.
+		// 获取old以及new pod中所有的containers
 		allContainers := getContainersFromPods(oldPod, pod)
 		for _, container := range allContainers {
 			events := computeEvents(oldPod, pod, &container.ID)
 			for _, e := range events {
+				// 扩展eventsByPodID
 				updateEvents(eventsByPodID, e)
 			}
 		}
@@ -235,11 +246,13 @@ func (g *GenericPLEG) relist() {
 
 	var needsReinspection map[types.UID]*kubecontainer.Pod
 	if g.cacheEnabled() {
+		// 如果g.cache不为nil
 		needsReinspection = make(map[types.UID]*kubecontainer.Pod)
 	}
 
 	// If there are events associated with a pod, we should update the
 	// podCache.
+	// 如果有和pod相关的events，我们应该更新podCache
 	for pid, events := range eventsByPodID {
 		pod := g.podRecords.getCurrent(pid)
 		if g.cacheEnabled() {
@@ -256,6 +269,7 @@ func (g *GenericPLEG) relist() {
 				glog.Errorf("PLEG: Ignoring events for pod %s/%s: %v", pod.Name, pod.Namespace, err)
 
 				// make sure we try to reinspect the pod during the next relisting
+				// 确保我们在下一次relisting的时候reinspect the pod
 				needsReinspection[pid] = pod
 
 				continue
@@ -263,6 +277,7 @@ func (g *GenericPLEG) relist() {
 				// this pod was in the list to reinspect and we did so because it had events, so remove it
 				// from the list (we don't want the reinspection code below to inspect it a second time in
 				// this relist execution)
+				// update成功，从g.podsToReinspect中删除
 				delete(g.podsToReinspect, pid)
 			}
 		}
@@ -273,12 +288,14 @@ func (g *GenericPLEG) relist() {
 			if events[i].Type == ContainerChanged {
 				continue
 			}
+			// 将event从eventChannel中发出
 			g.eventChannel <- events[i]
 		}
 	}
 
 	if g.cacheEnabled() {
 		// reinspect any pods that failed inspection during the previous relist
+		// reinspect那些在上一次relist的时候failed那些pods
 		if len(g.podsToReinspect) > 0 {
 			glog.V(5).Infof("GenericPLEG: Reinspecting pods that previously failed inspection")
 			for pid, pod := range g.podsToReinspect {
@@ -291,16 +308,20 @@ func (g *GenericPLEG) relist() {
 
 		// Update the cache timestamp.  This needs to happen *after*
 		// all pods have been properly updated in the cache.
+		// 更新cache的timestamp，这需要在cache中所有的pods都更新完成之后
+		// 才能发生		
 		g.cache.UpdateTime(timestamp)
 	}
 
 	// make sure we retain the list of pods that need reinspecting the next time relist is called
+	// 将needsReinspection赋值给g.podsToReinspect，确保它们在下一次relist的时候会被检测
 	g.podsToReinspect = needsReinspection
 }
 
 func getContainersFromPods(pods ...*kubecontainer.Pod) []*kubecontainer.Container {
 	cidSet := sets.NewString()
 	var containers []*kubecontainer.Container
+	// 获取pods中所有的containers
 	for _, p := range pods {
 		if p == nil {
 			continue
@@ -401,6 +422,7 @@ func (g *GenericPLEG) updateCache(pod *kubecontainer.Pod, pid types.UID) error {
 		status.IP = g.getPodIP(pid, status)
 	}
 
+	// 从容器运行时获取pod status之后，写入cache
 	g.cache.Set(pod.ID, status, err, timestamp)
 	return err
 }
@@ -449,9 +471,11 @@ func (pr podRecords) getCurrent(id types.UID) *kubecontainer.Pod {
 
 func (pr podRecords) setCurrent(pods []*kubecontainer.Pod) {
 	for i := range pr {
+		// 先将所有的podRecords中的current都设置为nil
 		pr[i].current = nil
 	}
 	for _, pod := range pods {
+		// 遍历新获取的pods，设置对应的current
 		if r, ok := pr[pod.ID]; ok {
 			r.current = pod
 		} else {
@@ -471,9 +495,11 @@ func (pr podRecords) update(id types.UID) {
 func (pr podRecords) updateInternal(id types.UID, r *podRecord) {
 	if r.current == nil {
 		// Pod no longer exists; delete the entry.
+		// 如果Pod已经存在了，则将该entry删除
 		delete(pr, id)
 		return
 	}
+	// 将r.current赋值给r.old
 	r.old = r.current
 	r.current = nil
 }

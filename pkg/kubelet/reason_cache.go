@@ -36,7 +36,7 @@ import (
 // TODO(random-liu): Use more reliable cache which could collect garbage of failed pod.
 // TODO(random-liu): Move reason cache to somewhere better.
 // ReasonCache将最新的启动失败的容器的原因存放在一个字符串里，通过键值<pod_UID>_<container_name>
-// 进行查找。但是这些都是best-effort的，有如下两个原因：
+// 进行查找。目标是将这些reason传播到container status。但是这些都是best-effort的，有如下两个原因：
 //	1. cache不是持久的
 //	2. 我们使用了LRU cache来避免额外的GC，这以为着在pod被删除的时候，有些entries可能已经被重用了
 type ReasonCache struct {
@@ -45,6 +45,7 @@ type ReasonCache struct {
 }
 
 // Reason is the cached item in ReasonCache
+// Reason是在ReasonCache中缓存的item
 type reasonItem struct {
 	Err     error
 	Message string

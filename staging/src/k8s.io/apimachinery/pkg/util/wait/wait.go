@@ -153,6 +153,7 @@ func JitterUntil(f func(), period time.Duration, jitterFactor float64, sliding b
 
 // Jitter returns a time.Duration between duration and duration + maxFactor *
 // duration.
+// Jitter返回duration到duration + maxFactor * duration之间的任意值
 //
 // This allows clients to avoid converging on periodic behavior. If maxFactor
 // is 0.0, a suggested default value will be chosen.

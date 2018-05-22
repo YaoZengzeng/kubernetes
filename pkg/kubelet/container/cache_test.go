@@ -83,6 +83,8 @@ func TestGetIfNewerThanWhenPodExists(t *testing.T) {
 			// time is newer than the given timestamp. This means that the
 			// entry is up-to-date but the rest of the cache are still being
 			// updated.
+			// Glocal cache timestamp更老，但是pod entry modified time更新
+			// 这意味着该entry是最新的，但是cache的其他部分还在更新
 			cacheTime: timestamp.Add(-time.Second),
 			modified:  timestamp.Add(time.Second * 3),
 			expected:  true,

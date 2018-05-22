@@ -114,6 +114,7 @@ func (c *cache) Set(id types.UID, status *PodStatus, err error, timestamp time.T
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	defer c.notify(id, timestamp)
+	// 将状态保存至c.pods中
 	c.pods[id] = &data{status: status, err: err, modified: timestamp}
 }
 
@@ -140,6 +141,7 @@ func (c *cache) UpdateTime(timestamp time.Time) {
 }
 
 func makeDefaultData(id types.UID) *data {
+	// 创建一个空的pod status
 	return &data{status: &PodStatus{ID: id}, err: nil}
 }
 
@@ -182,7 +184,7 @@ func (c *cache) getIfNewerThan(id types.UID, minTime time.Time) *data {
 		//   * the global timestamp of the cache is newer than minTime.
 		// 如果Status被缓存了，在以下两种情况之一为true时，返回status
 		//	 * status在minTime之后被修改了
-		//	 * minTime比cache的global timestamp无关
+		//	 * minTime比cache的global timestamp老
 		return d
 	}
 	// The pod status is not ready.
@@ -212,13 +214,16 @@ func (c *cache) notify(id types.UID, timestamp time.Time) {
 	}
 	// 更新c.subscribers[]
 	if len(newList) == 0 {
+		// 如果订阅者已经发送完了，就从c.subscribers中删除
 		delete(c.subscribers, id)
 	} else {
+		// 否则，更新c.subscribers
 		c.subscribers[id] = newList
 	}
 }
 
 func (c *cache) subscribe(id types.UID, timestamp time.Time) chan *data {
+	// 创建缓存为1的channel
 	ch := make(chan *data, 1)
 	c.lock.Lock()
 	defer c.lock.Unlock()
