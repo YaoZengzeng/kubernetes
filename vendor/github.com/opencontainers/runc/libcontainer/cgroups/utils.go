@@ -172,7 +172,9 @@ func getCgroupMountsHelper(ss map[string]bool, mi io.Reader, all bool) ([]Mount,
 }
 
 // GetCgroupMounts returns the mounts for the cgroup subsystems.
+// GetCgroupMounts返回cgroup子系统的mounts
 // all indicates whether to return just the first instance or all the mounts.
+// 参数all表示返回第一个instance还是所有的mounts
 func GetCgroupMounts(all bool) ([]Mount, error) {
 	f, err := os.Open("/proc/self/mountinfo")
 	if err != nil {

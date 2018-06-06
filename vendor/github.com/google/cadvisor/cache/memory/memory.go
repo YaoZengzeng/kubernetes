@@ -28,6 +28,7 @@ import (
 
 // TODO(vmarmol): See about refactoring this class, we have an unecessary redirection of containerCache and InMemoryCache.
 // containerCache is used to store per-container information
+// containerCache用于缓存每个container的信息
 type containerCache struct {
 	ref         info.ContainerReference
 	recentStats *utils.TimedStore

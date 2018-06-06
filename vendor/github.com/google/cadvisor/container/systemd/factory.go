@@ -39,6 +39,7 @@ func (f *systemdFactory) NewContainerHandler(name string, inHostNamespace bool) 
 func (f *systemdFactory) CanHandleAndAccept(name string) (bool, bool, error) {
 	// on systemd using devicemapper each mount into the container has an associated cgroup that we ignore.
 	// for details on .mount units: http://man7.org/linux/man-pages/man5/systemd.mount.5.html
+	// 只对.mount为后缀的，可以handle
 	if strings.HasSuffix(name, ".mount") {
 		return true, false, nil
 	}
@@ -53,6 +54,7 @@ func (f *systemdFactory) DebugInfo() map[string][]string {
 func Register(machineInfoFactory info.MachineInfoFactory, fsInfo fs.FsInfo, ignoreMetrics container.MetricSet) error {
 	glog.V(1).Infof("Registering systemd factory")
 	factory := &systemdFactory{}
+	// 仅仅加入raw类型的factories中
 	container.RegisterContainerHandlerFactory(factory, []watcher.ContainerWatchSource{watcher.Raw})
 	return nil
 }

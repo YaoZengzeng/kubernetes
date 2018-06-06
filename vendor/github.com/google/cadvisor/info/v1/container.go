@@ -84,6 +84,7 @@ type ContainerReference struct {
 
 	// Namespace under which the aliases of a container are unique.
 	// An example of a namespace is "docker" for Docker containers.
+	// 对于Docker容器，namespace就是"docker"
 	Namespace string `json:"namespace,omitempty"`
 
 	Labels map[string]string `json:"labels,omitempty"`

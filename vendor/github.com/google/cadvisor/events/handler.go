@@ -76,6 +76,7 @@ type Request struct {
 
 // EventManager is implemented by Events. It provides two ways to monitor
 // events and one way to add events
+// EventManager由Events实现，它提供了两种方法监听events，以及一种方法添加events
 type EventManager interface {
 	// WatchEvents() allows a caller to register for receiving events based on the specified request.
 	// On successful registration, an EventChannel object is returned.
@@ -126,6 +127,7 @@ func NewEventChannel(watchId int) *EventChannel {
 }
 
 // Policy specifying how many events to store.
+// Policy指定了存储多少个events
 // MaxAge is the max duration for which to keep events.
 // MaxNumEvents is the max number of events to keep (-1 for no limit).
 type StoragePolicy struct {

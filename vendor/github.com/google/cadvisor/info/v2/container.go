@@ -58,9 +58,11 @@ type MemorySpec struct {
 
 type ContainerInfo struct {
 	// Describes the container.
+	// 描述container的Spec
 	Spec ContainerSpec `json:"spec,omitempty"`
 
 	// Historical statistics gathered from the container.
+	// 从container处获取的historical statistics
 	Stats []*ContainerStats `json:"stats,omitempty"`
 }
 
@@ -231,6 +233,7 @@ type FsInfo struct {
 
 type RequestOptions struct {
 	// Type of container identifier specified - "name", "dockerid", dockeralias"
+	// container id的类型，"name", "dockerid"或者"dockeralias"
 	IdType string `json:"type"`
 	// Number of stats to return
 	Count int `json:"count"`
@@ -238,6 +241,7 @@ type RequestOptions struct {
 	Recursive bool `json:"recursive"`
 	// Update stats if they are older than MaxAge
 	// nil indicates no update, and 0 will always trigger an update.
+	// 0表示总会触发一个update
 	MaxAge *time.Duration `json:"max_age"`
 }
 

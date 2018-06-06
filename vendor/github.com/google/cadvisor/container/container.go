@@ -44,21 +44,27 @@ type ContainerHandler interface {
 	ContainerReference() (info.ContainerReference, error)
 
 	// Returns container's isolation spec.
+	// 返回该容器的isolation spec
 	GetSpec() (info.ContainerSpec, error)
 
 	// Returns the current stats values of the container.
+	// 返回该容器当前的stats
 	GetStats() (*info.ContainerStats, error)
 
 	// Returns the subcontainers of this container.
+	// 返回该容器的subcontainers
 	ListContainers(listType ListType) ([]info.ContainerReference, error)
 
 	// Returns the processes inside this container.
+	// 返回容器中的processes
 	ListProcesses(listType ListType) ([]int, error)
 
 	// Returns absolute cgroup path for the requested resource.
+	// 返回指定资源的绝对cgroup路径
 	GetCgroupPath(resource string) (string, error)
 
 	// Returns container labels, if available.
+	// 返回container的labels
 	GetContainerLabels() map[string]string
 
 	// Returns the container's ip address, if available
@@ -72,8 +78,10 @@ type ContainerHandler interface {
 
 	// Start starts any necessary background goroutines - must be cleaned up in Cleanup().
 	// It is expected that most implementations will be a no-op.
+	// 大多数实现的Start()函数都是空操作
 	Start()
 
 	// Type of handler
+	// Container的类型，包括ContainerTypeRaw, ContainerTypeContainerd等等
 	Type() ContainerType
 }

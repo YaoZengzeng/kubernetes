@@ -30,6 +30,7 @@ import (
 
 const (
 	// k8sNamespace is the namespace we use to connect containerd.
+	// 我们连接containerd使用的namespace
 	k8sNamespace = "k8s.io"
 )
 
@@ -61,6 +62,7 @@ func Client() (containerdClient, error) {
 		grpc.WithStreamInterceptor(stream),
 	)
 
+	// 监听的containerd的地址是/var/run/containerd/containerd.sock
 	conn, err := grpc.Dial(dialer.DialAddress("/var/run/containerd/containerd.sock"), gopts...)
 	if err != nil {
 		return nil, err

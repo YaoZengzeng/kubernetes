@@ -50,9 +50,11 @@ type StatsProvider interface {
 	ImageFsStats() (*statsapi.FsStats, error)
 
 	// The following stats are provided by cAdvisor.
+	// 以下数据由cAdvisor提供
 	//
 	// GetCgroupStats returns the stats and the networking usage of the cgroup
 	// with the specified cgroupName.
+	// GetCgroupStats返回给定cgroupName的cgroup的stats以及networking usage
 	GetCgroupStats(cgroupName string) (*statsapi.ContainerStats, *statsapi.NetworkStats, error)
 	// RootFsStats returns the stats of the node root filesystem.
 	RootFsStats() (*statsapi.FsStats, error)
@@ -68,6 +70,7 @@ type StatsProvider interface {
 	GetRawContainerInfo(containerName string, req *cadvisorapi.ContainerInfoRequest, subcontainers bool) (map[string]*cadvisorapi.ContainerInfo, error)
 
 	// The following information is provided by Kubelet.
+	// 以下信息由Kubelet提供
 	//
 	// GetPodByName returns the spec of the pod with the name in the specified
 	// namespace.

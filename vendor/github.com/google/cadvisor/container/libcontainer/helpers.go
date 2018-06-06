@@ -45,10 +45,12 @@ type CgroupSubsystems struct {
 
 	// Cgroup subsystem to their mount location.
 	// e.g.: "cpu" -> "/sys/fs/cgroup/cpu"
+	// Cgroup subsystem到它们的mount location的映射
 	MountPoints map[string]string
 }
 
 // Get information about the cgroup subsystems.
+// 获取cgroup子系统的信息
 func GetCgroupSubsystems() (CgroupSubsystems, error) {
 	// Get all cgroup mounts.
 	allCgroups, err := cgroups.GetCgroupMounts(true)
@@ -65,6 +67,7 @@ func getCgroupSubsystemsHelper(allCgroups []cgroups.Mount) (CgroupSubsystems, er
 	}
 
 	// Trim the mounts to only the subsystems we care about.
+	// 截取mounts中我们只关心的子系统部分
 	supportedCgroups := make([]cgroups.Mount, 0, len(allCgroups))
 	recordedMountpoints := make(map[string]struct{}, len(allCgroups))
 	mountPoints := make(map[string]string, len(allCgroups))

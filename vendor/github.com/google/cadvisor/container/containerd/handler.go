@@ -43,8 +43,10 @@ type containerdContainerHandler struct {
 	machineInfoFactory info.MachineInfoFactory
 	// Absolute path to the cgroup hierarchies of this container.
 	// (e.g.: "cpu" -> "/sys/fs/cgroup/cpu/test")
+	// 指向该容器的cgroup hierarchies的绝对路径
 	cgroupPaths map[string]string
 	// Manager of this container's cgroups.
+	// 该容器的cgroup manager
 	cgroupManager cgroups.Manager
 	fsInfo        fs.FsInfo
 	poolName      string
@@ -79,10 +81,12 @@ func newContainerdContainerHandler(
 	// Create the cgroup paths.
 	cgroupPaths := make(map[string]string, len(cgroupSubsystems.MountPoints))
 	for key, val := range cgroupSubsystems.MountPoints {
+		// 获取cgroup子系统的路径
 		cgroupPaths[key] = path.Join(val, name)
 	}
 
 	// Generate the equivalent cgroup manager for this container.
+	// 创建该容器的equivalent cgroup manager
 	cgroupManager := &cgroupfs.Manager{
 		Cgroups: &libcontainerconfigs.Cgroup{
 			Name: name,
@@ -93,6 +97,7 @@ func newContainerdContainerHandler(
 	id := ContainerNameToContainerdID(name)
 	// We assume that if load fails then the container is not known to containerd.
 	ctx := context.Background()
+	// 加载containerd中的容器
 	cntr, err := client.LoadContainer(ctx, id)
 	if err != nil {
 		return nil, err
@@ -103,6 +108,7 @@ func newContainerdContainerHandler(
 		return nil, err
 	}
 
+	// 获取该容器的task pid
 	taskPid, err := client.TaskPid(ctx, id)
 	if err != nil {
 		return nil, err
@@ -147,6 +153,7 @@ func (self *containerdContainerHandler) ContainerReference() (info.ContainerRefe
 	return info.ContainerReference{
 		Id:        self.id,
 		Name:      self.name,
+		// containerd的namespace为"containerd"
 		Namespace: k8sContainerdNamespace,
 		Labels:    self.labels,
 		Aliases:   self.aliases,

@@ -28,6 +28,7 @@ type ContainerHandlerFactory interface {
 	NewContainerHandler(name string, inHostNamespace bool) (c ContainerHandler, err error)
 
 	// Returns whether this factory can handle and accept the specified container.
+	// CanHandleAndAccept返回该factory是否能够处理以及接受特定的container
 	CanHandleAndAccept(name string) (handle bool, accept bool, err error)
 
 	// Name of the factory.
@@ -76,6 +77,8 @@ var (
 
 // Register a ContainerHandlerFactory. These should be registered from least general to most general
 // as they will be asked in order whether they can handle a particular container.
+// 注册一个ContainerHandlerFactory。它们应该按照least general到most general进行注册
+// 从而能够依次被询问，是否能够处理某个特定的容器
 func RegisterContainerHandlerFactory(factory ContainerHandlerFactory, watchTypes []watcher.ContainerWatchSource) {
 	factoriesLock.Lock()
 	defer factoriesLock.Unlock()
@@ -94,11 +97,13 @@ func HasFactories() bool {
 }
 
 // Create a new ContainerHandler for the specified container.
+// 为特定的容器创建一个新的ContainerHandler
 func NewContainerHandler(name string, watchType watcher.ContainerWatchSource, inHostNamespace bool) (ContainerHandler, bool, error) {
 	factoriesLock.RLock()
 	defer factoriesLock.RUnlock()
 
 	// Create the ContainerHandler with the first factory that supports it.
+	// 根据第一个支持该容器的factory，创建一个ContainerHandler
 	for _, factory := range factories[watchType] {
 		canHandle, canAccept, err := factory.CanHandleAndAccept(name)
 		if err != nil {

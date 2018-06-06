@@ -50,6 +50,7 @@ func (sp *summaryProviderImpl) Get() (*statsapi.Summary, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get node info: %v", err)
 	}
+	// 调用provider的各个方法获取node的stats信息
 	nodeConfig := sp.provider.GetNodeConfig()
 	rootStats, networkStats, err := sp.provider.GetCgroupStats("/")
 	if err != nil {
@@ -63,6 +64,7 @@ func (sp *summaryProviderImpl) Get() (*statsapi.Summary, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get imageFs stats: %v", err)
 	}
+	// 调用provider的ListPodStats获取pod stats
 	podStats, err := sp.provider.ListPodStats()
 	if err != nil {
 		return nil, fmt.Errorf("failed to list pod stats: %v", err)
@@ -88,12 +90,14 @@ func (sp *summaryProviderImpl) Get() (*statsapi.Summary, error) {
 		if name == "" {
 			continue
 		}
+		// 通过provider的GetCgroupStats获取system container的stats
 		s, _, err := sp.provider.GetCgroupStats(name)
 		if err != nil {
 			glog.Errorf("Failed to get system container stats for %q: %v", name, err)
 			continue
 		}
 		// System containers don't have a filesystem associated with them.
+		// System containers没有filesystem与之相关联
 		s.Logs, s.Rootfs = nil, nil
 		s.Name = sys
 		nodeStats.SystemContainers = append(nodeStats.SystemContainers, *s)

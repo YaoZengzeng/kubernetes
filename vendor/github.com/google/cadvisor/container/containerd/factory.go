@@ -38,6 +38,7 @@ const k8sContainerdNamespace = "containerd"
 
 // Regexp that identifies containerd cgroups, containers started with
 // --cgroup-parent have another prefix than 'containerd'
+// 用于区分containerd cgroups的Regexp
 var containerdCgroupRegexp = regexp.MustCompile(`([a-z0-9]{64})`)
 
 type containerdFactory struct {
@@ -45,8 +46,10 @@ type containerdFactory struct {
 	client             containerdClient
 	version            string
 	// Information about the mounted cgroup subsystems.
+	// 那些挂载的cgroup子系统的信息
 	cgroupSubsystems libcontainer.CgroupSubsystems
 	// Information about mounted filesystems.
+	// 挂载的文件系统信息
 	fsInfo        fs.FsInfo
 	ignoreMetrics container.MetricSet
 }
@@ -75,6 +78,7 @@ func (self *containerdFactory) NewContainerHandler(name string, inHostNamespace 
 }
 
 // Returns the containerd ID from the full container name.
+// 从完整的container name中返回containerd ID
 func ContainerNameToContainerdID(name string) string {
 	id := path.Base(name)
 	if matches := containerdCgroupRegexp.FindStringSubmatch(id); matches != nil {
@@ -85,6 +89,7 @@ func ContainerNameToContainerdID(name string) string {
 
 // isContainerName returns true if the cgroup with associated name
 // corresponds to a containerd container.
+// isContainerName返回true，如果和这个名字相关的容器代表了一个containerd container
 func isContainerName(name string) bool {
 	// TODO: May be check with HasPrefix ContainerdNamespace
 	if strings.HasSuffix(name, ".mount") {
@@ -94,6 +99,7 @@ func isContainerName(name string) bool {
 }
 
 // Containerd can handle and accept all containerd created containers
+// Containerd能够处理并接受所有containerd创建的容器
 func (self *containerdFactory) CanHandleAndAccept(name string) (bool, bool, error) {
 	// if the container is not associated with containerd, we can't handle it or accept it.
 	if !isContainerName(name) {
@@ -103,7 +109,10 @@ func (self *containerdFactory) CanHandleAndAccept(name string) (bool, bool, erro
 	id := ContainerNameToContainerdID(name)
 	// If container and task lookup in containerd fails then we assume
 	// that the container state is not known to containerd
+	// 如果在containerd中寻找container或者task失败
+	// 那么我们假设container state对于containerd是为止的
 	ctx := context.Background()
+	// 调用contaienrd的client，加载container，验证该容器containerd是否知道，并且处于running状态
 	_, err := self.client.LoadContainer(ctx, id)
 	if err != nil {
 		return false, false, fmt.Errorf("failed to load container: %v", err)
@@ -118,16 +127,19 @@ func (self *containerdFactory) DebugInfo() map[string][]string {
 
 // Register root container before running this function!
 func Register(factory info.MachineInfoFactory, fsInfo fs.FsInfo, ignoreMetrics container.MetricSet) error {
+	// 创建containerd的client
 	client, err := Client()
 	if err != nil {
 		return fmt.Errorf("unable to create containerd client: %v", err)
 	}
 
+	// 获取containerd的version
 	containerdVersion, err := client.Version(context.Background())
 	if err != nil {
 		return fmt.Errorf("failed to fetch containerd client version: %v", err)
 	}
 
+	// 获取cgroup子系统的信息
 	cgroupSubsystems, err := libcontainer.GetCgroupSubsystems()
 	if err != nil {
 		return fmt.Errorf("failed to get cgroup subsystems: %v", err)
@@ -143,6 +155,7 @@ func Register(factory info.MachineInfoFactory, fsInfo fs.FsInfo, ignoreMetrics c
 		ignoreMetrics:      ignoreMetrics,
 	}
 
+	// containerd只监听raw，将containerd加入raw对应的factories
 	container.RegisterContainerHandlerFactory(f, []watcher.ContainerWatchSource{watcher.Raw})
 	return nil
 }

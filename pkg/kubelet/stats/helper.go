@@ -37,6 +37,7 @@ func cadvisorInfoToCPUandMemoryStats(info *cadvisorapiv2.ContainerInfo) (*statsa
 	}
 	var cpuStats *statsapi.CPUStats
 	var memoryStats *statsapi.MemoryStats
+	// 如果有CPU，则填充cpuStats的数据
 	if info.Spec.HasCpu {
 		cpuStats = &statsapi.CPUStats{
 			Time: metav1.NewTime(cstat.Timestamp),
@@ -48,6 +49,7 @@ func cadvisorInfoToCPUandMemoryStats(info *cadvisorapiv2.ContainerInfo) (*statsa
 			cpuStats.UsageCoreNanoSeconds = &cstat.Cpu.Usage.Total
 		}
 	}
+	// 如果有Memory，则填充Memory相关的数据
 	if info.Spec.HasMemory {
 		pageFaults := cstat.Memory.ContainerData.Pgfault
 		majorPageFaults := cstat.Memory.ContainerData.Pgmajfault

@@ -40,17 +40,23 @@ import (
 
 // criStatsProvider implements the containerStatsProvider interface by getting
 // the container stats from CRI.
+// criStatsProvider通过从CRI获取container stats实现了containerStatsProvider
 type criStatsProvider struct {
 	// cadvisor is used to get the node root filesystem's stats (such as the
 	// capacity/available bytes/inodes) that will be populated in per container
 	// filesystem stats.
+	// cadvisor用于获取node根文件系统的stats（例如capacity/available bytes/inodes）
+	// 它会被填充到每个容器的filesystem stats中
 	cadvisor cadvisor.Interface
 	// resourceAnalyzer is used to get the volume stats of the pods.
+	// resourceAnalyzer用于获取pods的volume stats
 	resourceAnalyzer stats.ResourceAnalyzer
 	// runtimeService is used to get the status and stats of the pods and its
 	// managed containers.
+	// runtimeService用于获取pods以及它管理的容器的status和stats
 	runtimeService internalapi.RuntimeService
 	// imageService is used to get the stats of the image filesystem.
+	// imageService用于获取image filesystem的stats
 	imageService internalapi.ImageManagerService
 }
 
@@ -81,6 +87,7 @@ func (p *criStatsProvider) ListPodStats() ([]statsapi.PodStats, error) {
 		return nil, fmt.Errorf("failed to get rootFs info: %v", err)
 	}
 
+	// 调用CRI的list container获取容器信息
 	containers, err := p.runtimeService.ListContainers(&runtimeapi.ContainerFilter{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list all containers: %v", err)
@@ -88,7 +95,7 @@ func (p *criStatsProvider) ListPodStats() ([]statsapi.PodStats, error) {
 
 	// Creates pod sandbox map.
 	podSandboxMap := make(map[string]*runtimeapi.PodSandbox)
-	// 调用CRI的list sandbox获取信息
+	// 调用CRI的list sandbox获取pod信息
 	podSandboxes, err := p.runtimeService.ListPodSandbox(&runtimeapi.PodSandboxFilter{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list all pod sandboxes: %v", err)
@@ -115,6 +122,7 @@ func (p *criStatsProvider) ListPodStats() ([]statsapi.PodStats, error) {
 		return nil, fmt.Errorf("failed to list all container stats: %v", err)
 	}
 
+	// 移除处于terminated状态的容器
 	containers = removeTerminatedContainer(containers)
 	// Creates container map.
 	containerMap := make(map[string]*runtimeapi.Container)
@@ -123,6 +131,7 @@ func (p *criStatsProvider) ListPodStats() ([]statsapi.PodStats, error) {
 		containerMap[c.Id] = c
 	}
 
+	// 获取CRI Cadvisor Stats
 	caInfos, err := getCRICadvisorStats(p.cadvisor)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get container info from cadvisor: %v", err)
@@ -157,6 +166,7 @@ func (p *criStatsProvider) ListPodStats() ([]statsapi.PodStats, error) {
 			// 用从cadvisor获取的数据填充caInfos
 			caPodSandbox, found := caInfos[podSandboxID]
 			if !found {
+				// 无法获取sandbox的cadvisor数据
 				glog.V(4).Info("Unable to find cadvisor stats for sandbox %q", podSandboxID)
 			} else {
 				// addCadvisorPodStats主要用于填充网络相关的数据
@@ -308,6 +318,7 @@ func (p *criStatsProvider) makeContainerStats(
 			//
 			// TODO(yguo0905): Get this information from kubelet and
 			// populate the two fields here.
+			// 从Kubelet中获取Logs的UsedBytes和InodesUsed
 		},
 		// UserDefinedMetrics is not supported by CRI.
 	}

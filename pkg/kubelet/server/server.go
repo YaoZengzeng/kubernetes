@@ -168,6 +168,7 @@ type AuthInterface interface {
 
 // HostInterface contains all the kubelet methods required by the server.
 // For testability.
+// HostInterface包含了所有server需要的kubelet方法
 type HostInterface interface {
 	stats.StatsProvider
 	GetVersionInfo() (*cadvisorapi.VersionInfo, error)
@@ -277,6 +278,7 @@ func (s *Server) InstallDefaultHandlers() {
 	s.restfulCont.Add(ws)
 
 	// 创建/stats/summary等各个http handler
+	// 传入的provider位s.host，传入的summaryProvider为resourceAnalyzer
 	s.restfulCont.Add(stats.CreateHandlers(statsPath, s.host, s.resourceAnalyzer))
 	s.restfulCont.Handle(metricsPath, prometheus.Handler())
 

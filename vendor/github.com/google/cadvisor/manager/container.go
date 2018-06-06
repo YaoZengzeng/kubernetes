@@ -76,6 +76,7 @@ type containerData struct {
 	loadDecay float64
 
 	// Whether to log the usage of this container when it is updated.
+	// 在容器更新的时候，是否记录容器的使用量
 	logUsage bool
 
 	// Tells the container to stop.
@@ -351,6 +352,7 @@ func newContainerData(containerName string, memoryCache *memory.InMemoryCache, h
 	if handler == nil {
 		return nil, fmt.Errorf("nil container handler")
 	}
+	// 调用handler获取Container Reference
 	ref, err := handler.ContainerReference()
 	if err != nil {
 		return nil, err
@@ -383,6 +385,7 @@ func newContainerData(containerName string, memoryCache *memory.InMemoryCache, h
 		}
 	}
 
+	// 调用cont.handler.GetSpec，并赋值给cont.info.Spec
 	err = cont.updateSpec()
 	if err != nil {
 		return nil, err
@@ -445,6 +448,7 @@ func (c *containerData) housekeeping() {
 	}
 
 	// Housekeep every second.
+	// 对容器进行housekeeping
 	glog.V(3).Infof("Start housekeeping for container %q\n", c.info.Name)
 	houseKeepingTimer := c.clock.NewTimer(0 * time.Second)
 	defer houseKeepingTimer.Stop()
@@ -508,6 +512,7 @@ func (c *containerData) housekeepingTick(timer <-chan time.Time, longHousekeepin
 		}
 	}
 	// Log if housekeeping took too long.
+	// 输出log，如果housekeeping花费了太长时间
 	duration := c.clock.Since(start)
 	if duration >= longHousekeeping {
 		glog.V(3).Infof("[%s] Housekeeping took %s", c.info.Name, duration)
@@ -615,6 +620,7 @@ func (c *containerData) updateStats() error {
 		}
 		return err
 	}
+	// 将stats加入memory cache中
 	err = c.memoryCache.AddStats(ref, stats)
 	if err != nil {
 		return err

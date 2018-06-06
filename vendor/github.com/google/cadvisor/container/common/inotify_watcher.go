@@ -22,12 +22,15 @@ import (
 
 // Watcher for container-related inotify events in the cgroup hierarchy.
 //
+// 监控在cgroup hierarchy下容器相关的inotify events
 // Implementation is thread-safe.
 type InotifyWatcher struct {
 	// Underlying inotify watcher.
+	// 底层的inotify watcher
 	watcher *inotify.Watcher
 
 	// Map of containers being watched to cgroup paths watched for that container.
+	// 被watche的容器的map，以及该容器watch的cgroup paths
 	containersWatched map[string]map[string]bool
 
 	// Lock for all datastructure access.

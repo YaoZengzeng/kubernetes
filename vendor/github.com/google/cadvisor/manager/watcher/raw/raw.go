@@ -33,6 +33,7 @@ import (
 
 type rawContainerWatcher struct {
 	// Absolute path to the root of the cgroup hierarchies
+	// 通往root of cgroup hierarchies的绝对路径
 	cgroupPaths map[string]string
 
 	cgroupSubsystems *libcontainer.CgroupSubsystems

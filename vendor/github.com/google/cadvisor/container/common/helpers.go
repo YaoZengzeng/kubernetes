@@ -74,6 +74,7 @@ func GetSpec(cgroupPaths map[string]string, machineInfoFactory info.MachineInfoF
 	}
 
 	// CPU.
+	// 获取cpu的信息
 	cpuRoot, ok := cgroupPaths["cpu"]
 	if ok {
 		if utils.FileExists(cpuRoot) {
@@ -107,6 +108,7 @@ func GetSpec(cgroupPaths map[string]string, machineInfoFactory info.MachineInfoF
 	memoryRoot, ok := cgroupPaths["memory"]
 	if ok {
 		if utils.FileExists(memoryRoot) {
+			// memoryRoot路径存在，则将HasMemory设置为true
 			spec.HasMemory = true
 			spec.Memory.Limit = readUInt64(memoryRoot, "memory.limit_in_bytes")
 			spec.Memory.SwapLimit = readUInt64(memoryRoot, "memory.memsw.limit_in_bytes")

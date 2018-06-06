@@ -41,6 +41,7 @@ type rawFactory struct {
 	fsInfo fs.FsInfo
 
 	// Watcher for inotify events.
+	// 用于监听inotify events
 	watcher *common.InotifyWatcher
 
 	// List of metrics to be ignored.
@@ -60,7 +61,9 @@ func (self *rawFactory) NewContainerHandler(name string, inHostNamespace bool) (
 }
 
 // The raw factory can handle any container. If --docker_only is set to false, non-docker containers are ignored.
+// raw factory可以处理任何容器
 func (self *rawFactory) CanHandleAndAccept(name string) (bool, bool, error) {
+	// 如果name为"/"则一定可以接受
 	accept := name == "/" || !*dockerOnly
 	return true, accept, nil
 }

@@ -71,11 +71,13 @@ type Manager interface {
 	Stop() error
 
 	//  information about a container.
+	// 获取指定容器的信息
 	GetContainerInfo(containerName string, query *info.ContainerInfoRequest) (*info.ContainerInfo, error)
 
 	// Get V2 information about a container.
 	// Recursive (subcontainer) requests are best-effort, and may return a partial result alongside an
 	// error in the partial failure case.
+	// 返回容器的V2信息，递归subcontainer是best-effort的，可能会返回部分结果以及部分结果返回失败
 	GetContainerInfoV2(containerName string, options v2.RequestOptions) (map[string]v2.ContainerInfo, error)
 
 	// Get information about all subcontainers of the specified container (includes self).
@@ -141,12 +143,13 @@ type Manager interface {
 // New takes a memory storage and returns a new manager.
 // New获取一个memory storage并且返回一个新的manager
 func New(memoryCache *memory.InMemoryCache, sysfs sysfs.SysFs, maxHousekeepingInterval time.Duration, allowDynamicHousekeeping bool, ignoreMetricsSet container.MetricSet, collectorHttpClient *http.Client) (Manager, error) {
+	// MemoryCache用来缓存收集到的容器数据
 	if memoryCache == nil {
 		return nil, fmt.Errorf("manager requires memory storage")
 	}
 
 	// Detect the container we are running on.
-	// 检测我们正在运行的容器
+	// 检测cadvisor是否运行在一个容器中
 	selfContainer, err := cgroups.GetOwnCgroupPath("cpu")
 	if err != nil {
 		return nil, err
@@ -157,6 +160,7 @@ func New(memoryCache *memory.InMemoryCache, sysfs sysfs.SysFs, maxHousekeepingIn
 		dockerStatus info.DockerStatus
 		rktPath      string
 	)
+	// 获取docker, rkt的信息
 	if tempDockerStatus, err := docker.Status(); err != nil {
 		glog.V(5).Infof("Docker not connected: %v", err)
 	} else {
@@ -168,6 +172,7 @@ func New(memoryCache *memory.InMemoryCache, sysfs sysfs.SysFs, maxHousekeepingIn
 		rktPath = tmpRktPath
 	}
 
+	// 构建一个crio Client并尝试连接
 	crioClient, err := crio.Client()
 	if err != nil {
 		return nil, err
@@ -195,12 +200,14 @@ func New(memoryCache *memory.InMemoryCache, sysfs sysfs.SysFs, maxHousekeepingIn
 
 	// If cAdvisor was started with host's rootfs mounted, assume that its running
 	// in its own namespaces.
+	// 如果在cAdvisor启动时有host的rootfs mounted，则假设它在自己的namespace中运行
 	inHostNamespace := false
 	if _, err := os.Stat("/rootfs/proc"); os.IsNotExist(err) {
 		inHostNamespace = true
 	}
 
 	// Register for new subcontainers.
+	// 从eventsChannel中获取新的subcontainers
 	eventsChannel := make(chan watcher.ContainerEvent, 16)
 
 	newManager := &manager{
@@ -220,6 +227,7 @@ func New(memoryCache *memory.InMemoryCache, sysfs sysfs.SysFs, maxHousekeepingIn
 		nvidiaManager:            &accelerators.NvidiaManager{},
 	}
 
+	// 获取machine info
 	machineInfo, err := machine.Info(sysfs, fsInfo, inHostNamespace)
 	if err != nil {
 		return nil, err
@@ -285,6 +293,7 @@ func (self *manager) Start() error {
 		self.containerWatchers = append(self.containerWatchers, watcher)
 	}
 
+	// 注册containerd container factory
 	err = containerd.Register(self, self.fsInfo, self.ignoreMetrics)
 	if err != nil {
 		glog.V(5).Infof("Registration of the containerd container factory failed: %v", err)
@@ -295,11 +304,13 @@ func (self *manager) Start() error {
 		glog.V(5).Infof("Registration of the crio container factory failed: %v", err)
 	}
 
+	// 注册systemd container factory
 	err = systemd.Register(self, self.fsInfo, self.ignoreMetrics)
 	if err != nil {
 		glog.V(5).Infof("Registration of the systemd container factory failed: %v", err)
 	}
 
+	// 注册raw container factory
 	err = raw.Register(self, self.fsInfo, self.ignoreMetrics)
 	if err != nil {
 		glog.Errorf("Registration of the raw container factory failed: %v", err)
@@ -312,25 +323,30 @@ func (self *manager) Start() error {
 	self.containerWatchers = append(self.containerWatchers, rawWatcher)
 
 	// Watch for OOMs.
+	// 监听OOMs
 	err = self.watchForNewOoms()
 	if err != nil {
 		glog.Warningf("Could not configure a source for OOM detection, disabling OOM events: %v", err)
 	}
 
 	// If there are no factories, don't start any housekeeping and serve the information we do have.
+	// 如果没有factory，则不要启动任何的housekeeping
 	if !container.HasFactories() {
 		return nil
 	}
 
 	// Setup collection of nvidia GPU metrics if any of them are attached to the machine.
+	// 收集nvida GPU的metrics
 	self.nvidiaManager.Setup()
 
 	// Create root and then recover all containers.
+	// 创建root并且recover所有的containers
 	err = self.createContainer("/", watcher.Raw)
 	if err != nil {
 		return err
 	}
 	glog.V(2).Infof("Starting recovery of all containers")
+	// 开始recover所有的containers
 	err = self.detectSubcontainers("/")
 	if err != nil {
 		return err
@@ -338,6 +354,7 @@ func (self *manager) Start() error {
 	glog.V(2).Infof("Recovery completed")
 
 	// Watch for new container.
+	// 监控新的container
 	quitWatcher := make(chan error)
 	err = self.watchForNewContainers(quitWatcher)
 	if err != nil {
@@ -346,6 +363,7 @@ func (self *manager) Start() error {
 	self.quitChannels = append(self.quitChannels, quitWatcher)
 
 	// Look for new containers in the main housekeeping thread.
+	// 在一个main housekeeping thread中等待新的containers的创建
 	quitGlobalHousekeeping := make(chan error)
 	self.quitChannels = append(self.quitChannels, quitGlobalHousekeeping)
 	go self.globalHousekeeping(quitGlobalHousekeeping)
@@ -384,6 +402,7 @@ func (self *manager) globalHousekeeping(quit chan error) {
 			start := time.Now()
 
 			// Check for new containers.
+			// 定时检测SubContainers
 			err := self.detectSubcontainers("/")
 			if err != nil {
 				glog.Errorf("Failed to detect containers: %s", err)
@@ -394,6 +413,7 @@ func (self *manager) globalHousekeeping(quit chan error) {
 			if duration >= longHousekeeping {
 				glog.V(3).Infof("Global Housekeeping(%d) took %s", t.Unix(), duration)
 			}
+		// 向管道quit中发送两个消息，则退出housekeeping
 		case <-quit:
 			// Quit if asked to do so.
 			quit <- nil
@@ -484,6 +504,7 @@ func (self *manager) GetContainerInfo(containerName string, query *info.Containe
 }
 
 func (self *manager) GetContainerInfoV2(containerName string, options v2.RequestOptions) (map[string]v2.ContainerInfo, error) {
+	// 获取容器的信息
 	containers, err := self.getRequestedContainers(containerName, options)
 	if err != nil {
 		return nil, err
@@ -501,15 +522,17 @@ func (self *manager) GetContainerInfoV2(containerName string, options v2.Request
 			infos[name] = result
 			continue
 		}
+		// 获取容器的Spec
 		result.Spec = self.getV2Spec(cinfo)
 
+		// 从self的memoryCache中获取RecentStats
 		stats, err := self.memoryCache.RecentStats(name, nilTime, nilTime, options.Count)
 		if err != nil {
 			errs.append(name, "RecentStats", err)
 			infos[name] = result
 			continue
 		}
-
+		// 将v1转换为v2，填充result的stats字段
 		result.Stats = v2.ContainerStatsFromV1(containerName, &cinfo.Spec, stats)
 		infos[name] = result
 	}
@@ -558,8 +581,10 @@ func (self *manager) getSubcontainers(containerName string) map[string]*containe
 	// 获取指定容器的所有unique subcontainers
 	matchedName := path.Join(containerName, "/")
 	for i := range self.containers {
+		// 遍历self中包含的containers
 		name := self.containers[i].info.Name
 		if name == containerName || strings.HasPrefix(name, matchedName) {
+			// 将以matchedName为前缀的容器加入containersMap中
 			containersMap[self.containers[i].info.Name] = self.containers[i]
 		}
 	}
@@ -689,6 +714,7 @@ func (self *manager) GetRequestedContainersInfo(containerName string, options v2
 func (self *manager) getRequestedContainers(containerName string, options v2.RequestOptions) (map[string]*containerData, error) {
 	containersMap := make(map[string]*containerData)
 	switch options.IdType {
+	// 分别获取类型为TypeName和TypeDocker的容器
 	case v2.TypeName:
 		if options.Recursive == false {
 			cont, err := self.getContainer(containerName)
@@ -697,6 +723,7 @@ func (self *manager) getRequestedContainers(containerName string, options v2.Req
 			}
 			containersMap[cont.info.Name] = cont
 		} else {
+			// 一般Recursive都为true
 			containersMap = self.getSubcontainers(containerName)
 			if len(containersMap) == 0 {
 				return containersMap, fmt.Errorf("unknown container: %q", containerName)
@@ -922,10 +949,12 @@ func (m *manager) createContainerLocked(containerName string, watchSource watche
 	}
 
 	// Check that the container didn't already exist.
+	// 先检查该container确实不存在
 	if _, ok := m.containers[namespacedName]; ok {
 		return nil
 	}
 
+	// 从factories中获取一个能处理该containerName的factory
 	handler, accept, err := container.NewContainerHandler(containerName, watchSource, m.inHostNamespace)
 	if err != nil {
 		return err
@@ -974,16 +1003,19 @@ func (m *manager) createContainerLocked(containerName string, watchSource watche
 
 	glog.V(3).Infof("Added container: %q (aliases: %v, namespace: %q)", containerName, cont.info.Aliases, cont.info.Namespace)
 
+	// 获取container spec
 	contSpec, err := cont.handler.GetSpec()
 	if err != nil {
 		return err
 	}
 
+	// 获取container ref
 	contRef, err := cont.handler.ContainerReference()
 	if err != nil {
 		return err
 	}
 
+	// 创建event
 	newEvent := &info.Event{
 		ContainerName: contRef.Name,
 		Timestamp:     contSpec.CreationTime,
@@ -995,6 +1027,7 @@ func (m *manager) createContainerLocked(containerName string, watchSource watche
 	}
 
 	// Start the container's housekeeping.
+	// 启动容器的housekeeping
 	return cont.Start()
 }
 
@@ -1096,12 +1129,14 @@ func (m *manager) getContainersDiff(containerName string) (added []info.Containe
 
 // Detect the existing subcontainers and reflect the setup here.
 func (m *manager) detectSubcontainers(containerName string) error {
+	// 获取子container的不同
 	added, removed, err := m.getContainersDiff(containerName)
 	if err != nil {
 		return err
 	}
 
 	// Add the new containers.
+	// 增加新的containers
 	for _, cont := range added {
 		err = m.createContainer(cont.Name, watcher.Raw)
 		if err != nil {
@@ -1110,6 +1145,7 @@ func (m *manager) detectSubcontainers(containerName string) error {
 	}
 
 	// Remove the old containers.
+	// 移除老的containers
 	for _, cont := range removed {
 		err = m.destroyContainer(cont.Name)
 		if err != nil {
@@ -1121,6 +1157,7 @@ func (m *manager) detectSubcontainers(containerName string) error {
 }
 
 // Watches for new containers started in the system. Runs forever unless there is a setup error.
+// 监听系统中新启动的容器，一直运行，直到出现setup error
 func (self *manager) watchForNewContainers(quit chan error) error {
 	for _, watcher := range self.containerWatchers {
 		err := watcher.Start(self.eventsChannel)

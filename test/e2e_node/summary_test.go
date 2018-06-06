@@ -60,6 +60,7 @@ var _ = framework.KubeDescribe("Summary API", func() {
 
 			Eventually(func() error {
 				for _, pod := range pods {
+					// pod启动的容器数目以及容器的重启次数和预期相符
 					err := verifyPodRestartCount(f, pod.Name, len(pod.Spec.Containers), numRestarts)
 					if err != nil {
 						return err
@@ -69,6 +70,7 @@ var _ = framework.KubeDescribe("Summary API", func() {
 			}, time.Minute, 5*time.Second).Should(BeNil())
 
 			// Wait for cAdvisor to collect 2 stats points
+			// 休眠15秒，等待cAdvisor收集2个stats points
 			time.Sleep(15 * time.Second)
 
 			// Setup expectations.
@@ -90,6 +92,7 @@ var _ = framework.KubeDescribe("Summary API", func() {
 					"Memory": ptrMatchAllFields(gstruct.Fields{
 						"Time": recent(maxStatsAge),
 						// We don't limit system container memory.
+						// 我们不对system container的memory进行限制
 						"AvailableBytes":  BeNil(),
 						"UsageBytes":      bounded(1*framework.Mb, 10*framework.Gb),
 						"WorkingSetBytes": bounded(1*framework.Mb, 10*framework.Gb),
@@ -136,12 +139,14 @@ var _ = framework.KubeDescribe("Summary API", func() {
 						"CPU": ptrMatchAllFields(gstruct.Fields{
 							"Time":                 recent(maxStatsAge),
 							"UsageNanoCores":       bounded(100000, 1E9),
+							// "UsageCoreNanoSeconds"是可以获取到的
 							"UsageCoreNanoSeconds": bounded(10000000, 1E11),
 						}),
 						"Memory": ptrMatchAllFields(gstruct.Fields{
 							"Time":            recent(maxStatsAge),
 							"AvailableBytes":  bounded(1*framework.Kb, 10*framework.Mb),
 							"UsageBytes":      bounded(10*framework.Kb, 20*framework.Mb),
+							// "WorkingSetBytes"是可以获取到的
 							"WorkingSetBytes": bounded(10*framework.Kb, 20*framework.Mb),
 							"RSSBytes":        bounded(1*framework.Kb, framework.Mb),
 							"PageFaults":      bounded(100, 1000000),
@@ -161,14 +166,17 @@ var _ = framework.KubeDescribe("Summary API", func() {
 							"Time":           recent(maxStatsAge),
 							"AvailableBytes": fsCapacityBounds,
 							"CapacityBytes":  fsCapacityBounds,
+							// "UsedBytes"无法获取
 							"UsedBytes":      bounded(framework.Kb, 10*framework.Mb),
 							"InodesFree":     bounded(1E4, 1E8),
 							"Inodes":         bounded(1E4, 1E8),
+							// "InodesUsed"无法获取
 							"InodesUsed":     bounded(0, 1E8),
 						}),
 						"UserDefinedMetrics": BeEmpty(),
 					}),
 				}),
+				// Pod的"Network", "CPU"以及"Memory"都无法获取
 				"Network": ptrMatchAllFields(gstruct.Fields{
 					"Time": recent(maxStatsAge),
 					"InterfaceStats": gstruct.MatchAllFields(gstruct.Fields{
@@ -180,11 +188,13 @@ var _ = framework.KubeDescribe("Summary API", func() {
 					}),
 					"Interfaces": Not(BeNil()),
 				}),
+				// 无法获取
 				"CPU": ptrMatchAllFields(gstruct.Fields{
 					"Time":                 recent(maxStatsAge),
 					"UsageNanoCores":       bounded(100000, 1E9),
 					"UsageCoreNanoSeconds": bounded(10000000, 1E11),
 				}),
+				// 无法获取
 				"Memory": ptrMatchAllFields(gstruct.Fields{
 					"Time":            recent(maxStatsAge),
 					"AvailableBytes":  bounded(1*framework.Kb, 10*framework.Mb),
@@ -220,6 +230,7 @@ var _ = framework.KubeDescribe("Summary API", func() {
 				}),
 			})
 
+			// matchExpectations包含了podExpectations
 			matchExpectations := ptrMatchAllFields(gstruct.Fields{
 				"Node": gstruct.MatchAllFields(gstruct.Fields{
 					"NodeName":         Equal(framework.TestContext.NodeName),

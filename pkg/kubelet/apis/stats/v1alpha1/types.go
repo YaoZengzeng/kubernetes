@@ -21,10 +21,13 @@ import (
 )
 
 // Summary is a top-level container for holding NodeStats and PodStats.
+// Summary用于存储NodeStats和PodStats
 type Summary struct {
 	// Overall node stats.
+	// 整个节点的stats
 	Node NodeStats `json:"node"`
 	// Per-pod stats.
+	// 每个pod的stats
 	Pods []PodStats `json:"pods"`
 }
 
@@ -33,6 +36,7 @@ type NodeStats struct {
 	// Reference to the measured Node.
 	NodeName string `json:"nodeName"`
 	// Stats of system daemons tracked as raw containers.
+	// 将system daemons的stats追踪为raw containers
 	// The system containers are named according to the SystemContainer* constants.
 	// +optional
 	// +patchMergeKey=name

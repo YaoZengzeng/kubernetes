@@ -59,6 +59,8 @@ func NewCadvisorStatsProvider(
 
 // newStatsProvider returns a new StatsProvider that provides node stats from
 // cAdvisor and the container stats using the containerStatsProvider.
+// newStatsProvider返回一个新的StatsProvider，它从cAdvisor获取node stats
+// 并且从containerStatsProvider获取容器stats
 func newStatsProvider(
 	cadvisor cadvisor.Interface,
 	podManager kubepod.Manager,
@@ -74,6 +76,7 @@ func newStatsProvider(
 }
 
 // StatsProvider provides the stats of the node and the pod-managed containers.
+// StatsProvider提供节点以及pod管理的容器的stats
 type StatsProvider struct {
 	cadvisor     cadvisor.Interface
 	podManager   kubepod.Manager
@@ -91,6 +94,8 @@ type containerStatsProvider interface {
 
 // GetCgroupStats returns the stats of the cgroup with the cgroupName. Note that
 // this function doesn't generate filesystem stats.
+// GetCgroupStats返回cgroupName指定的cgroup的stats
+// 本函数并不产生filesystem stats
 func (p *StatsProvider) GetCgroupStats(cgroupName string) (*statsapi.ContainerStats, *statsapi.NetworkStats, error) {
 	info, err := getCgroupInfo(p.cadvisor, cgroupName)
 	if err != nil {
@@ -103,6 +108,7 @@ func (p *StatsProvider) GetCgroupStats(cgroupName string) (*statsapi.ContainerSt
 }
 
 // RootFsStats returns the stats of the node root filesystem.
+// RootFsStats返回节点的rootfs的stats
 func (p *StatsProvider) RootFsStats() (*statsapi.FsStats, error) {
 	rootFsInfo, err := p.cadvisor.RootFsInfo()
 	if err != nil {
@@ -134,6 +140,7 @@ func (p *StatsProvider) RootFsStats() (*statsapi.FsStats, error) {
 }
 
 // GetContainerInfo returns stats (from cAdvisor) for a container.
+// GetContainerInfo返回一个容器的stats（源于cAdvisor）
 func (p *StatsProvider) GetContainerInfo(podFullName string, podUID types.UID, containerName string, req *cadvisorapiv1.ContainerInfoRequest) (*cadvisorapiv1.ContainerInfo, error) {
 	// Resolve and type convert back again.
 	// We need the static pod UID but the kubecontainer API works with types.UID.
@@ -158,6 +165,7 @@ func (p *StatsProvider) GetContainerInfo(podFullName string, podUID types.UID, c
 
 // GetRawContainerInfo returns the stats (from cadvisor) for a non-Kubernetes
 // container.
+// GetRawContainerInfo返回一个非Kubernetes容器的stats
 func (p *StatsProvider) GetRawContainerInfo(containerName string, req *cadvisorapiv1.ContainerInfoRequest, subcontainers bool) (map[string]*cadvisorapiv1.ContainerInfo, error) {
 	if subcontainers {
 		return p.cadvisor.SubcontainerInfo(containerName, req)

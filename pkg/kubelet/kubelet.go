@@ -768,6 +768,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 				klet.runtimeCache,
 				klet.containerRuntime)
 		} else {
+			// Kubelet包含了StatsProvider的所有方法
 			klet.StatsProvider = stats.NewCRIStatsProvider(
 				klet.cadvisor,
 				klet.resourceAnalyzer,

@@ -17,6 +17,7 @@
 package watcher
 
 // SubcontainerEventType indicates an addition or deletion event.
+// SubcontainerEventType代表了一个addition或者deletion事件
 type ContainerEventType int
 
 const (
@@ -34,17 +35,21 @@ const (
 // ContainerEvent represents a
 type ContainerEvent struct {
 	// The type of event that occurred.
+	// 事件的类型
 	EventType ContainerEventType
 
 	// The full container name of the container where the event occurred.
+	// 事件发生的容器的full container name
 	Name string
 
 	// The watcher that detected this change event
+	// 探测到此次change event的watcher
 	WatchSource ContainerWatchSource
 }
 
 type ContainerWatcher interface {
 	// Registers a channel to listen for events affecting subcontainers (recursively).
+	// 注册一个channel，用于监听影响subcontainers的events
 	Start(events chan ContainerEvent) error
 
 	// Stops watching for subcontainer changes.

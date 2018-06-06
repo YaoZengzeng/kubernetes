@@ -45,6 +45,7 @@ import (
 type cadvisorClient struct {
 	imageFsInfoProvider ImageFsInfoProvider
 	rootPath            string
+	// cadvisor/manager的manager
 	manager.Manager
 }
 
@@ -52,7 +53,9 @@ var _ Interface = new(cadvisorClient)
 
 // TODO(vmarmol): Make configurable.
 // The amount of time for which to keep stats in memory.
+// stats在内存中最多保存2分钟
 const statsCacheDuration = 2 * time.Minute
+// 进行housekeeping的时间间隔，默认为10s，最大为15s
 const maxHousekeepingInterval = 15 * time.Second
 const defaultHousekeepingInterval = 10 * time.Second
 const allowDynamicHousekeeping = true
@@ -109,12 +112,16 @@ func containerLabels(c *cadvisorapi.ContainerInfo) map[string]string {
 func New(address string, port uint, imageFsInfoProvider ImageFsInfoProvider, rootPath string, usingLegacyStats bool) (Interface, error) {
 	sysFs := sysfs.NewRealSysFs()
 
+	// 忽略的metrics包括NetworkTcpUsageMetrics以及NetworkUdpUsageMetrics
 	ignoreMetrics := cadvisormetrics.MetricSet{cadvisormetrics.NetworkTcpUsageMetrics: struct{}{}, cadvisormetrics.NetworkUdpUsageMetrics: struct{}{}}
 	if !usingLegacyStats {
+		// 当不是使用Legacy Stats时，忽略的Metrics包括DiskUsageMetrics
 		ignoreMetrics[cadvisormetrics.DiskUsageMetrics] = struct{}{}
 	}
 
 	// Create and start the cAdvisor container manager.
+	// 创建并且启动cAdvisor container manager
+	// memory.New()创建memory cache
 	m, err := manager.New(memory.New(statsCacheDuration, nil), sysFs, maxHousekeepingInterval, allowDynamicHousekeeping, ignoreMetrics, http.DefaultClient)
 	if err != nil {
 		return nil, err
@@ -136,6 +143,7 @@ func New(address string, port uint, imageFsInfoProvider ImageFsInfoProvider, roo
 		Manager:             m,
 	}
 
+	// cadvisor暴露监听的端口和地址
 	err = cadvisorClient.exportHTTP(address, port)
 	if err != nil {
 		return nil, err
@@ -188,6 +196,7 @@ func (cc *cadvisorClient) ContainerInfo(name string, req *cadvisorapi.ContainerI
 }
 
 func (cc *cadvisorClient) ContainerInfoV2(name string, options cadvisorapiv2.RequestOptions) (map[string]cadvisorapiv2.ContainerInfo, error) {
+	// 其中name为"/"
 	return cc.GetContainerInfoV2(name, options)
 }
 

@@ -229,7 +229,9 @@ func buildPodRef(containerLabels map[string]string) statsapi.PodReference {
 }
 
 // isPodManagedContainer returns true if the cinfo container is managed by a Pod
+// isPodManagedContainer返回true，如果cinfo container是由Pod管理的
 func isPodManagedContainer(cinfo *cadvisorapiv2.ContainerInfo) bool {
+	// 从label中解析出pod name和pod namespace
 	podName := kubetypes.GetPodName(cinfo.Spec.Labels)
 	podNamespace := kubetypes.GetPodNamespace(cinfo.Spec.Labels)
 	managed := podName != "" && podNamespace != ""
@@ -256,9 +258,11 @@ func getcadvisorPodInfoFromPodUID(podUID types.UID, infos map[string]cadvisorapi
 
 // removeTerminatedContainerInfo returns the specified containerInfo but with
 // the stats of the terminated containers removed.
+// removeTerminatedContainerInfo返回特定的containerInfo，但是处于terminated的容器被移除了
 //
 // A ContainerInfo is considered to be of a terminated container if it has an
 // older CreationTime and zero CPU instantaneous and memory RSS usage.
+// 一个ContainerInfo会被认为是一个terminated container，
 func removeTerminatedContainerInfo(containerInfo map[string]cadvisorapiv2.ContainerInfo) map[string]cadvisorapiv2.ContainerInfo {
 	cinfoMap := make(map[containerID][]containerInfoWithCgroup)
 	for key, cinfo := range containerInfo {
@@ -286,10 +290,12 @@ func removeTerminatedContainerInfo(containerInfo map[string]cadvisorapiv2.Contai
 			if hasMemoryAndCPUInstUsage(&refs[i].cinfo) {
 				// Stops removing when we first see an info with non-zero
 				// CPU/Memory usage.
+				// 当我们第一次看到一个非零的CPU/Memory usage的时候，停止移除
 				break
 			}
 		}
 		for ; i < len(refs); i++ {
+			// 将接下来的cgroup信息放入result
 			result[refs[i].cgroup] = refs[i].cinfo
 		}
 	}
@@ -329,6 +335,7 @@ type containerInfoWithCgroup struct {
 // both non-zero CPU instantaneous usage and non-zero memory RSS usage, and
 // false otherwise.
 func hasMemoryAndCPUInstUsage(info *cadvisorapiv2.ContainerInfo) bool {
+	// 如果容器没有使用CPU或者Memory，返回false
 	if !info.Spec.HasCpu || !info.Spec.HasMemory {
 		return false
 	}
@@ -345,7 +352,9 @@ func hasMemoryAndCPUInstUsage(info *cadvisorapiv2.ContainerInfo) bool {
 func getCadvisorContainerInfo(ca cadvisor.Interface) (map[string]cadvisorapiv2.ContainerInfo, error) {
 	infos, err := ca.ContainerInfoV2("/", cadvisorapiv2.RequestOptions{
 		IdType:    cadvisorapiv2.TypeName,
+		// 需要两个样本来计算"instantaneous" CPU
 		Count:     2, // 2 samples are needed to compute "instantaneous" CPU
+		// Recursive为true
 		Recursive: true,
 	})
 	if err != nil {
