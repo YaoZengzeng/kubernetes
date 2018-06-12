@@ -140,8 +140,11 @@ func (p *criStatsProvider) ListPodStats() ([]statsapi.PodStats, error) {
 	// 遍历ListContainerStats返回的结果
 	for _, stats := range resp {
 		containerID := stats.Attributes.Id
+		// 根据list container stats返回的结果，获取从list container返回的
+		// container对象
 		container, found := containerMap[containerID]
 		if !found {
+			// 如果list container stats返回的结果在list container中不存在
 			glog.Errorf("Unknown id %q in container map.", containerID)
 			continue
 		}

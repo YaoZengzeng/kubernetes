@@ -993,6 +993,13 @@ func (m *manager) createContainerLocked(containerName string, watchSource watche
 	}
 
 	// Add the container name and all its aliases. The aliases must be within the namespace of the factory.
+	// 将containers加入了manager.containers
+	// 例如containerName为:
+	// /kubepods/burstable/pod8d7fb43ab905e6303c27118a3754fc64/93767585ad645a33bc620df5feca36021df023ec7548b0553798bc31ffc2dfe5
+	// aliases为:
+	// [93767585ad645a33bc620df5feca36021df023ec7548b0553798bc31ffc2dfe5 /kubepods/burstable/pod8d7fb43ab905e6303c27118a3754fc64/93767585ad645a33bc620df5feca36021df023ec7548b0553798bc31ffc2dfe5]
+	// namespace为：
+	// containerd
 	m.containers[namespacedName] = cont
 	for _, alias := range cont.info.Aliases {
 		m.containers[namespacedContainerName{

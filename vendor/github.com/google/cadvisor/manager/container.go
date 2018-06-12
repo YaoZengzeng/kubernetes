@@ -104,6 +104,7 @@ func jitter(duration time.Duration, maxFactor float64) time.Duration {
 }
 
 func (c *containerData) Start() error {
+	// Start()就是启动housekeeping()
 	go c.housekeeping()
 	return nil
 }
@@ -505,6 +506,7 @@ func (c *containerData) housekeepingTick(timer <-chan time.Time, longHousekeepin
 	case <-timer:
 	}
 	start := c.clock.Now()
+	// 更新stats
 	err := c.updateStats()
 	if err != nil {
 		if c.allowErrorLogging() {
@@ -559,6 +561,7 @@ func (c *containerData) updateLoad(newLoad uint64) {
 
 func (c *containerData) updateStats() error {
 	stats, statsErr := c.handler.GetStats()
+	// 调用handler，获取stats
 	if statsErr != nil {
 		// Ignore errors if the container is dead.
 		if !c.handler.Exists() {

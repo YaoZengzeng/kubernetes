@@ -262,10 +262,12 @@ func getcadvisorPodInfoFromPodUID(podUID types.UID, infos map[string]cadvisorapi
 //
 // A ContainerInfo is considered to be of a terminated container if it has an
 // older CreationTime and zero CPU instantaneous and memory RSS usage.
-// 一个ContainerInfo会被认为是一个terminated container，
+// 一个ContainerInfo会被认为是一个terminated container，如果它有着older CreationTime
+// 以及CPU instantaneout以及memory RSS usage为0
 func removeTerminatedContainerInfo(containerInfo map[string]cadvisorapiv2.ContainerInfo) map[string]cadvisorapiv2.ContainerInfo {
 	cinfoMap := make(map[containerID][]containerInfoWithCgroup)
 	for key, cinfo := range containerInfo {
+		// 过滤非pod管理的container
 		if !isPodManagedContainer(&cinfo) {
 			continue
 		}
@@ -294,6 +296,7 @@ func removeTerminatedContainerInfo(containerInfo map[string]cadvisorapiv2.Contai
 				break
 			}
 		}
+		// 如果一直没有memory和cpu的usage，则不会加入result
 		for ; i < len(refs); i++ {
 			// 将接下来的cgroup信息放入result
 			result[refs[i].cgroup] = refs[i].cinfo
