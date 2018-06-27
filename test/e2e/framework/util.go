@@ -1333,6 +1333,8 @@ func WaitForPodRunningInNamespace(c clientset.Interface, pod *v1.Pod) error {
 
 // Waits default amount of time (PodStartTimeout) for the specified pod to become running.
 // Returns an error if timeout occurs first, or pod goes in to failed state.
+// Waits默认时间(PodStartTimeout)等待特定的pod变为running
+// 返回error，如果发生了timeout，否则pod进入failed state
 func WaitForPodNameRunningInNamespace(c clientset.Interface, podName, namespace string) error {
 	return WaitTimeoutForPodRunningInNamespace(c, podName, namespace, PodStartTimeout)
 }
@@ -2202,7 +2204,9 @@ func (f *Framework) testContainerOutputMatcher(scenarioName string,
 }
 
 // MatchContainerOutput creates a pod and waits for all it's containers to exit with success.
+// MatchContainerOutput创建一个pod并且等待它所有的容器都成功推出
 // It then tests that the matcher with each expectedOutput matches the output of the specified container.
+// 接着再将给定容器的输出和expectedOutput相比较
 func (f *Framework) MatchContainerOutput(
 	pod *v1.Pod,
 	containerName string,

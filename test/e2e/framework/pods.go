@@ -78,6 +78,7 @@ func (c *PodClient) Create(pod *v1.Pod) *v1.Pod {
 }
 
 // CreateSync creates a new pod according to the framework specifications in the given namespace, and waits for it to start.
+// CreateSync在给定的namespace根据framework specification，创建一个新的pod，并且等待它启动
 func (c *PodClient) CreateSyncInNamespace(pod *v1.Pod, namespace string) *v1.Pod {
 	p := c.Create(pod)
 	ExpectNoError(WaitForPodNameRunningInNamespace(c.f.ClientSet, p.Name, namespace))

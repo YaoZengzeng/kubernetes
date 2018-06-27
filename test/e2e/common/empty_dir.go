@@ -357,6 +357,7 @@ func doTest0644(f *framework.Framework, image string, medium v1.StorageMedium) {
 	}
 
 	msg := fmt.Sprintf("emptydir 0644 on %v", formatMedium(medium))
+	// 期待的output
 	out := []string{
 		"perms of file \"/test-volume/test-file\": -rw-r--r--",
 		"content of file \"/test-volume/test-file\": mount-tester new file",

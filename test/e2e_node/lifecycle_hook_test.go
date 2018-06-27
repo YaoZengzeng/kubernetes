@@ -39,6 +39,7 @@ var _ = framework.KubeDescribe("Container Lifecycle Hook", func() {
 	)
 	Context("when create a pod with lifecycle hook", func() {
 		var targetIP string
+		// 启动一个pod，用于处理hook请求
 		podHandleHookRequest := &v1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "pod-handle-http-request",
@@ -88,10 +89,12 @@ var _ = framework.KubeDescribe("Container Lifecycle Hook", func() {
 			lifecycle := &v1.Lifecycle{
 				PostStart: &v1.Handler{
 					Exec: &v1.ExecAction{
+						// post start的命令为
 						Command: []string{"sh", "-c", "curl http://" + targetIP + ":8080/echo?msg=poststart"},
 					},
 				},
 			}
+			// 构建测试pod结构，名为"pod-with-poststart-exec-hook"
 			podWithHook := getPodWithHook("pod-with-poststart-exec-hook", imageutils.GetE2EImage(imageutils.Hostexec), lifecycle)
 			testPodWithHook(podWithHook)
 		})

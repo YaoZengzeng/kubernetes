@@ -30,6 +30,8 @@ var _ = Describe("[sig-network] Networking", func() {
 		// Try to hit all endpoints through a test container, retry 5 times,
 		// expect exactly one unique hostname. Each of these endpoints reports
 		// its own hostname.
+		// 尝试通过一个test container hit所有的endpoints，重试五次
+		// 期望一个唯一的hostname。每个endpoints，回复它们自己的hostname
 		/*
 			    Testname: networking-intra-pod-http
 			    Description: Try to hit test endpoints from a test container and make

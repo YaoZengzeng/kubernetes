@@ -95,21 +95,29 @@ func getServiceSelector() map[string]string {
 
 // NetworkingTestConfig is a convenience class around some utility methods
 // for testing kubeproxy/networking/services/endpoints.
+// NetworkingTestConfig是一个有着utility methods的convenience class
+// 用于测试kubeproxy/networking/services/endpoints
 type NetworkingTestConfig struct {
 	// TestContaienrPod is a test pod running the netexec image. It is capable
 	// of executing tcp/udp requests against ip:port.
+	// TestContainerpod是用于运行netexec image的test pod
+	// 它能够执行针对ip:port执行tcp/udp请求
 	TestContainerPod *v1.Pod
 	// HostTestContainerPod is a pod running with hostNetworking=true, and the
 	// hostexec image.
+	// HostTestContainerPod是一个运行hostNetworking=true的pod，以及hostexec image
 	HostTestContainerPod *v1.Pod
 	// EndpointPods are the pods belonging to the Service created by this
 	// test config. Each invocation of `setup` creates a service with
 	// 1 pod per node running the netexecImage.
+	// EndpointPods是这个test config创建的Service所属的pods
+	// 每次执行`setup`都会创建一个service，其中每个node有一个pod运行netexecImage
 	EndpointPods []*v1.Pod
 	f            *Framework
 	podClient    *PodClient
 	// NodePortService is a Service with Type=NodePort spanning over all
 	// endpointPods.
+	// NodePortService是一个Type=NodePort的Service
 	NodePortService *v1.Service
 	// SessionAffinityService is a Service with SessionAffinity=ClientIP
 	// spanning over all endpointPods.
@@ -549,6 +557,7 @@ func (config *NetworkingTestConfig) createService(serviceSpec *v1.Service) *v1.S
 
 // setupCore sets up the pods and core test config
 // mainly for simplified node e2e setup
+// setupCore创建pods以及
 func (config *NetworkingTestConfig) setupCore(selector map[string]string) {
 	By("Creating the service pods in kubernetes")
 	podName := "netserver"

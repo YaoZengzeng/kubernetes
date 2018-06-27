@@ -421,7 +421,7 @@ func (f *Framework) WaitForPodNoLongerRunning(podName string) error {
 // for all of the containers in the podSpec to move into the 'Success' status, and tests
 // the specified container log against the given expected output using a substring matcher.
 // TestContainerOutput在给定的namespace中运行给定的pod并且等待podSpec中所有的容器都进入
-// 'Success'状态，并且实用substring matcher将给定容器的log和给定的expected string进行比较
+// 'Success'状态，并且使用substring matcher将给定容器的log和给定的expected string进行比较
 func (f *Framework) TestContainerOutput(scenarioName string, pod *v1.Pod, containerIndex int, expectedOutput []string) {
 	f.testContainerOutputMatcher(scenarioName, pod, containerIndex, expectedOutput, ContainSubstring)
 }

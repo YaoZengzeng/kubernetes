@@ -208,13 +208,18 @@ func (ds *dockerService) StopPodSandbox(podSandboxID string) error {
 	}
 
 	// WARNING: The following operations made the following assumption:
+	// WARNING: 以下操作基于如下假设：
 	// 1. kubelet will retry on any error returned by StopPodSandbox.
+	// 1. Kubelet会不断地retry，如果它发现了StopPodSandbox的错误
 	// 2. tearing down network and stopping sandbox container can succeed in any sequence.
 	// This depends on the implementation detail of network plugin and proper error handling.
 	// For kubenet, if tearing down network failed and sandbox container is stopped, kubelet
 	// will retry. On retry, kubenet will not be able to retrieve network namespace of the sandbox
 	// since it is stopped. With empty network namespcae, CNI bridge plugin will conduct best
 	// effort clean up and will not return error.
+	// 对于kubenet，如果tearing down network失败了，并且sandbox container已经被stopped了，kubelet会retry
+	// 在retry的过程中，kubenet不会获取到sandbox的namespace，因为它已经stopped了
+	// 对于空的network namespace，CNI bridge plugin会尽力去clean up而不会返回error
 	errList := []error{}
 	ready, ok := ds.getNetworkReady(podSandboxID)
 	if !hostNetwork && (ready || !ok) {

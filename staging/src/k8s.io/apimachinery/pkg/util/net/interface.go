@@ -244,6 +244,8 @@ func memberOf(ip net.IP, family AddressFamily) bool {
 // chooseIPFromHostInterfaces looks at all system interfaces, trying to find one that is up that
 // has a global unicast address (non-loopback, non-link local, non-point2point), and returns the IP.
 // Searches for IPv4 addresses, and then IPv6 addresses.
+// chooseIPFromHostInterfaces遍历所有的system interfaces，试着找到一个启动着的并且有global unicast address
+// 的网卡，并且返回它的IP地址。首先遍历IPv4地址，再遍历IPv6地址
 func chooseIPFromHostInterfaces(nw networkInterfacer) (net.IP, error) {
 	intfs, err := nw.Interfaces()
 	if err != nil {
@@ -298,6 +300,10 @@ func chooseIPFromHostInterfaces(nw networkInterfacer) (net.IP, error) {
 // interfaces. Otherwise, it will use IPv4 and IPv6 route information to return the
 // IP of the interface with a gateway on it (with priority given to IPv4). For a node
 // with no internet connection, it returns error.
+// ChooseHostInterface用于为daemon获取一个IP
+// 如果没有routing info file，它会从system interface中选择一个global IP
+// 否则，它会使用IPv4以及IPv6的路由信息，来返回有gateway的interface的IP
+// 对于没有internet连接的node，返回error
 func ChooseHostInterface() (net.IP, error) {
 	var nw networkInterfacer = networkInterface{}
 	if _, err := os.Stat(ipv4RouteFile); os.IsNotExist(err) {
@@ -313,6 +319,9 @@ func ChooseHostInterface() (net.IP, error) {
 // networkInterfacer defines an interface for several net library functions. Production
 // code will forward to net library functions, and unit tests will override the methods
 // for testing purposes.
+// networkInterfacer为一系列的net library functions定义了一组接口
+// 对于Production code，会直接转发到net library functions，对于unit tests则会对这些方法进行覆盖
+// 从而用于测试
 type networkInterfacer interface {
 	InterfaceByName(intfName string) (*net.Interface, error)
 	Addrs(intf *net.Interface) ([]net.Addr, error)
@@ -321,6 +330,7 @@ type networkInterfacer interface {
 
 // networkInterface implements the networkInterfacer interface for production code, just
 // wrapping the underlying net library function calls.
+// 仅仅只是对底层的net library function的封装
 type networkInterface struct{}
 
 func (_ networkInterface) InterfaceByName(intfName string) (*net.Interface, error) {
