@@ -72,7 +72,7 @@ type manager struct {
 	podStatusChannel chan podStatusSyncRequest
 	// Map from (mirror) pod UID to latest status version successfully sent to the API server.
 	// apiStatusVersions must only be accessed from the sync thread.
-	// pod UID到上一次同步到API server的status version的映射
+	// pod UID到上一次同步到API server的status version的映射，apiStatusVersions必须在sync thread中运行
 	apiStatusVersions map[kubetypes.MirrorPodUID]uint64
 	podDeletionSafety PodDeletionSafetyProvider
 }
@@ -187,6 +187,7 @@ func (m *manager) Start() {
 func (m *manager) GetPodStatus(uid types.UID) (v1.PodStatus, bool) {
 	m.podStatusesLock.RLock()
 	defer m.podStatusesLock.RUnlock()
+	// 从podStatuses获取容器的最新状态
 	status, ok := m.podStatuses[types.UID(m.podManager.TranslatePodUID(uid))]
 	return status.status, ok
 }
@@ -286,6 +287,8 @@ func findContainerStatus(status *v1.PodStatus, containerID string) (containerSta
 func (m *manager) TerminatePod(pod *v1.Pod) {
 	m.podStatusesLock.Lock()
 	defer m.podStatusesLock.Unlock()
+	// 如果m中存在pod的status，则将其作为oldStatus
+	// 否则将参数中的Status设置为oldStatus
 	oldStatus := &pod.Status
 	if cachedStatus, ok := m.podStatuses[pod.UID]; ok {
 		oldStatus = &cachedStatus.status
@@ -312,6 +315,7 @@ func (m *manager) TerminatePod(pod *v1.Pod) {
 // 这是非法的，并且说明kubelet里面有逻辑错误
 func checkContainerStateTransition(oldStatuses, newStatuses []v1.ContainerStatus, restartPolicy v1.RestartPolicy) error {
 	// If we should always restart, containers are allowed to leave the terminated state
+	// 如果我们always restart，容器应该允许离开terminated state
 	if restartPolicy == v1.RestartPolicyAlways {
 		return nil
 	}
@@ -351,6 +355,7 @@ func (m *manager) updateStatusInternal(pod *v1.Pod, status v1.PodStatus, forceUp
 	}
 
 	// Check for illegal state transition in containers
+	// 检查非法的容器状态迁移
 	if err := checkContainerStateTransition(oldStatus.ContainerStatuses, status.ContainerStatuses, pod.Spec.RestartPolicy); err != nil {
 		glog.Errorf("Status update on pod %v/%v aborted: %v", pod.Namespace, pod.Name, err)
 		return false
@@ -365,6 +370,7 @@ func (m *manager) updateStatusInternal(pod *v1.Pod, status v1.PodStatus, forceUp
 	// 设置上次更新的事件
 	if _, readyCondition := podutil.GetPodCondition(&status, v1.PodReady); readyCondition != nil {
 		// Need to set LastTransitionTime.
+		// 更新last transition time
 		lastTransitionTime := metav1.Now()
 		_, oldReadyCondition := podutil.GetPodCondition(&oldStatus, v1.PodReady)
 		if oldReadyCondition != nil && readyCondition.Status == oldReadyCondition.Status {
@@ -465,6 +471,7 @@ func (m *manager) syncBatch() {
 			_, hasPod := m.podStatuses[types.UID(uid)]
 			_, hasMirror := mirrorToPod[uid]
 			if !hasPod && !hasMirror {
+				// 如果对应的uid，既没有pod，也没有mirror，则直接从apiStatusVersions删除
 				delete(m.apiStatusVersions, uid)
 			}
 		}
@@ -492,6 +499,7 @@ func (m *manager) syncBatch() {
 	}()
 
 	for _, update := range updatedStatuses {
+		// 批量对pod的状态进行同步
 		glog.V(5).Infof("Status Manager: syncPod in syncbatch. pod UID: %q", update.podUID)
 		m.syncPod(update.podUID, update.status)
 	}
@@ -540,7 +548,9 @@ func (m *manager) syncPod(uid types.UID, status versionedPodStatus) {
 	}
 	pod = newPod
 
+	// 成功更新pod的status至api server
 	glog.V(3).Infof("Status for pod %q updated successfully: (%d, %+v)", format.Pod(pod), status.version, status.status)
+	// 将最新的status记录到apiStatusVerions
 	m.apiStatusVersions[kubetypes.MirrorPodUID(pod.UID)] = status.version
 
 	// We don't handle graceful deletion of mirror pods.
@@ -558,6 +568,7 @@ func (m *manager) syncPod(uid types.UID, status versionedPodStatus) {
 		}
 		// pod已经终止了，从etcd中移除
 		glog.V(3).Infof("Pod %q fully terminated and removed from etcd", format.Pod(pod))
+		// deletePodStatus()只是简单地将pod从m.podStatuses中删除
 		m.deletePodStatus(uid)
 	}
 }

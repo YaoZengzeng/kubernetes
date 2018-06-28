@@ -94,6 +94,7 @@ type Runtime interface {
 	// 将running pod同步到指定状态
 	SyncPod(pod *v1.Pod, apiPodStatus v1.PodStatus, podStatus *PodStatus, pullSecrets []v1.Secret, backOff *flowcontrol.Backoff) PodSyncResult
 	// KillPod kills all the containers of a pod. Pod may be nil, running pod must not be.
+	// KillPod用来杀死所有pod内的容器，Pod可以为nil，running pod一定不能为nil
 	// TODO(random-liu): Return PodSyncResult in KillPod.
 	// gracePeriodOverride if specified allows the caller to override the pod default grace period.
 	// only hard kill paths are allowed to specify a gracePeriodOverride in the kubelet in order to not corrupt user data.
@@ -101,23 +102,28 @@ type Runtime interface {
 	KillPod(pod *v1.Pod, runningPod Pod, gracePeriodOverride *int64) error
 	// GetPodStatus retrieves the status of the pod, including the
 	// information of all containers in the pod that are visble in Runtime.
+	// GetPodStatus获取pod的status，包括pod中包含的所有运行时可见的容器
 	GetPodStatus(uid types.UID, name, namespace string) (*PodStatus, error)
 	// Returns the filesystem path of the pod's network namespace; if the
 	// runtime does not handle namespace creation itself, or cannot return
 	// the network namespace path, it should return an error.
 	// TODO: Change ContainerID to a Pod ID since the namespace is shared
 	// by all containers in the pod.
+	// 获取对应的pod的network namespace path
 	GetNetNS(containerID ContainerID) (string, error)
 	// Returns the container ID that represents the Pod, as passed to network
 	// plugins. For example, if the runtime uses an infra container, returns
 	// the infra container's ContainerID.
 	// TODO: Change ContainerID to a Pod ID, see GetNetNS()
+	// 获取pod的infra container的ID
 	GetPodContainerID(*Pod) (ContainerID, error)
 	// TODO(vmarmol): Unify pod and containerID args.
 	// GetContainerLogs returns logs of a specific container. By
 	// default, it returns a snapshot of the container log. Set 'follow' to true to
 	// stream the log. Set 'follow' to false and specify the number of lines (e.g.
 	// "100" or "all") to tail the log.
+	// GetContainerLogs返回特定容器的logs，默认情况下只返回容器日志的一个snapshot
+	// 将follow设置为true，可以得到日志流
 	GetContainerLogs(pod *v1.Pod, containerID ContainerID, logOptions *v1.PodLogOptions, stdout, stderr io.Writer) (err error)
 	// Delete a container. If the container is still running, an error is returned.
 	// 删除一个容器，如果容器还在运行，则返回error
@@ -127,6 +133,8 @@ type Runtime interface {
 	// UpdatePodCIDR sends a new podCIDR to the runtime.
 	// This method just proxies a new runtimeConfig with the updated
 	// CIDR value down to the runtime shim.
+	// UpdatePodCIDR发送一个新的podCIDR得到容器运行时
+	// 该方法只是负责代理将新的，内含updated CIDR传递到runtime shim
 	UpdatePodCIDR(podCIDR string) error
 }
 
@@ -186,6 +194,7 @@ type ContainerCommandRunner interface {
 type Pod struct {
 	// The ID of the pod, which can be used to retrieve a particular pod
 	// from the pod list returned by GetPods().
+	// 可以用ID从GetPods()返回的pod list中获取某个特定的pod
 	ID types.UID
 	// The name and namespace of the pod, which is readable by human.
 	Name      string
@@ -198,6 +207,7 @@ type Pod struct {
 	// List of sandboxes associated with this pod. The sandboxes are converted
 	// to Container temporariliy to avoid substantial changes to other
 	// components. This is only populated by kuberuntime.
+	// 和这个pod相关的一系列sandboxes
 	// 暂时将Sandbox转换为Container从而避免其他组件的大量变更
 	// TODO: use the runtimeApi.PodSandbox type directly.
 	Sandboxes []*Container

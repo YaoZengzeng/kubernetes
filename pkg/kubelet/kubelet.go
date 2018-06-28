@@ -629,6 +629,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 
 	klet.livenessManager = proberesults.NewManager()
 
+	// 创建kubelet的podCache，用来缓存从底层容器运行时得到的最新的pod的状态
 	klet.podCache = kubecontainer.NewCache()
 	// podManager is also responsible for keeping secretManager and configMapManager contents up-to-date.
 	// podManager负责保持secretManager和configMapManager的内容是最新的
@@ -2020,6 +2021,7 @@ func (kl *Kubelet) syncLoop(updates <-chan kubetypes.PodUpdate, handler SyncHand
 	// housekeepingPeriod为2秒
 	housekeepingTicker := time.NewTicker(housekeepingPeriod)
 	defer housekeepingTicker.Stop()
+	// 启动plegCh，从容器运行时获取pod状态的改变
 	plegCh := kl.pleg.Watch()
 	for {
 		// 遇到错误则加入runtimeState.runtimeErrors中，每次遇到错误，休眠5秒
@@ -2232,7 +2234,7 @@ func (kl *Kubelet) dispatchWork(pod *v1.Pod, syncType kubetypes.SyncPodType, mir
 			// set, and force a status update to trigger a pod deletion request
 			// to the apiserver.
 			// 如果pod已经处于terminated状态，不会有pod worker去处理它
-			// 检测DeletionTimestamp是否设置，并且强制进status update从而触发一个
+			// 检测DeletionTimestamp是否设置，并且强制更新status从而触发一个
 			// pod deletion请求到apiserver
 			kl.statusManager.TerminatePod(pod)
 		}
@@ -2498,15 +2500,18 @@ func (kl *Kubelet) ListenAndServeReadOnly(address net.IP, port uint) {
 // Delete the eligible dead container instances in a pod. Depending on the configuration, the latest dead containers may be kept around.
 // 删除pod中合格的dead container。根据配置，最后一个dead container应该要保留
 func (kl *Kubelet) cleanUpContainersInPod(podID types.UID, exitedContainerID string) {
+	// 从podCache中获取podID对应的pod的状态
 	if podStatus, err := kl.podCache.Get(podID); err == nil {
 		removeAll := false
 		if syncedPod, ok := kl.podManager.GetPodByUID(podID); ok {
 			// generate the api status using the cached runtime status to get up-to-date ContainerStatuses
+			// 使用缓存的runtime status来获取最新的ContainerStatuses，从而来生成api status
 			apiPodStatus := kl.generateAPIPodStatus(syncedPod, podStatus)
 			// When an evicted or deleted pod has already synced, all containers can be removed.
 			// 如果evicted或者deleted pod已经同步了，则其中所有的容器都可以被移除
 			removeAll = eviction.PodIsEvicted(syncedPod.Status) || (syncedPod.DeletionTimestamp != nil && notRunning(apiPodStatus.ContainerStatuses))
 		}
+		// 删除pod中的容器
 		kl.containerDeletor.deleteContainersInPod(exitedContainerID, podStatus, removeAll)
 	}
 }
@@ -2514,6 +2519,7 @@ func (kl *Kubelet) cleanUpContainersInPod(podID types.UID, exitedContainerID str
 // isSyncPodWorthy filters out events that are not worthy of pod syncing
 func isSyncPodWorthy(event *pleg.PodLifecycleEvent) bool {
 	// ContatnerRemoved doesn't affect pod state
+	// ContatnerRemoved不会影响pod的状态
 	return event.Type != pleg.ContainerRemoved
 }
 

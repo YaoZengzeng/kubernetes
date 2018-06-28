@@ -16,4 +16,5 @@ limitations under the License.
 
 // Package wait provides tools for polling or listening for changes
 // to a condition.
+// wait包提供了用于轮询或者监听某个条件发送的改变
 package wait // import "k8s.io/apimachinery/pkg/util/wait"

@@ -183,7 +183,7 @@ func (p *podWorkers) managePodLoop(podUpdates <-chan UpdatePodOptions) {
 			// Time. This ensures the worker doesn't start syncing until
 			// after the cache is at least newer than the finished time of
 			// the previous sync.
-			// 确保从运行时获取的pod status比上次sync的finished time更新，才进行同步
+			// 这是一个blocking call，确保从运行时获取的pod status比上次sync的finished time更新，才进行同步
 			status, err := p.podCache.GetNewerThan(podUID, lastSyncTime)
 			if err != nil {
 				// This is the legacy event thrown by manage pod loop

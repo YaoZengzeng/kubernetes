@@ -86,6 +86,8 @@ type Manager interface {
 	// DeletePod deletes the given pod from the manager.  For mirror pods,
 	// this means deleting the mappings related to mirror pods.  For non-
 	// mirror pods, this means deleting from indexes for all non-mirror pods.
+	// DeletePod删除给定pod，对于mirror pods，这意味着删除和mirror pods之间的映射
+	// 对于非mirror pods, 这意味着从所有的非mirror pods中删除
 	DeletePod(pod *v1.Pod)
 	// DeleteOrphanedMirrorPods deletes all mirror pods which do not have
 	// associated static pods. This method sends deletion requests to the API
@@ -165,6 +167,7 @@ func NewBasicPodManager(client MirrorClient, secretManager secret.Manager, confi
 	pm.configMapManager = configMapManager
 	pm.checkpointManager = checkpoint.GetInstance()
 	pm.MirrorClient = client
+	// 对pm进行初始化，新建各个map
 	pm.SetPods(nil)
 	return pm
 }
@@ -206,6 +209,7 @@ func (pm *basicManager) UpdatePod(pod *v1.Pod) {
 // updatePodsInternal更新当前manager里给定的pods，更新各种索引
 func (pm *basicManager) updatePodsInternal(pods ...*v1.Pod) {
 	for _, pod := range pods {
+		// 在secret manager和configMap manager对pod进行注册
 		if pm.secretManager != nil {
 			// TODO: Consider detecting only status update and in such case do
 			// not register pod, as it doesn't really matter.

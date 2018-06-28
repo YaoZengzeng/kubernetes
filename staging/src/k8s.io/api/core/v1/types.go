@@ -2390,11 +2390,14 @@ const (
 	PodScheduled PodConditionType = "PodScheduled"
 	// PodReady means the pod is able to service requests and should be added to the
 	// load balancing pools of all matching services.
+	// PodReady意味着pod能够处理service requests并且应该被添加到所有匹配的services的load balancing pool中
 	PodReady PodConditionType = "Ready"
 	// PodInitialized means that all init containers in the pod have started successfully.
+	// PodInitialized意味着pod中所有的init containers都已经启动成功了
 	PodInitialized PodConditionType = "Initialized"
 	// PodReasonUnschedulable reason in PodScheduled PodCondition means that the scheduler
 	// can't schedule the pod right now, for example due to insufficient resources in the cluster.
+	// PodReasonUnschedulable意味着scheduler现在不能调度pod，比如在集群中没有足够的资源的时候
 	PodReasonUnschedulable = "Unschedulable"
 )
 

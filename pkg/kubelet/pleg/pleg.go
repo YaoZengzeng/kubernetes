@@ -23,6 +23,8 @@ import (
 type PodLifeCycleEventType string
 
 const (
+	// PodLifeCycleEventType有启动，死亡以及移除
+	// 如果不能用这三种事件描述，就用"PodSync"
 	ContainerStarted PodLifeCycleEventType = "ContainerStarted"
 	ContainerDied    PodLifeCycleEventType = "ContainerDied"
 	ContainerRemoved PodLifeCycleEventType = "ContainerRemoved"
@@ -50,6 +52,7 @@ type PodLifecycleEvent struct {
 	Data interface{}
 }
 
+// PodLifecycleEventGenerator包含Start(), Watch()和Healthy()三类接口
 type PodLifecycleEventGenerator interface {
 	Start()
 	Watch() chan *PodLifecycleEvent

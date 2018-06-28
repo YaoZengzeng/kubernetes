@@ -80,6 +80,7 @@ type cache struct {
 	// timestamp is nil after initialization, and will only become non-nil when
 	// it is ready to serve the cached statuses.
 	// global timestamp用来表示缓存的数据有多新，所有缓存的内容都至少要新过这个timestamp
+	// 在初始化之后timestamp是nil，它只有在准备好服务cached statuses，才会变为non-nil
 	timestamp *time.Time
 	// Map that stores the subscriber records.
 	// 存储subscriber records的map
