@@ -99,6 +99,7 @@ func getContainersToDeleteInPod(filterContainerID string, podStatus *kubecontain
 }
 
 // deleteContainersInPod issues container deletion requests for containers selected by getContainersToDeleteInPod.
+// deleteContainersInPod发出一个删除容器的请求，根据从getContainersToDeleteInPod筛选出的容器
 func (p *podContainerDeletor) deleteContainersInPod(filterContainerID string, podStatus *kubecontainer.PodStatus, removeAll bool) {
 	containersToKeep := p.containersToKeep
 	if removeAll {

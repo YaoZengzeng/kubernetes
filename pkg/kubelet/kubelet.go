@@ -125,6 +125,8 @@ const (
 	// Capacity of the channel for storing pods to kill. A small number should
 	// suffice because a goroutine is dedicated to check the channel and does
 	// not block on anything else.
+	// podKillingChannelCapacity是用于存储需要kill的pod的channel的容量
+	// 一个很小的值就足够了，因为会有一个专门的goroutine专门负责这个channel并且不会被阻塞
 	podKillingChannelCapacity = 50
 
 	// Period for performing global cleanup tasks.
@@ -822,6 +824,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	// 每1秒relist一次
 	klet.pleg = pleg.NewGenericPLEG(klet.containerRuntime, plegChannelCapacity, plegRelistPeriod, klet.podCache, clock.RealClock{})
 	// maxWaitForContainerRuntime是等待容器运行时启动的时间
+	// runtimeState用于检测底层的容器运行时是否健康
 	klet.runtimeState = newRuntimeState(maxWaitForContainerRuntime)
 	klet.runtimeState.addHealthCheck("PLEG", klet.pleg.Healthy)
 	klet.updatePodCIDR(kubeCfg.PodCIDR)
@@ -952,6 +955,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	if err != nil {
 		return nil, err
 	}
+	// 将runtimeSupport，safeWhitelist和unsafeWhitelist加入kubelet的admitHandlers
 	klet.admitHandlers.AddPodAdmitHandler(runtimeSupport)
 	klet.admitHandlers.AddPodAdmitHandler(safeWhitelist)
 	klet.admitHandlers.AddPodAdmitHandler(unsafeWhitelist)
@@ -1695,7 +1699,7 @@ func (kl *Kubelet) syncPod(o syncPodOptions) error {
 	}
 
 	// Update status in the status manager
-	// 更新status manager中的状态
+	// 每次sync都会更新status manager中的状态，从而把它同步到API server
 	kl.statusManager.SetPodStatus(pod, apiPodStatus)
 
 	// Kill pod if it should not be running
@@ -1921,6 +1925,7 @@ func (kl *Kubelet) deletePod(pod *v1.Pod) error {
 	if err != nil {
 		return fmt.Errorf("error listing containers: %v", err)
 	}
+	// 从runningPods中解析出pod.UID对应的runningPod
 	runningPod := kubecontainer.Pods(runningPods).FindPod("", pod.UID)
 	if runningPod.IsEmpty() {
 		return fmt.Errorf("pod not found")

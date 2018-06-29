@@ -210,6 +210,7 @@ func (m *manager) CleanupPods(activePods []*v1.Pod) {
 	defer m.workerLock.RUnlock()
 
 	for key, worker := range m.workers {
+		// 停止probe manager里面的worker
 		if _, ok := desiredPods[key.podUID]; !ok {
 			worker.stop()
 		}
@@ -232,6 +233,7 @@ func (m *manager) UpdatePodStatus(podUID types.UID, podStatus *v1.PodStatus) {
 	}
 	// init containers are ready if they have exited with success or if a readiness probe has
 	// succeeded.
+	// init containers处于ready状态，如果他们成功退出，或者readiness probe成功
 	for i, c := range podStatus.InitContainerStatuses {
 		var ready bool
 		if c.State.Terminated != nil && c.State.Terminated.ExitCode == 0 {

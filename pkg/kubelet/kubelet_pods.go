@@ -843,6 +843,7 @@ func containerResourceRuntimeValue(fs *v1.ResourceFieldSelector, pod *v1.Pod, co
 }
 
 // One of the following arguments must be non-nil: runningPod, status.
+// runningPod和status必须有一个为nil
 // TODO: Modify containerRuntime.KillPod() to accept the right arguments.
 func (kl *Kubelet) killPod(pod *v1.Pod, runningPod *kubecontainer.Pod, status *kubecontainer.PodStatus, gracePeriodOverride *int64) error {
 	var p kubecontainer.Pod
@@ -855,6 +856,7 @@ func (kl *Kubelet) killPod(pod *v1.Pod, runningPod *kubecontainer.Pod, status *k
 	}
 
 	// Call the container runtime KillPod method which stops all running containers of the pod
+	// 调用容器运行时的KillPod方法停止pod中所有的running containers
 	if err := kl.containerRuntime.KillPod(pod, p, gracePeriodOverride); err != nil {
 		return err
 	}
@@ -865,6 +867,7 @@ func (kl *Kubelet) killPod(pod *v1.Pod, runningPod *kubecontainer.Pod, status *k
 }
 
 // makePodDataDirs creates the dirs for the pod datas.
+// makePodDataDirs创建目录用于存储pod的数据，且允许目录已经存在
 func (kl *Kubelet) makePodDataDirs(pod *v1.Pod) error {
 	uid := pod.UID
 	// 创建pod dir
@@ -1050,6 +1053,8 @@ func (kl *Kubelet) HandlePodCleanups() error {
 	// in the cgroup tree prior to inspecting the set of pods in our pod manager.
 	// this ensures our view of the cgroup tree does not mistakenly observe pods
 	// that are added after the fact...
+	// kubelet缺少checkpointing，所以我们在查看在pod manager中的容器之前，需要先看看cgroup
+	// tree中的pods。这能确保我们看到的cgroup tree不会错误地将之后加入的pods加入
 	var (
 		cgroupPods map[types.UID]cm.CgroupName
 		err        error
@@ -1143,6 +1148,7 @@ func (kl *Kubelet) HandlePodCleanups() error {
 
 // podKiller launches a goroutine to kill a pod received from the channel if
 // another goroutine isn't already in action.
+// podKiller启动一个goroutine用于负责杀死从channel中获取的pod
 func (kl *Kubelet) podKiller() {
 	killing := sets.NewString()
 	// guard for the killing set
@@ -1158,6 +1164,7 @@ func (kl *Kubelet) podKiller() {
 			apiPod := podPair.APIPod
 
 			lock.Lock()
+			// 记录那些已经被kill的pod
 			exists := killing.Has(string(runningPod.ID))
 			if !exists {
 				killing.Insert(string(runningPod.ID))
@@ -1165,6 +1172,7 @@ func (kl *Kubelet) podKiller() {
 			lock.Unlock()
 
 			if !exists {
+				// 另外启动一个goroutine，用于负责kill pod
 				go func(apiPod *v1.Pod, runningPod *kubecontainer.Pod) {
 					glog.V(2).Infof("Killing unwanted pod %q", runningPod.Name)
 					err := kl.killPod(apiPod, runningPod, nil, nil)
@@ -1172,6 +1180,7 @@ func (kl *Kubelet) podKiller() {
 						glog.Errorf("Failed killing the pod %q: %v", runningPod.Name, err)
 					}
 					lock.Lock()
+					// 再从集合中把ID移除
 					killing.Delete(string(runningPod.ID))
 					lock.Unlock()
 				}(apiPod, runningPod)

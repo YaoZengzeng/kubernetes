@@ -2350,6 +2350,7 @@ type ContainerStatus struct {
 }
 
 // PodPhase is a label for the condition of a pod at the current time.
+// PodPhase是一个label，用于表示pod当前所处的状态
 type PodPhase string
 
 // These are the valid statuses of pods.
@@ -2402,9 +2403,11 @@ const (
 )
 
 // PodCondition contains details for the current condition of this pod.
+// PodCondition包含了当前pod的状态的细节
 type PodCondition struct {
 	// Type is the type of the condition.
 	// Currently only Ready.
+	// 现在只有Ready一个状态
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
 	Type PodConditionType `json:"type" protobuf:"bytes,1,opt,name=type,casttype=PodConditionType"`
 	// Status is the status of the condition.
@@ -3055,6 +3058,8 @@ type PodStatus struct {
 	// The list has one entry per init container in the manifest. The most recent successful
 	// init container will have ready = true, the most recently started container will have
 	// startTime set.
+	// 每一个manifest中的init container在list中都有一个entry，最新运行成功的init container的ready=true
+	// 最新启动成功的容器的startTime会被设置
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-and-container-status
 	InitContainerStatuses []ContainerStatus `json:"initContainerStatuses,omitempty" protobuf:"bytes,10,rep,name=initContainerStatuses"`
 

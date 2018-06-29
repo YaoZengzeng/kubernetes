@@ -105,6 +105,7 @@ type Manager interface {
 	PodStatusProvider
 
 	// Start the API server status sync loop.
+	// 启动API Server的status sync loop
 	Start()
 
 	// SetPodStatus caches updates the cached status for the given pod, and triggers a status update.

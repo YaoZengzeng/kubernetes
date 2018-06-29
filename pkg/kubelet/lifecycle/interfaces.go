@@ -109,6 +109,7 @@ type PodSyncTarget interface {
 }
 
 // PodLifecycleTarget groups a set of lifecycle interfaces for convenience.
+// PodLifecycleTarget方便起见将一系列的lifecycle interfaces合并
 type PodLifecycleTarget interface {
 	PodAdmitTarget
 	PodSyncLoopTarget
@@ -116,6 +117,7 @@ type PodLifecycleTarget interface {
 }
 
 // PodAdmitHandlers maintains a list of handlers to pod admission.
+// PodAdmitHandlers维护了一系列用于pod admission的handlers
 type PodAdmitHandlers []PodAdmitHandler
 
 // AddPodAdmitHandler adds the specified observer.
@@ -124,6 +126,7 @@ func (handlers *PodAdmitHandlers) AddPodAdmitHandler(a PodAdmitHandler) {
 }
 
 // PodSyncLoopHandlers maintains a list of handlers to pod sync loop.
+// PodSyncLoopHandlers维护了一系列用于pod sync loop的handlers
 type PodSyncLoopHandlers []PodSyncLoopHandler
 
 // AddPodSyncLoopHandler adds the specified observer.
@@ -132,6 +135,7 @@ func (handlers *PodSyncLoopHandlers) AddPodSyncLoopHandler(a PodSyncLoopHandler)
 }
 
 // PodSyncHandlers maintains a list of handlers to pod sync.
+// PodSyncHandlers维护了一系列的handlers用于pod sync
 type PodSyncHandlers []PodSyncHandler
 
 // AddPodSyncHandler adds the specified handler.

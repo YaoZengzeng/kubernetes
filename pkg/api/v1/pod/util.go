@@ -280,6 +280,8 @@ func GetPodCondition(status *v1.PodStatus, conditionType v1.PodConditionType) (i
 // Updates existing pod condition or creates a new one. Sets LastTransitionTime to now if the
 // status has changed.
 // Returns true if pod condition has changed or has been added.
+// 更新一个已经存在的pod condition或者创建一个新的，如果状态发生了改变，将LastTransitionTime设置为now
+// 返回true，如果pod condition发生了改变，或者被新增
 func UpdatePodCondition(status *v1.PodStatus, condition *v1.PodCondition) bool {
 	condition.LastTransitionTime = metav1.Now()
 	// Try to find this pod condition.

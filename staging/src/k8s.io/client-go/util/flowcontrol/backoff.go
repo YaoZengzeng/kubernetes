@@ -56,6 +56,7 @@ func NewBackOff(initial, max time.Duration) *Backoff {
 }
 
 // Get the current backoff Duration
+// 获取当前id对应的回退时间间隔
 func (p *Backoff) Get(id string) time.Duration {
 	p.Lock()
 	defer p.Unlock()
@@ -118,6 +119,7 @@ func (p *Backoff) IsInBackOffSinceUpdate(id string, eventTime time.Time) bool {
 
 // Garbage collect records that have aged past maxDuration. Backoff users are expected
 // to invoke this periodically.
+// GC那些已经超过maxDuration的记录，Backoff的使用者期望能够阶段性地对它进行调用
 func (p *Backoff) GC() {
 	p.Lock()
 	defer p.Unlock()
@@ -125,6 +127,7 @@ func (p *Backoff) GC() {
 	for id, entry := range p.perItemBackoff {
 		if now.Sub(entry.lastUpdate) > p.maxDuration*2 {
 			// GC when entry has not been updated for 2*maxDuration
+			// 如果entry已经超过2*maxDuration没更新了，就删除它
 			delete(p.perItemBackoff, id)
 		}
 	}

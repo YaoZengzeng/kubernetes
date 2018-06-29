@@ -95,6 +95,7 @@ func (r *runtimeCache) updateCache() error {
 	if err != nil {
 		return err
 	}
+	// 调用runtimeCache.getter从容器运行时获取pods，并且更新timestamp
 	r.pods, r.cacheTime = pods, timestamp
 	return nil
 }

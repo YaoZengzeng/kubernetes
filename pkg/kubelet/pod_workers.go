@@ -303,6 +303,7 @@ func (p *podWorkers) ForgetNonExistingPodWorkers(desiredPods map[types.UID]empty
 	p.podLock.Lock()
 	defer p.podLock.Unlock()
 	for key := range p.podUpdates {
+		// 将不再desiredPods中的pod的pod worker移除
 		if _, exists := desiredPods[key]; !exists {
 			p.removeWorker(key)
 		}
