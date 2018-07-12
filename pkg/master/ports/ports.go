@@ -35,6 +35,7 @@ const (
 	CloudControllerManagerPort = 10253
 	// KubeletReadOnlyPort exposes basic read-only services from the kubelet.
 	// May be overridden by a flag at startup.
+	// KubeletReadOnlyPort暴露kubelet基本的read-only services，可能会在启动阶段被一个flag覆盖
 	// This is necessary for heapster to collect monitoring stats from the kubelet
 	// until heapster can transition to using the SSL endpoint.
 	// TODO(roberthbailey): Remove this once we have a better solution for heapster.

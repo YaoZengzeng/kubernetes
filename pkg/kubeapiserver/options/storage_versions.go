@@ -30,6 +30,7 @@ const (
 )
 
 // StorageSerializationOptions contains the options for encoding resources.
+// StorageSerializationOptions包含了编码resources的选项
 type StorageSerializationOptions struct {
 	StorageVersions string
 	// The default values for StorageVersions. StorageVersions overrides

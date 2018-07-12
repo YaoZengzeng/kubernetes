@@ -54,6 +54,8 @@ type ActualStateOfWorld interface {
 	// AddPodToVolume adds the given pod to the given volume in the cache
 	// indicating the specified volume has been successfully mounted to the
 	// specified pod.
+	// AddPodToVolume将给定的pod加入到cache中的给定volume，用来表示volume已经成功
+	// 挂载到了指定的pod
 	// If a pod with the same unique name already exists under the specified
 	// volume, reset the pod's remountRequired value.
 	// If a volume with the name volumeName does not exist in the list of
@@ -65,6 +67,7 @@ type ActualStateOfWorld interface {
 	// volume indicates it requires remounting on pod updates). Atomically
 	// updating volumes depend on this to update the contents of the volume on
 	// pod update.
+	// MarkRemountRequired将所有特定pod的已经attached和mounted的volume标记为需要重新mount
 	MarkRemountRequired(podName volumetypes.UniquePodName)
 
 	// SetVolumeGloballyMounted sets the GloballyMounted value for the given
@@ -77,6 +80,8 @@ type ActualStateOfWorld interface {
 
 	// DeletePodFromVolume removes the given pod from the given volume in the
 	// cache indicating the volume has been successfully unmounted from the pod.
+	// DeletePodFromVolume将指定的pod从cache中的给定volume删除，表示volume已经成功从
+	// pod unmounted
 	// If a pod with the same unique name does not exist under the specified
 	// volume, this is a no-op.
 	// If a volume with the name volumeName does not exist in the list of
@@ -86,6 +91,8 @@ type ActualStateOfWorld interface {
 	// DeleteVolume removes the given volume from the list of attached volumes
 	// in the cache indicating the volume has been successfully detached from
 	// this node.
+	// DeleteVolume将给定的volume从一系列缓存中的attached volumes中删除，表示volume已经
+	// 成功从本节点detached
 	// If a volume with the name volumeName does not exist in the list of
 	// attached volumes, this is a no-op.
 	// If a volume with the name volumeName exists and its list of mountedPods
@@ -426,7 +433,9 @@ func (asw *actualStateOfWorld) MarkRemountRequired(
 	podName volumetypes.UniquePodName) {
 	asw.Lock()
 	defer asw.Unlock()
+	// 遍历所有attached Volumes
 	for volumeName, volumeObj := range asw.attachedVolumes {
+		// 遍历所有attached Volumes中关联的pod
 		for mountedPodName, podObj := range volumeObj.mountedPods {
 			if mountedPodName != podName {
 				continue

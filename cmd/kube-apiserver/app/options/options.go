@@ -74,9 +74,11 @@ type ServerRunOptions struct {
 }
 
 // NewServerRunOptions creates a new ServerRunOptions object with default parameters
+// NewServerRunOptions根据默认参数创建一个新的ServerRunOptions对象
 func NewServerRunOptions() *ServerRunOptions {
 	s := ServerRunOptions{
 		GenericServerRunOptions: genericoptions.NewServerRunOptions(),
+		// 默认的DefaultEtcdPathPrefix为"/registry"
 		Etcd:                 genericoptions.NewEtcdOptions(storagebackend.NewDefaultConfig(kubeoptions.DefaultEtcdPathPrefix, nil)),
 		SecureServing:        kubeoptions.NewSecureServingOptions(),
 		InsecureServing:      kubeoptions.NewInsecureServingOptions(),
@@ -117,6 +119,7 @@ func NewServerRunOptions() *ServerRunOptions {
 	s.Etcd.DefaultStorageMediaType = "application/vnd.kubernetes.protobuf"
 
 	// register all admission plugins
+	// 注册所有的admission plugins
 	RegisterAllAdmissionPlugins(s.Admission.Plugins)
 	// Set the default for admission plugins names
 	s.Admission.PluginNames = []string{"AlwaysAdmit"}

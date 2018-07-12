@@ -16,4 +16,6 @@ limitations under the License.
 
 // Package volume includes internal representations of external volume types
 // as well as utility methods required to mount/unmount volumes to kubelets.
+// volume package包含了各种external volume types以及一些用于将volumes mount/unmount到
+// kubelet的方法的内部表示
 package volume // import "k8s.io/kubernetes/pkg/volume"

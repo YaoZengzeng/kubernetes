@@ -90,12 +90,14 @@ type VolumePlugin interface {
 	// Init initializes the plugin.  This will be called exactly once
 	// before any New* calls are made - implementations of plugins may
 	// depend on this.
+	// Init初始化plugin，这会在调用任何New*之前被有且调用一次
 	Init(host VolumeHost) error
 
 	// Name returns the plugin's name.  Plugins must use namespaced names
 	// such as "example.com/volume" and contain exactly one '/' character.
 	// The "kubernetes.io" namespace is reserved for plugins which are
 	// bundled with kubernetes.
+	// Name返回plugin的名字，Plugin必须使用namespaced names，例如"example.com/volume"
 	GetPluginName() string
 
 	// GetVolumeName returns the name/ID to uniquely identifying the actual
@@ -445,10 +447,12 @@ func (pm *VolumePluginMgr) InitPlugins(plugins []VolumePlugin, prober DynamicPlu
 			continue
 		}
 
+		// 不能多次注册
 		if _, found := pm.plugins[name]; found {
 			allErrs = append(allErrs, fmt.Errorf("volume plugin %q was registered more than once", name))
 			continue
 		}
+		// 对plugin进行初始化
 		err := plugin.Init(host)
 		if err != nil {
 			glog.Errorf("Failed to load volume plugin %s, error: %s", name, err.Error())
@@ -456,6 +460,7 @@ func (pm *VolumePluginMgr) InitPlugins(plugins []VolumePlugin, prober DynamicPlu
 			continue
 		}
 		pm.plugins[name] = plugin
+		// volume加载成功
 		glog.V(1).Infof("Loaded volume plugin %q", name)
 	}
 	return utilerrors.NewAggregate(allErrs)

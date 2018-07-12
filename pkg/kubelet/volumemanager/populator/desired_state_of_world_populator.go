@@ -50,6 +50,9 @@ import (
 // pods and ensures that each one exists in the desired state of the world cache
 // if it has volumes. It also verifies that the pods in the desired state of the
 // world cache still exist, if not, it removes them.
+// DesiredStateOfWorldPopulator会阶段性地对active pods进行遍历，并且确保那些有volumes的pod
+// 位于desired state of the world. 它还确保位于desired state of the world的pod存在，否则
+// 将其移除
 type DesiredStateOfWorldPopulator interface {
 	Run(sourcesReady config.SourcesReady, stopCh <-chan struct{})
 
@@ -57,6 +60,9 @@ type DesiredStateOfWorldPopulator interface {
 	// (if it exists) forcing it to be reprocessed. This is required to enable
 	// remounting volumes on pod updates (volumes like Downward API volumes
 	// depend on this behavior to ensure volume content is updated).
+	// ReprocessPod将给定的pod从list of processedPods中移除（如果存在的话），强制
+	// 让它reprocessed. 这在pod更新时remounting volumes是需要的（像Downward API之类
+	// 的volume依赖这种行为，保证volume的内容是最新的）
 	ReprocessPod(podName volumetypes.UniquePodName)
 
 	// HasAddedPods returns whether the populator has looped through the list
@@ -137,6 +143,7 @@ func (dswp *desiredStateOfWorldPopulator) Run(sourcesReady config.SourcesReady, 
 
 func (dswp *desiredStateOfWorldPopulator) ReprocessPod(
 	podName volumetypes.UniquePodName) {
+	// 从processed pod中移除
 	dswp.deleteProcessedPod(podName)
 }
 

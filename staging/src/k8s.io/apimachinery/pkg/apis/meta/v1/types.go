@@ -90,6 +90,7 @@ const (
 
 // ObjectMeta is metadata that all persisted resources must have, which includes all objects
 // users must create.
+// ObjectMeta是所有持久的资源必须有的元数据，包含了用户需要创建的所有对象
 type ObjectMeta struct {
 	// Name must be unique within a namespace. Is required when creating resources, although
 	// some resources may allow a client to request the generation of an appropriate name

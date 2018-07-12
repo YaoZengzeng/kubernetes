@@ -63,6 +63,7 @@ func TestWatchCacheBasic(t *testing.T) {
 
 	// Test Add/Update/Delete.
 	pod1 := makeTestPod("pod", 1)
+	// 增加pod信息
 	if err := store.Add(pod1); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -74,6 +75,7 @@ func TestWatchCacheBasic(t *testing.T) {
 		}
 	}
 	pod2 := makeTestPod("pod", 2)
+	// 更新pod信息
 	if err := store.Update(pod2); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -85,6 +87,7 @@ func TestWatchCacheBasic(t *testing.T) {
 		}
 	}
 	pod3 := makeTestPod("pod", 3)
+	// 删除pod信息
 	if err := store.Delete(pod3); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -98,6 +101,7 @@ func TestWatchCacheBasic(t *testing.T) {
 	store.Add(makeTestPod("pod3", 6))
 	{
 		podNames := sets.String{}
+		// 测试store.List()
 		for _, item := range store.List() {
 			podNames.Insert(item.(*storeElement).Object.(*v1.Pod).ObjectMeta.Name)
 		}
@@ -110,6 +114,7 @@ func TestWatchCacheBasic(t *testing.T) {
 	}
 
 	// Test Replace.
+	// 测试replace功能，用参数中的list替代store中原本的list
 	store.Replace([]interface{}{
 		makeTestPod("pod4", 7),
 		makeTestPod("pod5", 8),

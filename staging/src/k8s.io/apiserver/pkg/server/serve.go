@@ -39,11 +39,13 @@ const (
 // serveSecurely runs the secure http server. It fails only if certificates cannot
 // be loaded or the initial listen call fails. The actual server loop (stoppable by closing
 // stopCh) runs in a go routine, i.e. serveSecurely does not block.
+// serveSecurely运行secure http server
 func (s *GenericAPIServer) serveSecurely(stopCh <-chan struct{}) error {
 	if s.SecureServingInfo.Listener == nil {
 		return fmt.Errorf("listener must not be nil")
 	}
 
+	// 创建secureServer
 	secureServer := &http.Server{
 		Addr:           s.SecureServingInfo.Listener.Addr().String(),
 		Handler:        s.Handler,
@@ -94,6 +96,8 @@ func (s *GenericAPIServer) serveSecurely(stopCh <-chan struct{}) error {
 // RunServer listens on the given port if listener is not given,
 // then spawns a go-routine continuously serving
 // until the stopCh is closed. This function does not block.
+// RunServer监听指定端口，如果listener没有指定的话
+// 之后再生成一个goroutine持续地进行服务，直到stopCh被关闭
 func RunServer(
 	server *http.Server,
 	ln net.Listener,

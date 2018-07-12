@@ -73,6 +73,9 @@ type Reconciler interface {
 // controllerAttachDetachEnabled - if true, indicates that the attach/detach
 //   controller is responsible for managing the attach/detach operations for
 //   this node, and therefore the volume manager should not
+// controllerAttachDetachEnabled - 如果为true，表示attach/detach controller会负责
+// 本节点的attach/detach操作，因此volume manager无需对此进行管理
+// 
 // loopSleepDuration - the amount of time the reconciler loop sleeps between
 //   successive executions
 //   syncDuration - the amount of time the syncStates sleeps between

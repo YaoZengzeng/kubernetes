@@ -50,6 +50,7 @@ import (
 //
 // Once an operation completes successfully, the actualStateOfWorld is updated
 // to indicate the volume is attached/detached/mounted/unmounted.
+// 一旦某个操作成功完成，actualStateOfWorld就会更新，表示volume已经被attached/detached/mounted/unmounted
 //
 // If the OperationExecutor fails to start the operation because, for example,
 // an operation with the same UniqueVolumeName is already pending, a non-nil

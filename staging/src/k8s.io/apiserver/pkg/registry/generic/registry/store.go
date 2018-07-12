@@ -1235,6 +1235,7 @@ func (e *Store) Export(ctx genericapirequest.Context, name string, opts metav1.E
 
 // CompleteWithOptions updates the store with the provided options and
 // defaults common fields.
+// CompleteWithOptions根据给定的options和默认的公共的fields更新store
 func (e *Store) CompleteWithOptions(options *generic.StoreOptions) error {
 	if e.DefaultQualifiedResource.Empty() {
 		return fmt.Errorf("store %#v must have a non-empty qualified resource", e)

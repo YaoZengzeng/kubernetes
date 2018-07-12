@@ -31,6 +31,7 @@ import (
 func DefaultServiceIPRange(passedServiceClusterIPRange net.IPNet) (net.IPNet, net.IP, error) {
 	serviceClusterIPRange := passedServiceClusterIPRange
 	if passedServiceClusterIPRange.IP == nil {
+		// 默认的service的IP range为10.0.0.0/24
 		defaultNet := "10.0.0.0/24"
 		glog.Infof("Network range for service cluster IPs is unspecified. Defaulting to %v.", defaultNet)
 		_, defaultServiceClusterIPRange, err := net.ParseCIDR(defaultNet)
@@ -44,6 +45,7 @@ func DefaultServiceIPRange(passedServiceClusterIPRange net.IPNet) (net.IPNet, ne
 	}
 
 	// Select the first valid IP from ServiceClusterIPRange to use as the GenericAPIServer service IP.
+	// 从ServiceClusterIPRange中选择第一个合法的IP作为GenericAPIServer的service IP
 	apiServerServiceIP, err := ipallocator.GetIndexedIP(&serviceClusterIPRange, 1)
 	if err != nil {
 		return net.IPNet{}, net.IP{}, err

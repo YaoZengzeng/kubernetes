@@ -51,6 +51,7 @@ func main() {
 	verflag.PrintAndExitIfRequested()
 
 	stopCh := server.SetupSignalHandler()
+	// 将api server的配置信息s传入
 	if err := app.Run(s, stopCh); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)

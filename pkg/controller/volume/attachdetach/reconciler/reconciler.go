@@ -45,6 +45,8 @@ type Reconciler interface {
 	// if volumes that should be attached are attached and volumes that should
 	// be detached are detached. If not, it will trigger attach/detach
 	// operations to rectify.
+	// Run函数阶段性地进行reconciliation loop，检查该attach的volume是否被attach以及该detach
+	// 的volume是否被detach
 	Run(stopCh <-chan struct{})
 }
 
@@ -112,6 +114,8 @@ func (rc *reconciler) reconciliationLoopFunc() func() {
 			glog.V(5).Info("Skipping reconciling attached volumes still attached since it is set to less than one second via the command line.")
 		} else if time.Since(rc.timeOfLastSync) > rc.syncDuration {
 			glog.V(5).Info("Starting reconciling attached volumes still attached")
+			// 周期性地与底层的storage system去同步，确保node obj中记录的attached volume
+			// 的状态的正确性
 			rc.sync()
 		}
 	}
@@ -128,6 +132,10 @@ func (rc *reconciler) updateSyncTime() {
 
 func (rc *reconciler) syncStates() {
 	volumesPerNode := rc.actualStateOfWorld.GetAttachedVolumesPerNode()
+	// 直接从底层的storage system去检查volume是否处于attached状态
+	// 因为node/kubelet是不可靠的，这里是通过operationexecutor调用真正的
+	// volume plugin的代码去做检测，如果发现该volum device已经不再attach到
+	// 对应的node时，更新ActualStateOfWorld，记录该volume已经detached
 	rc.attacherDetacher.VerifyVolumesAreAttached(volumesPerNode, rc.actualStateOfWorld)
 }
 

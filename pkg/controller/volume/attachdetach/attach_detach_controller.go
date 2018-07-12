@@ -90,6 +90,7 @@ type AttachDetachController interface {
 }
 
 // NewAttachDetachController returns a new instance of AttachDetachController.
+// AttachDetach Controller关心的是pod，node，pv和pvc
 func NewAttachDetachController(
 	kubeClient clientset.Interface,
 	podInformer coreinformers.PodInformer,
@@ -214,6 +215,7 @@ type attachDetachController struct {
 	cloud cloudprovider.Interface
 
 	// volumePluginMgr used to initialize and fetch volume plugins
+	// volumePluginMgr用于初始化以及获取volume plugins
 	volumePluginMgr volume.VolumePluginMgr
 
 	// desiredStateOfWorld is a data structure containing the desired state of
@@ -242,6 +244,7 @@ type attachDetachController struct {
 
 	// nodeStatusUpdater is used to update node status with the list of attached
 	// volumes
+	// nodeStatusUpdater用一系列已经attach的volume更新node status
 	nodeStatusUpdater statusupdater.NodeStatusUpdater
 
 	// desiredStateOfWorldPopulator runs an asynchronous periodic loop to
@@ -266,10 +269,15 @@ func (adc *attachDetachController) Run(stopCh <-chan struct{}) {
 	if err != nil {
 		glog.Errorf("Error populating the actual state of world: %v", err)
 	}
+	// 遍历所有的pod和podToAdd.Spec.Volumes
+	// 将需要进行attach的volume和volume对应的pod添加到DesiredStateOfWorld
 	err = adc.populateDesiredStateOfWorld()
 	if err != nil {
 		glog.Errorf("Error populating the desired state of world: %v", err)
 	}
+	// reconciler将ActualStateOfWorld和DesiredStateOfWorld进行对比
+	// 确保该detach的volume就进行detach操作，该attach的volume就进行attach操作
+	// 最后，更新node object，将attached到node的volume持久化到node object
 	go adc.reconciler.Run(stopCh)
 	go adc.desiredStateOfWorldPopulator.Run(stopCh)
 

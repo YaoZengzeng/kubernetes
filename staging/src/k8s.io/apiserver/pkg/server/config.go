@@ -76,6 +76,7 @@ const (
 )
 
 // Config is a structure used to configure a GenericAPIServer.
+// Config是一个用于配置GenericAPIServer的结构
 // Its members are sorted roughly in order of importance for composers.
 type Config struct {
 	// SecureServingInfo is required to serve https
@@ -181,10 +182,14 @@ type Config struct {
 
 	// The port on PublicAddress where a read-write server will be installed.
 	// Defaults to 6443 if not set.
+	// read-writer server在PublicAddress监听的端口
+	// 默认为6443
 	ReadWritePort int
 	// PublicAddress is the IP address where members of the cluster (kubelet,
 	// kube-proxy, services, etc.) can reach the GenericAPIServer.
 	// If nil or 0.0.0.0, the host's default interface will be used.
+	// PublicAddress是集群的成员（kubelet, kube-proxy, services，等等）访问GenericAPIServer
+	// 的地址，如果为nil或者0.0.0.0，则会使用host默认的interface
 	PublicAddress net.IP
 }
 
@@ -233,6 +238,7 @@ type SecureServingInfo struct {
 func NewConfig(codecs serializer.CodecFactory) *Config {
 	return &Config{
 		Serializer:                   codecs,
+		// 默认的监听端口设置为443
 		ReadWritePort:                443,
 		RequestContextMapper:         apirequest.NewRequestContextMapper(),
 		BuildHandlerChainFunc:        DefaultBuildHandlerChain,
@@ -251,6 +257,8 @@ func NewConfig(codecs serializer.CodecFactory) *Config {
 
 		// Default to treating watch as a long-running operation
 		// Generic API servers have no inherent long-running subresources
+		// 默认将watch作为一个long-running operation
+		// Generic API server没有固有的long-running subresources
 		LongRunningFunc: genericfilters.BasicLongRunningRequestCheck(sets.NewString("watch"), sets.NewString()),
 	}
 }

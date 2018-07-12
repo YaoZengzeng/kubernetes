@@ -57,6 +57,7 @@ type PodStorage struct {
 
 // REST implements a RESTStorage for pods
 type REST struct {
+	// Store封装了和etcd的交互
 	*genericregistry.Store
 	proxyTransport http.RoundTripper
 }

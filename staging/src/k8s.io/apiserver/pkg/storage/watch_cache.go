@@ -46,6 +46,8 @@ const (
 // watchCache. Additionally to a typical "watch.Event" it contains
 // the previous value of the object to enable proper filtering in the
 // upper layers.
+// watchCacheEvent是一个单个的"watch event"，它会发送给watchCache的用户
+// 除了典型的"watch.Event"，它还包含了object之前的值，用于upper layers的过滤
 type watchCacheEvent struct {
 	Type                 watch.EventType
 	Object               runtime.Object
@@ -64,6 +66,7 @@ type watchCacheEvent struct {
 // e.g. validation underneath). To avoid computing it multiple times
 // (to serve the event in different List/Watch requests), in the
 // underlying store we are keeping pair (key, object).
+// 计算一个object的key并不容易，为了避免重复计算，我们就将（key，object）保存起来了
 type storeElement struct {
 	Key    string
 	Object runtime.Object
@@ -80,16 +83,20 @@ func storeElementKey(obj interface{}) (string, error) {
 // watchCacheElement is a single "watch event" stored in a cache.
 // It contains the resource version of the object and the object
 // itself.
+// watchCacheElement是存储在cache中的单个"watch event"
+// 它包含了object的resource version以及object
 type watchCacheElement struct {
 	resourceVersion uint64
 	watchCacheEvent *watchCacheEvent
 }
 
 // watchCache implements a Store interface.
+// watchCache实现了Store接口
 // However, it depends on the elements implementing runtime.Object interface.
 //
 // watchCache is a "sliding window" (with a limited capacity) of objects
 // observed from a watch.
+// watchCache是一个"滑动窗口"（有着固定大小），用于存储从watch中得到的对象
 type watchCache struct {
 	sync.RWMutex
 
@@ -111,6 +118,7 @@ type watchCache struct {
 	// by endIndex (if cache is full it will be startIndex + capacity).
 	// Both startIndex and endIndex can be greater than buffer capacity -
 	// you should always apply modulo capacity to get an index in cache array.
+	// cache是一个环形缓冲区，分别用startIndex和endIndex来标记缓冲区的头和尾
 	cache      []watchCacheElement
 	startIndex int
 	endIndex   int
@@ -156,13 +164,16 @@ func newWatchCache(
 
 // Add takes runtime.Object as an argument.
 func (w *watchCache) Add(obj interface{}) error {
+	// 将interface{}类型的obj转换为runtime.Object，并且返回resourceVersion
 	object, resourceVersion, err := objectToVersionedRuntimeObject(obj)
 	if err != nil {
 		return err
 	}
+	// 构建一个watch event
 	event := watch.Event{Type: watch.Added, Object: object}
 
 	f := func(elem *storeElement) error { return w.store.Add(elem) }
+	// 调用watchCache的processEvent进行处理
 	return w.processEvent(event, resourceVersion, f)
 }
 
@@ -219,6 +230,7 @@ func (w *watchCache) processEvent(event watch.Event, resourceVersion uint64, upd
 	if err != nil {
 		return fmt.Errorf("couldn't compute key: %v", err)
 	}
+	// 构建storeElement
 	elem := &storeElement{Key: key, Object: event.Object}
 
 	// TODO: We should consider moving this lock below after the watchCacheEvent
@@ -227,6 +239,7 @@ func (w *watchCache) processEvent(event watch.Event, resourceVersion uint64, upd
 	// Maybe introduce another lock for this purpose.
 	w.Lock()
 	defer w.Unlock()
+	// 获取之前存储的对象
 	previous, exists, err := w.store.Get(elem)
 	if err != nil {
 		return err
@@ -246,6 +259,7 @@ func (w *watchCache) processEvent(event watch.Event, resourceVersion uint64, upd
 			return err
 		}
 	}
+	// 构建watchCacheEvent
 	watchCacheEvent := &watchCacheEvent{
 		Type:                 event.Type,
 		Object:               event.Object,
@@ -272,6 +286,7 @@ func (w *watchCache) processEvent(event watch.Event, resourceVersion uint64, upd
 func (w *watchCache) updateCache(resourceVersion uint64, event *watchCacheEvent) {
 	if w.endIndex == w.startIndex+w.capacity {
 		// Cache is full - remove the oldest element.
+		// Cache已满，移除oldest element
 		w.startIndex++
 	}
 	w.cache[w.endIndex%w.capacity] = watchCacheElement{resourceVersion, event}

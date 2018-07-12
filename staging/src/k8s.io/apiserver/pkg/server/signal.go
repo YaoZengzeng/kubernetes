@@ -26,6 +26,8 @@ var onlyOneSignalHandler = make(chan struct{})
 // SetupSignalHandler registered for SIGTERM and SIGINT. A stop channel is returned
 // which is closed on one of these signals. If a second signal is caught, the program
 // is terminated with exit code 1.
+// SetupSignalHandler注册SIGTERM和SIGINT，并且会返回一个channel，如果遇到了上述之一的signals
+// 则channel被关闭，如果遇到第二个signal，则直接退出，返回码为1
 func SetupSignalHandler() (stopCh <-chan struct{}) {
 	close(onlyOneSignalHandler) // panics when called twice
 

@@ -25,6 +25,7 @@ import (
 )
 
 // LongRunningRequestCheck is a predicate which is true for long-running http requests.
+// LongRunningRequestCheck是一个predicate，对于long-running http requests返回true
 type LongRunningRequestCheck func(r *http.Request, requestInfo *RequestInfo) bool
 
 // RequestContextMapper keeps track of the context associated with a particular request

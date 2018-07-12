@@ -32,8 +32,10 @@ const (
 )
 
 // Config is configuration for creating a storage backend.
+// Config是用于创建storage backend的配置
 type Config struct {
 	// Type defines the type of storage backend, e.g. "etcd2", etcd3". Default ("") is "etcd3".
+	// storage backend的类型，例如，"etcd2", "etcd3"，默认（“”）为"etcd3"
 	Type string
 	// Prefix is the prefix to all keys passed to storage.Interface methods.
 	Prefix string

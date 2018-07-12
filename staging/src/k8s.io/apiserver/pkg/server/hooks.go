@@ -91,6 +91,7 @@ func (s *GenericAPIServer) AddPostStartHook(name string, hook PostStartHookFunc)
 
 	// done is closed when the poststarthook is finished.  This is used by the health check to be able to indicate
 	// that the poststarthook is finished
+	// 当poststarthook结束的时候，done会被关闭，这会被health check用于通知poststarthook已经结束了
 	done := make(chan struct{})
 	s.AddHealthzChecks(postStartHookHealthz{name: "poststarthook/" + name, done: done})
 	s.postStartHooks[name] = postStartHookEntry{hook: hook, done: done}

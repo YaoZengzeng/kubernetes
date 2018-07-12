@@ -27,9 +27,11 @@ import (
 
 // Volume represents a directory used by pods or hosts on a node. All method
 // implementations of methods in the volume interface must be idempotent.
+// Volume代表了node上的pods或者hosts使用的目录
 type Volume interface {
 	// GetPath returns the path to which the volume should be mounted for the
 	// pod.
+	// GetPath返回pod应该要挂载的volume的路径
 	GetPath() string
 
 	// MetricsProvider embeds methods for exposing metrics (e.g.
@@ -102,6 +104,7 @@ type Attributes struct {
 }
 
 // Mounter interface provides methods to set up/mount the volume.
+// Mounter接口提供了方法用于创建/挂载volume
 type Mounter interface {
 	// Uses Interface to provide the path for Docker binds.
 	Volume

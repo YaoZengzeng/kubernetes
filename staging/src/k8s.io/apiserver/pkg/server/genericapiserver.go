@@ -74,6 +74,7 @@ type APIGroupInfo struct {
 }
 
 // GenericAPIServer contains state for a Kubernetes cluster api server.
+// GenericAPIServer包含了Kubernetes集群的api server的状态
 type GenericAPIServer struct {
 	// discoveryAddresses is used to build cluster IPs for discovery.
 	discoveryAddresses discovery.Addresses
@@ -288,6 +289,7 @@ func (s preparedGenericAPIServer) Run(stopCh <-chan struct{}) error {
 	}
 
 	// Wait for all requests to finish, which are bounded by the RequestTimeout variable.
+	// 等待所有请求结束，并通过RequestTimeout进行限制
 	s.HandlerChainWaitGroup.Wait()
 
 	return nil

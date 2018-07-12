@@ -146,6 +146,7 @@ type VolumeManager interface {
 
 	// Marks the specified volume as having successfully been reported as "in
 	// use" in the nodes's volume status.
+	// 将指定的volume标记为"in use"，在节点的volume status
 	MarkVolumesAsReportedInUse(volumesReportedAsInUse []v1.UniqueVolumeName)
 }
 
@@ -359,6 +360,7 @@ func (vm *volumeManager) MarkVolumesAsReportedInUse(
 }
 
 func (vm *volumeManager) WaitForAttachAndMount(pod *v1.Pod) error {
+	// 从pod的配置中解析出volume的配置
 	expectedVolumes := getExpectedVolumes(pod)
 	if len(expectedVolumes) == 0 {
 		// No volumes to verify
@@ -414,6 +416,8 @@ func (vm *volumeManager) verifyVolumesMountedFunc(podName types.UniquePodName, e
 // getUnmountedVolumes fetches the current list of mounted volumes from
 // the actual state of the world, and uses it to process the list of
 // expectedVolumes. It returns a list of unmounted volumes.
+// getUnmountedVolumes从actual state of the world中获取当前已经挂载的volumes
+// 并且将它和expectedVolumes进行比较，返回一系列unmounted volumes
 func (vm *volumeManager) getUnmountedVolumes(podName types.UniquePodName, expectedVolumes []string) []string {
 	mountedVolumes := sets.NewString()
 	for _, mountedVolume := range vm.actualStateOfWorld.GetMountedVolumesForPod(podName) {
