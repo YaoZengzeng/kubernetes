@@ -405,6 +405,8 @@ const (
 // RSControlInterface is an interface that knows how to add or delete
 // ReplicaSets, as well as increment or decrement them. It is used
 // by the deployment controller to ease testing of actions that it takes.
+// RSControlInterface是一个接口，它知道如何增加或删除ReplicaSets，以及增加或者减少它们
+// 它由deployment controller使用，用于减轻对它的行为进行测试的难度
 type RSControlInterface interface {
 	PatchReplicaSet(namespace, name string, data []byte) error
 }

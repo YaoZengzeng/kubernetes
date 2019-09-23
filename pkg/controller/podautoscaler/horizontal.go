@@ -64,6 +64,7 @@ type timestampedRecommendation struct {
 // HorizontalController is responsible for the synchronizing HPA objects stored
 // in the system with the actual deployments/replication controllers they
 // control.
+// HorizontalController负责同步存储在系统中的HPA对象以及它们控制的真实的deployments/replication
 type HorizontalController struct {
 	scaleNamespacer scaleclient.ScalesGetter
 	hpaNamespacer   autoscalingclient.HorizontalPodAutoscalersGetter
@@ -76,11 +77,13 @@ type HorizontalController struct {
 
 	// hpaLister is able to list/get HPAs from the shared cache from the informer passed in to
 	// NewHorizontalController.
+	// hpaLister能够从传给NewHorizontalController的informer的shared cache进行list/get HPAs
 	hpaLister       autoscalinglisters.HorizontalPodAutoscalerLister
 	hpaListerSynced cache.InformerSynced
 
 	// podLister is able to list/get Pods from the shared cache from the informer passed in to
 	// NewHorizontalController.
+	// podLister能够从传给NewHorizontalController的informer的shared cache进行list/get HPAs
 	podLister       corelisters.PodLister
 	podListerSynced cache.InformerSynced
 
@@ -149,6 +152,7 @@ func NewHorizontalController(
 }
 
 // Run begins watching and syncing.
+// Run开始监听以及同步
 func (a *HorizontalController) Run(stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 	defer a.queue.ShutDown()
@@ -161,6 +165,7 @@ func (a *HorizontalController) Run(stopCh <-chan struct{}) {
 	}
 
 	// start a single worker (we may wish to start more in the future)
+	// 启动一个single worker
 	go wait.Until(a.worker, time.Second, stopCh)
 
 	<-stopCh

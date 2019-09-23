@@ -34,6 +34,7 @@ import (
 
 // NewCRIStatsProvider returns a StatsProvider that provides the node stats
 // from cAdvisor and the container stats from CRI.
+// NewCRIStatsProvider从CRI获取container stats
 func NewCRIStatsProvider(
 	cadvisor cadvisor.Interface,
 	resourceAnalyzer stats.ResourceAnalyzer,
@@ -50,6 +51,7 @@ func NewCRIStatsProvider(
 
 // NewCadvisorStatsProvider returns a containerStatsProvider that provides both
 // the node and the container stats from cAdvisor.
+// NewCadvisorStatsProvider返回一个containerStatsProvider，提供从cAdvisor获取的node以及containers stats
 func NewCadvisorStatsProvider(
 	cadvisor cadvisor.Interface,
 	resourceAnalyzer stats.ResourceAnalyzer,
@@ -63,6 +65,8 @@ func NewCadvisorStatsProvider(
 
 // newStatsProvider returns a new StatsProvider that provides node stats from
 // cAdvisor and the container stats using the containerStatsProvider.
+// newStatsProvider返回一个新的StatsProvider，提供从cAdvisor获取的node stats以及从containerStatsProvider
+// 获取的container stats
 func newStatsProvider(
 	cadvisor cadvisor.Interface,
 	podManager kubepod.Manager,
@@ -78,6 +82,7 @@ func newStatsProvider(
 }
 
 // StatsProvider provides the stats of the node and the pod-managed containers.
+// StatsProvider提供node以及pod管理的containers的stats
 type StatsProvider struct {
 	cadvisor     cadvisor.Interface
 	podManager   kubepod.Manager
@@ -88,6 +93,7 @@ type StatsProvider struct {
 
 // containerStatsProvider is an interface that provides the stats of the
 // containers managed by pods.
+// containerStatsProvider是一个接口用于提供pods管理的containers的stats
 type containerStatsProvider interface {
 	ListPodStats() ([]statsapi.PodStats, error)
 	ListPodStatsAndUpdateCPUNanoCoreUsage() ([]statsapi.PodStats, error)

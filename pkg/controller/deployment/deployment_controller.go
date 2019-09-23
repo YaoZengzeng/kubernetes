@@ -15,9 +15,12 @@ limitations under the License.
 */
 
 // Package deployment contains all the logic for handling Kubernetes Deployments.
+// deployment包包含了处理Kubernetes Deployments的所有逻辑
 // It implements a set of strategies (rolling, recreate) for deploying an application,
+// 它实现了部署一个应用的一系列策略（rolling，recreate）
 // the means to rollback to previous versions, proportional scaling for mitigating
 // risk, cleanup policy, and other useful features of Deployments.
+// 回滚到之前版本，按比例缩放来减轻风险，清理策略以及其他Deployments的有用特性
 package deployment
 
 import (
@@ -64,8 +67,10 @@ var controllerKind = apps.SchemeGroupVersion.WithKind("Deployment")
 
 // DeploymentController is responsible for synchronizing Deployment objects stored
 // in the system with actual running replica sets and pods.
+// DeploymentController负责同步存储在系统中的Deployment对象以及真正运行的replica sets和pods
 type DeploymentController struct {
 	// rsControl is used for adopting/releasing replica sets.
+	// rsControl用于采用/释放replica sets
 	rsControl     controller.RSControlInterface
 	client        clientset.Interface
 	eventRecorder record.EventRecorder
@@ -76,6 +81,7 @@ type DeploymentController struct {
 	enqueueDeployment func(deployment *apps.Deployment)
 
 	// dLister can list/get deployments from the shared informer's store
+	// dLister可以从shared informer的store中list/get deployments
 	dLister appslisters.DeploymentLister
 	// rsLister can list/get replica sets from the shared informer's store
 	rsLister appslisters.ReplicaSetLister

@@ -26,6 +26,7 @@ import (
 
 type RateLimiter interface {
 	// When gets an item and gets to decide how long that item should wait
+	// When拿到一个item并且决定这个item需要等待多久
 	When(item interface{}) time.Duration
 	// Forget indicates that an item is finished being retried.  Doesn't matter whether its for perm failing
 	// or for success, we'll stop tracking it

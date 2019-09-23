@@ -58,8 +58,11 @@ type criStatsProvider struct {
 	// cadvisor is used to get the node root filesystem's stats (such as the
 	// capacity/available bytes/inodes) that will be populated in per container
 	// filesystem stats.
+	// cadvisor用于获取node的根文件系统的stats（例如capacity/available bytes/inodes）
+	// 它会填充到每个容器的filesystem stats
 	cadvisor cadvisor.Interface
 	// resourceAnalyzer is used to get the volume stats of the pods.
+	// resourceAnalyzer用于获取pods的volume stats
 	resourceAnalyzer stats.ResourceAnalyzer
 	// runtimeService is used to get the status and stats of the pods and its
 	// managed containers.
@@ -67,6 +70,7 @@ type criStatsProvider struct {
 	// imageService is used to get the stats of the image filesystem.
 	imageService internalapi.ImageManagerService
 	// logMetrics provides the metrics for container logs
+	// logMetrics提供container logs的metrics
 	logMetricsService LogMetricsService
 	// osInterface is the interface for syscalls.
 	osInterface kubecontainer.OSInterface

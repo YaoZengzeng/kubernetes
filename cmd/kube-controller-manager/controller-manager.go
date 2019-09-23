@@ -18,6 +18,8 @@ limitations under the License.
 // controllers, and creating corresponding pods to achieve the desired
 // state.  It uses the API to listen for new controllers and to create/delete
 // pods.
+// controller manager负责监听replication controllers并且创建相应的pods来实现desired state
+// 它用API监听新的controllers以及创建/删除pods
 package main
 
 import (

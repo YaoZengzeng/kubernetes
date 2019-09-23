@@ -16,4 +16,5 @@ limitations under the License.
 
 // Package podautoscaler contains logic for autoscaling number of
 // pods based on metrics observed.
+// podautoscaler包含基于发现的metrics指标来自动扩缩容pods数目的逻辑
 package podautoscaler // import "k8s.io/kubernetes/pkg/controller/podautoscaler"

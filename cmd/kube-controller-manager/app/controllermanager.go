@@ -286,6 +286,7 @@ func Run(c *config.CompletedConfig, stopCh <-chan struct{}) error {
 }
 
 // ControllerContext defines the context object for controller
+// ControllerContext定义了controller的context object
 type ControllerContext struct {
 	// ClientBuilder will provide a client for this controller to use
 	ClientBuilder controller.ControllerClientBuilder
@@ -308,6 +309,7 @@ type ControllerContext struct {
 	RESTMapper *restmapper.DeferredDiscoveryRESTMapper
 
 	// AvailableResources is a map listing currently available resources
+	// AvailableResources是一个当前可用的资源的map
 	AvailableResources map[schema.GroupVersionResource]bool
 
 	// Cloud is the cloud provider interface for the controllers to use.
@@ -370,6 +372,7 @@ const (
 
 // NewControllerInitializers is a public map of named controller groups (you can start more than one in an init func)
 // paired to their InitFunc.  This allows for structured downstream composition and subdivision.
+// NewControllerInitializers是一个named controller groups的public map（可以在一个init func中启动超过一个）
 func NewControllerInitializers(loopMode ControllerLoopMode) map[string]InitFunc {
 	controllers := map[string]InitFunc{}
 	controllers["endpoint"] = startEndpointController

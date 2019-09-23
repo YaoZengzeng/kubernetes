@@ -92,6 +92,7 @@ type KubeControllerManagerOptions struct {
 }
 
 // NewKubeControllerManagerOptions creates a new KubeControllerManagerOptions with a default config.
+// NewKubeControllerManagerOptions用默认的配置创建一个新的KubeControllerManagerOptions
 func NewKubeControllerManagerOptions() (*KubeControllerManagerOptions, error) {
 	componentConfig, err := NewDefaultComponentConfig(ports.InsecureKubeControllerManagerPort)
 	if err != nil {

@@ -33,6 +33,8 @@ import (
 
 // HorizontalPodAutoscalerInformer provides access to a shared informer and lister for
 // HorizontalPodAutoscalers.
+// HorizontalPodAutoscalerInformer提供了对于HorizontalPodAutoscalers的一个共享的informer以及lister
+// 的访问
 type HorizontalPodAutoscalerInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() v1.HorizontalPodAutoscalerLister

@@ -91,6 +91,7 @@ func startHPAControllerWithMetricsClient(ctx ControllerContext, metricsClient me
 		return nil, false, err
 	}
 
+	// 创建hap controller
 	go podautoscaler.NewHorizontalController(
 		hpaClient.CoreV1(),
 		scaleClient,

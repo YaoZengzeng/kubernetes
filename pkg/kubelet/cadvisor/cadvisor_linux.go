@@ -58,6 +58,7 @@ var _ Interface = new(cadvisorClient)
 
 // TODO(vmarmol): Make configurable.
 // The amount of time for which to keep stats in memory.
+// 将stats保存在内存中的时间
 const statsCacheDuration = 2 * time.Minute
 const maxHousekeepingInterval = 15 * time.Second
 const defaultHousekeepingInterval = 10 * time.Second
@@ -100,6 +101,7 @@ func New(imageFsInfoProvider ImageFsInfoProvider, rootPath string, cgroupRoots [
 	}
 
 	// Create the cAdvisor container manager.
+	// 创建cAdvisor container manager
 	m, err := manager.New(memory.New(statsCacheDuration, nil), sysFs, maxHousekeepingInterval, allowDynamicHousekeeping, includedMetrics, http.DefaultClient, cgroupRoots)
 	if err != nil {
 		return nil, err

@@ -62,6 +62,8 @@ func registerRateLimiterMetric(ownerName string) error {
 
 // RegisterMetricAndTrackRateLimiterUsage registers a metric ownerName_rate_limiter_use in prometheus to track
 // how much used rateLimiter is and starts a goroutine that updates this metric every updatePeriod
+// RegisterMetricAndTrackRateLimiterUsage在prometheus中注册一个metric名叫ownerName_rate_limiter_use，用来追踪有多少个
+// 已经被使用的rateLimiter并且启动一个goroutine在每次updatePeriod之后更新它
 func RegisterMetricAndTrackRateLimiterUsage(ownerName string, rateLimiter flowcontrol.RateLimiter) error {
 	if err := registerRateLimiterMetric(ownerName); err != nil {
 		return err

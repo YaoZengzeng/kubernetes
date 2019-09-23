@@ -110,6 +110,7 @@ type EventRecorder interface {
 }
 
 // EventBroadcaster knows how to receive events and send them to any EventSink, watcher, or log.
+// EventBroadcaster知道如何接收events并且发送它们到任何的EventSink, watcher或者log
 type EventBroadcaster interface {
 	// StartEventWatcher starts sending events received from this EventBroadcaster to the given
 	// event handler function. The return value can be ignored or used to stop recording, if

@@ -40,6 +40,7 @@ type ContainerHandlerFactory interface {
 }
 
 // MetricKind represents the kind of metrics that cAdvisor exposes.
+// MetricKind表示cAdvisor暴露的metrics的类型
 type MetricKind string
 
 const (

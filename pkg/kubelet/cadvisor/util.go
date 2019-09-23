@@ -67,6 +67,7 @@ func EphemeralStorageCapacityFromFsInfo(info cadvisorapi2.FsInfo) v1.ResourceLis
 }
 
 // UsingLegacyCadvisorStats returns true if container stats are provided by cadvisor instead of through the CRI.
+// UsingLegacyCadvisorStats返回true，如果容器的stats由cadvisor提供而不是CRI
 // CRI integrations should get container metrics via CRI. Docker
 // uses the built-in cadvisor to gather such metrics on Linux for
 // historical reasons.
