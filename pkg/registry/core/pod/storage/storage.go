@@ -47,6 +47,7 @@ import (
 )
 
 // PodStorage includes storage for pods and all sub resources
+// PodStorage包含了对于pods以及它的所有子资源的存储
 type PodStorage struct {
 	Pod                 *REST
 	Binding             *BindingREST
@@ -62,12 +63,14 @@ type PodStorage struct {
 }
 
 // REST implements a RESTStorage for pods
+// REST为pods实现了RESTStorage
 type REST struct {
 	*genericregistry.Store
 	proxyTransport http.RoundTripper
 }
 
 // NewStorage returns a RESTStorage object that will work against pods.
+// NewStorage返回一个针对pods的RESTStorage对象
 func NewStorage(optsGetter generic.RESTOptionsGetter, k client.ConnectionInfoGetter, proxyTransport http.RoundTripper, podDisruptionBudgetClient policyclient.PodDisruptionBudgetsGetter) (PodStorage, error) {
 
 	store := &genericregistry.Store{
@@ -138,6 +141,7 @@ func (r *REST) Categories() []string {
 }
 
 // BindingREST implements the REST endpoint for binding pods to nodes when etcd is in use.
+// BindingREST实现了REST接口用于绑定pods到node，如果etcd正在使用的话
 type BindingREST struct {
 	store *genericregistry.Store
 }
@@ -155,6 +159,7 @@ func (r *BindingREST) New() runtime.Object {
 var _ = rest.NamedCreater(&BindingREST{})
 
 // Create ensures a pod is bound to a specific host.
+// Create确保pod和特定的host相绑定
 func (r *BindingREST) Create(ctx context.Context, name string, obj runtime.Object, createValidation rest.ValidateObjectFunc, options *metav1.CreateOptions) (out runtime.Object, err error) {
 	binding, ok := obj.(*api.Binding)
 	if !ok {

@@ -32,6 +32,7 @@ import (
 )
 
 // HealthChecker is a named healthz checker.
+// HealthChecker是一个命名的healthz checker
 type HealthChecker interface {
 	Name() string
 	Check(req *http.Request) error

@@ -56,6 +56,7 @@ const (
 
 // Scheduler watches for new unscheduled pods. It attempts to find
 // nodes that they fit on and writes bindings back to the api server.
+// Scheduler监听新的未被调度的pods，它试着找到合适它们的nodes并且将binding写回api server
 type Scheduler struct {
 	// It is expected that changes made via SchedulerCache will be observed
 	// by NodeLister and Algorithm.

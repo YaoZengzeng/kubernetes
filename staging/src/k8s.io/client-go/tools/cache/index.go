@@ -24,6 +24,7 @@ import (
 )
 
 // Indexer is a storage interface that lets you list objects using multiple indexing functions.
+// Indexer是一个storage insterface，它可以用多个索引函数让你list对象
 // There are three kinds of strings here.
 // One is a storage key, as defined in the Store interface.
 // Another kind is a name of an index.
@@ -53,6 +54,7 @@ type Indexer interface {
 }
 
 // IndexFunc knows how to compute the set of indexed values for an object.
+// IndexFunc直到如何为一个对象计算indexed values
 type IndexFunc func(obj interface{}) ([]string, error)
 
 // IndexFuncToKeyFuncAdapter adapts an indexFunc to a keyFunc.  This is only useful if your index function returns
@@ -76,10 +78,12 @@ func IndexFuncToKeyFuncAdapter(indexFunc IndexFunc) KeyFunc {
 
 const (
 	// NamespaceIndex is the lookup name for the most comment index function, which is to index by the namespace field.
+	// NamespaceIndex用于找到最常用的索引函数，它通过namespace字段进行索引
 	NamespaceIndex string = "namespace"
 )
 
 // MetaNamespaceIndexFunc is a default index function that indexes based on an object's namespace
+// MetaNamespaceIndexFunc是一个默认的index函数，基于对象的namespace进行索引
 func MetaNamespaceIndexFunc(obj interface{}) ([]string, error) {
 	meta, err := meta.Accessor(obj)
 	if err != nil {
@@ -89,6 +93,7 @@ func MetaNamespaceIndexFunc(obj interface{}) ([]string, error) {
 }
 
 // Index maps the indexed value to a set of keys in the store that match on that value
+// Index将indexed value映射到在store中所有匹配这个keys的value
 type Index map[string]sets.String
 
 // Indexers maps a name to a IndexFunc

@@ -55,6 +55,7 @@ func TestWatchList(t *testing.T) {
 func testWatch(t *testing.T, recursive bool) {
 	ctx, store, cluster := testSetup(t)
 	defer cluster.Terminate(t)
+	// 创建pod且设置元数据
 	podFoo := &example.Pod{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
 	podBar := &example.Pod{ObjectMeta: metav1.ObjectMeta{Name: "bar"}}
 
@@ -64,9 +65,11 @@ func testWatch(t *testing.T, recursive bool) {
 		watchTests []*testWatchStruct
 	}{{ // create a key
 		key:        "/somekey-1",
+		// 创建一个key
 		watchTests: []*testWatchStruct{{podFoo, true, watch.Added}},
 		pred:       storage.Everything,
 	}, { // create a key but obj gets filtered. Then update it with unfiltered obj
+		// 创建一个key但是对象被过滤了，之后用unfiltered对象来更新它
 		key:        "/somekey-3",
 		watchTests: []*testWatchStruct{{podFoo, false, ""}, {podBar, true, watch.Added}},
 		pred: storage.SelectionPredicate{
@@ -74,6 +77,7 @@ func testWatch(t *testing.T, recursive bool) {
 			Field: fields.ParseSelectorOrDie("metadata.name=bar"),
 			GetAttrs: func(obj runtime.Object) (labels.Set, fields.Set, error) {
 				pod := obj.(*example.Pod)
+				// 获取对象的某些字段
 				return nil, fields.Set{"metadata.name": pod.Name}, nil
 			},
 		},
@@ -115,6 +119,8 @@ func testWatch(t *testing.T, recursive bool) {
 			if watchTest.expectEvent {
 				expectObj := out
 				if watchTest.watchType == watch.Deleted {
+					// 如果类型为Delete，则获取的对象为prevObj
+					// 但是ResourceVersion发生了改变
 					expectObj = prevObj
 					expectObj.ResourceVersion = out.ResourceVersion
 				}

@@ -16,4 +16,5 @@ limitations under the License.
 
 // Package rest has generic implementations of resources used for
 // REST responses
+// rest有着用于实现REST responses的通用资源
 package rest // import "k8s.io/apiserver/pkg/registry/generic/rest"

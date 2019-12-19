@@ -69,6 +69,7 @@ import (
 
 // LegacyRESTStorageProvider provides information needed to build RESTStorage for core, but
 // does NOT implement the "normal" RESTStorageProvider (yet!)
+// LegacyRESTStorageProvider提供了为core构建RESTStorage所需的信息，但是没有实现通常的RESTStorageProvider
 type LegacyRESTStorageProvider struct {
 	StorageFactory serverstorage.StorageFactory
 	// Used for custom proxy dialing, and proxy TLS options
@@ -92,6 +93,7 @@ type LegacyRESTStorageProvider struct {
 
 // LegacyRESTStorage returns stateful information about particular instances of REST storage to
 // master.go for wiring controllers.
+// LegacyRESTStorage返回关于REST storage特定实例的有状态信息，用于master.go连接controllers
 // TODO remove this by running the controller as a poststarthook
 type LegacyRESTStorage struct {
 	ServiceClusterIPAllocator          rangeallocation.RangeRegistry
@@ -108,6 +110,7 @@ func (c LegacyRESTStorageProvider) NewLegacyRESTStorage(restOptionsGetter generi
 		NegotiatedSerializer:         legacyscheme.Codecs,
 	}
 
+	// 创建各个核心资源对象的Storage
 	var podDisruptionClient policyclient.PodDisruptionBudgetsGetter
 	if policyGroupVersion := (schema.GroupVersion{Group: "policy", Version: "v1beta1"}); legacyscheme.Scheme.IsVersionRegistered(policyGroupVersion) {
 		var err error
@@ -268,6 +271,7 @@ func (c LegacyRESTStorageProvider) NewLegacyRESTStorage(restOptionsGetter generi
 		serviceNodePortAllocator,
 		c.ProxyTransport)
 
+	// 构建资源对象到存储的map
 	restStorageMap := map[string]rest.Storage{
 		"pods":             podStorage.Pod,
 		"pods/attach":      podStorage.Attach,
@@ -324,6 +328,8 @@ func (c LegacyRESTStorageProvider) NewLegacyRESTStorage(restOptionsGetter generi
 	if utilfeature.DefaultFeatureGate.Enabled(features.EphemeralContainers) {
 		restStorageMap["pods/ephemeralcontainers"] = podStorage.EphemeralContainers
 	}
+	// 设置restStorageMap到apiGroupInfo的VersionedResourcesStorageMap
+	// 版本号为v1?
 	apiGroupInfo.VersionedResourcesStorageMap["v1"] = restStorageMap
 
 	return restStorage, apiGroupInfo, nil

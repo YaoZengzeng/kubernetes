@@ -54,9 +54,11 @@ import (
 )
 
 // Info about an API group.
+// Info是关于一个API group的信息
 type APIGroupInfo struct {
 	PrioritizedVersions []schema.GroupVersion
 	// Info about the resources in this group. It's a map from version to resource to the storage.
+	// Info是关于这个group中的资源，它是一个从version到resource到storage的map
 	VersionedResourcesStorageMap map[string]map[string]rest.Storage
 	// OptionsExternalVersion controls the APIVersion used for common objects in the
 	// schema like api.Status, api.DeleteOptions, and metav1.ListOptions. Other implementors may
@@ -84,6 +86,7 @@ type APIGroupInfo struct {
 }
 
 // GenericAPIServer contains state for a Kubernetes cluster api server.
+// GenericAPIServer包含一个Kubernetes cluster api server的状态
 type GenericAPIServer struct {
 	// discoveryAddresses is used to build cluster IPs for discovery.
 	discoveryAddresses discovery.Addresses
@@ -103,6 +106,7 @@ type GenericAPIServer struct {
 	legacyAPIGroupPrefixes sets.String
 
 	// admissionControl is used to build the RESTStorage that backs an API Group.
+	// admissionControl用于构建API Group后端的RESTStorage
 	admissionControl admission.Interface
 
 	// SecureServingInfo holds configuration of the TLS server.
@@ -118,12 +122,14 @@ type GenericAPIServer struct {
 
 	// "Outputs"
 	// Handler holds the handlers being used by this API server
+	// Handler包含了这个API server使用的handlers
 	Handler *APIServerHandler
 
 	// listedPathProvider is a lister which provides the set of paths to show at /
 	listedPathProvider routes.ListedPathProvider
 
 	// DiscoveryGroupManager serves /apis
+	// DiscoveryGroupManager用来服务/apis端口
 	DiscoveryGroupManager discovery.GroupManager
 
 	// Enable swagger and/or OpenAPI if these configs are non-nil.
@@ -184,6 +190,7 @@ type GenericAPIServer struct {
 	enableAPIResponseCompression bool
 
 	// delegationTarget is the next delegate in the chain. This is never nil.
+	// delegationTarget是chain的下一个delegate，不应该为nil
 	delegationTarget DelegationTarget
 
 	// HandlerChainWaitGroup allows you to wait for all chain handlers finish after the server shutdown.
@@ -221,6 +228,7 @@ type DelegationTarget interface {
 	NextDelegate() DelegationTarget
 
 	// PrepareRun does post API installation setup steps. It calls recursively the same function of the delegates.
+	// PrepareRun会递归调用delegates的同一个函数
 	PrepareRun() preparedGenericAPIServer
 }
 
@@ -280,6 +288,7 @@ type preparedGenericAPIServer struct {
 }
 
 // PrepareRun does post API installation setup steps. It calls recursively the same function of the delegates.
+// PrepareRun会发布API安装步骤，它递归调用delegates的同样函数
 func (s *GenericAPIServer) PrepareRun() preparedGenericAPIServer {
 	s.delegationTarget.PrepareRun()
 
@@ -313,6 +322,7 @@ func (s *GenericAPIServer) PrepareRun() preparedGenericAPIServer {
 
 // Run spawns the secure http server. It only returns if stopCh is closed
 // or the secure port cannot be listened on initially.
+// Run生成安全的http server，只有在stopCh被关闭的时候返回或者安全端口不能被初始化
 func (s preparedGenericAPIServer) Run(stopCh <-chan struct{}) error {
 	delayedStopCh := make(chan struct{})
 
@@ -430,6 +440,7 @@ func (s *GenericAPIServer) InstallLegacyAPIGroup(apiPrefix string, apiGroupInfo 
 		return fmt.Errorf("unable to get openapi models: %v", err)
 	}
 
+	// 注册API Reources
 	if err := s.installAPIResources(apiPrefix, apiGroupInfo, openAPIModels); err != nil {
 		return err
 	}

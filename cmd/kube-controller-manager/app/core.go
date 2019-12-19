@@ -65,6 +65,7 @@ import (
 	netutils "k8s.io/utils/net"
 )
 
+// 下面各个函数启动各个Controller
 func startServiceController(ctx ControllerContext) (http.Handler, bool, error) {
 	serviceController, err := servicecontroller.New(
 		ctx.Cloud,

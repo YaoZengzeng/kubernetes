@@ -103,6 +103,7 @@ type DeploymentController struct {
 }
 
 // NewDeploymentController creates a new DeploymentController.
+// NewDeploymentController创建一个新的DeploymentController
 func NewDeploymentController(dInformer appsinformers.DeploymentInformer, rsInformer appsinformers.ReplicaSetInformer, podInformer coreinformers.PodInformer, client clientset.Interface) (*DeploymentController, error) {
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(klog.Infof)
@@ -118,6 +119,7 @@ func NewDeploymentController(dInformer appsinformers.DeploymentInformer, rsInfor
 		eventRecorder: eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: "deployment-controller"}),
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "deployment"),
 	}
+	// 构建RSController
 	dc.rsControl = controller.RealRSControl{
 		KubeClient: client,
 		Recorder:   dc.eventRecorder,
@@ -461,7 +463,9 @@ func (dc *DeploymentController) resolveControllerRef(namespace string, controlle
 }
 
 // worker runs a worker thread that just dequeues items, processes them, and marks them done.
+// worker运行一个worker thread，它就是将items出队，处理它们并且将它们标记完成
 // It enforces that the syncHandler is never invoked concurrently with the same key.
+// 它确保syncHandler不会并行地被同一个key调用
 func (dc *DeploymentController) worker() {
 	for dc.processNextWorkItem() {
 	}
@@ -564,7 +568,9 @@ func (dc *DeploymentController) getPodMapForDeployment(d *apps.Deployment, rsLis
 }
 
 // syncDeployment will sync the deployment with the given key.
+// syncDeployment会用给定的key同步deployment
 // This function is not meant to be invoked concurrently with the same key.
+// 这个函数不能用同样的key同时调用
 func (dc *DeploymentController) syncDeployment(key string) error {
 	startTime := time.Now()
 	klog.V(4).Infof("Started syncing deployment %q (%v)", key, startTime)
@@ -572,10 +578,12 @@ func (dc *DeploymentController) syncDeployment(key string) error {
 		klog.V(4).Infof("Finished syncing deployment %q (%v)", key, time.Since(startTime))
 	}()
 
+	// 从key中获取namespace和name
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		return err
 	}
+	// 从dLister中找到namespace和key
 	deployment, err := dc.dLister.Deployments(namespace).Get(name)
 	if errors.IsNotFound(err) {
 		klog.V(2).Infof("Deployment %v has been deleted", key)
@@ -586,6 +594,7 @@ func (dc *DeploymentController) syncDeployment(key string) error {
 	}
 
 	// Deep-copy otherwise we are mutating our cache.
+	// 使用Deep-Copy，否则会修改cache
 	// TODO: Deep-copy only when needed.
 	d := deployment.DeepCopy()
 
@@ -601,6 +610,7 @@ func (dc *DeploymentController) syncDeployment(key string) error {
 
 	// List ReplicaSets owned by this Deployment, while reconciling ControllerRef
 	// through adoption/orphaning.
+	// 列举由这个Deployment所有的ReplicaSets，当通过adoption/orphaning调谐ControllerRef
 	rsList, err := dc.getReplicaSetsForDeployment(d)
 	if err != nil {
 		return err

@@ -25,6 +25,7 @@ import (
 )
 
 // RESTOptions is set of configuration options to generic registries.
+// RESTOptions是一系列用于generic registries的配置
 type RESTOptions struct {
 	StorageConfig *storagebackend.Config
 	Decorator     StorageDecorator
@@ -40,11 +41,13 @@ func (opts RESTOptions) GetRESTOptions(schema.GroupResource) (RESTOptions, error
 	return opts, nil
 }
 
+// RESTOptionsGetter仅仅是一个接口用于返回RESTOptions
 type RESTOptionsGetter interface {
 	GetRESTOptions(resource schema.GroupResource) (RESTOptions, error)
 }
 
 // StoreOptions is set of configuration options used to complete generic registries.
+// StoreOptions是一系列的配置项用于完善generic registries
 type StoreOptions struct {
 	RESTOptions RESTOptionsGetter
 	TriggerFunc storage.IndexerFuncs

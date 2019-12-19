@@ -26,10 +26,13 @@ import (
 )
 
 // NodeLister helps list Nodes.
+// NodeLister用于对Nodes进行list操作
 type NodeLister interface {
 	// List lists all Nodes in the indexer.
+	// List对indexer中的所有Nodes进行list
 	List(selector labels.Selector) (ret []*v1.Node, err error)
 	// Get retrieves the Node from the index for a given name.
+	// Get用给定的name从index中获取Node
 	Get(name string) (*v1.Node, error)
 	NodeListerExpansion
 }

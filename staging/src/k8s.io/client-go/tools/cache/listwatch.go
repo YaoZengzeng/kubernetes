@@ -55,21 +55,26 @@ type WatchFunc func(options metav1.ListOptions) (watch.Interface, error)
 // ListWatch knows how to list and watch a set of apiserver resources.  It satisfies the ListerWatcher interface.
 // It is a convenience function for users of NewReflector, etc.
 // ListFunc and WatchFunc must not be nil
+// ListWatch知道如何list以及watch一系列的apiserver资源，它符合ListWatcher接口，它对于NewReflector的用户是一个方便的函数
 type ListWatch struct {
 	ListFunc  ListFunc
 	WatchFunc WatchFunc
 	// DisableChunking requests no chunking for this list watcher.
+	// DisableChunking让list watcher没有chunking
 	DisableChunking bool
 }
 
 // Getter interface knows how to access Get method from RESTClient.
+// Getter知道如何访问RESTClient的Get方法
 type Getter interface {
 	Get() *restclient.Request
 }
 
 // NewListWatchFromClient creates a new ListWatch from the specified client, resource, namespace and field selector.
+// NewListWatchFromClient从指定的client，resource，namespace以及field selector创建一个新的ListWatch
 func NewListWatchFromClient(c Getter, resource string, namespace string, fieldSelector fields.Selector) *ListWatch {
 	optionsModifier := func(options *metav1.ListOptions) {
+		// optionsModifier能够设置options的FiledSelector
 		options.FieldSelector = fieldSelector.String()
 	}
 	return NewFilteredListWatchFromClient(c, resource, namespace, optionsModifier)
@@ -81,6 +86,7 @@ func NewListWatchFromClient(c Getter, resource string, namespace string, fieldSe
 func NewFilteredListWatchFromClient(c Getter, resource string, namespace string, optionsModifier func(options *metav1.ListOptions)) *ListWatch {
 	listFunc := func(options metav1.ListOptions) (runtime.Object, error) {
 		optionsModifier(&options)
+		// 调用client进行request
 		return c.Get().
 			Namespace(namespace).
 			Resource(resource).

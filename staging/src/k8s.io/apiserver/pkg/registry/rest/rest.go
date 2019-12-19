@@ -183,6 +183,7 @@ type Creater interface {
 }
 
 // NamedCreater is an object that can create an instance of a RESTful object using a name parameter.
+// NamedCreater是一个对象，它能创建一个RESTful对象的实例，用一个name参数
 type NamedCreater interface {
 	// New returns an empty object that can be used with Create after request data has been put into it.
 	// This object must be a pointer type for use with Codec.DecodeInto([]byte, runtime.Object)

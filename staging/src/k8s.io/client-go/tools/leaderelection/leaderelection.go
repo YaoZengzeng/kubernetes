@@ -73,10 +73,12 @@ const (
 )
 
 // NewLeaderElector creates a LeaderElector from a LeaderElectionConfig
+// NewLeaderElector从一个LeaderElectionConfig创建一个LeaderElector
 func NewLeaderElector(lec LeaderElectionConfig) (*LeaderElector, error) {
 	if lec.LeaseDuration <= lec.RenewDeadline {
 		return nil, fmt.Errorf("leaseDuration must be greater than renewDeadline")
 	}
+	// RenewDeadline必须小于RetryPeriod的1.2倍
 	if lec.RenewDeadline <= time.Duration(JitterFactor*float64(lec.RetryPeriod)) {
 		return nil, fmt.Errorf("renewDeadline must be greater than retryPeriod*JitterFactor")
 	}
@@ -110,6 +112,7 @@ func NewLeaderElector(lec LeaderElectionConfig) (*LeaderElector, error) {
 
 type LeaderElectionConfig struct {
 	// Lock is the resource that will be used for locking
+	// Lock是我们用于locking的资源对象
 	Lock rl.Interface
 
 	// LeaseDuration is the duration that non-leader candidates will
@@ -125,14 +128,17 @@ type LeaderElectionConfig struct {
 	// long waits in the scenario.
 	//
 	// Core clients default this value to 15 seconds.
+	// Core clients默认的LeaseDuration为15s
 	LeaseDuration time.Duration
 	// RenewDeadline is the duration that the acting master will retry
 	// refreshing leadership before giving up.
+	// RenewDeadline是当前的master在放弃之前尝试刷新leadership的时间间隔
 	//
 	// Core clients default this value to 10 seconds.
 	RenewDeadline time.Duration
 	// RetryPeriod is the duration the LeaderElector clients should wait
 	// between tries of actions.
+	// RetryPeriod是LeaderElector clients在tries of actions的时间间隔
 	//
 	// Core clients default this value to 2 seconds.
 	RetryPeriod time.Duration
@@ -158,6 +164,7 @@ type LeaderElectionConfig struct {
 
 // LeaderCallbacks are callbacks that are triggered during certain
 // lifecycle events of the LeaderElector. These are invoked asynchronously.
+// LeaderCallbacks是在LeaderElector特定的lifecycle events被触发的回调函数
 //
 // possible future callbacks:
 //  * OnChallenge()
@@ -173,9 +180,11 @@ type LeaderCallbacks struct {
 }
 
 // LeaderElector is a leader election client.
+// LeaderElector是一个选主的client
 type LeaderElector struct {
 	config LeaderElectionConfig
 	// internal bookkeeping
+	// 下面两个字段内部用于保存
 	observedRecord rl.LeaderElectionRecord
 	observedTime   time.Time
 	// used to implement OnNewLeader(), may lag slightly from the
@@ -193,11 +202,14 @@ type LeaderElector struct {
 }
 
 // Run starts the leader election loop
+// Run启动选主循环
 func (le *LeaderElector) Run(ctx context.Context) {
 	defer func() {
 		runtime.HandleCrash()
+		// 调用回调函数的OnStoppedLeading
 		le.config.Callbacks.OnStoppedLeading()
 	}()
+	// 一直去争取锁，直到返回true，若返回false则直接失败退出
 	if !le.acquire(ctx) {
 		return // ctx signalled done
 	}
@@ -233,6 +245,7 @@ func (le *LeaderElector) IsLeader() bool {
 
 // acquire loops calling tryAcquireOrRenew and returns true immediately when tryAcquireOrRenew succeeds.
 // Returns false if ctx signals done.
+// acquire循环调用tryAcquireOrRenew并且立即返回，如果tryAcquireOrRenew成功，返回false，如果ctx结束
 func (le *LeaderElector) acquire(ctx context.Context) bool {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -314,24 +327,30 @@ func (le *LeaderElector) release() bool {
 // tryAcquireOrRenew tries to acquire a leader lease if it is not already acquired,
 // else it tries to renew the lease if it has already been acquired. Returns true
 // on success else returns false.
+// tryAcquireOrRenew试着获取一个leader lease，如果它还没获取到的话，否则试着刷新lease，如果它还没被获取
+// 如果成功的话，返回true，否则返回false
 func (le *LeaderElector) tryAcquireOrRenew() bool {
 	now := metav1.Now()
 	leaderElectionRecord := rl.LeaderElectionRecord{
 		HolderIdentity:       le.config.Lock.Identity(),
 		LeaseDurationSeconds: int(le.config.LeaseDuration / time.Second),
+		// 将RenewTime和AcquireTime都设置为now
 		RenewTime:            now,
 		AcquireTime:          now,
 	}
 
 	// 1. obtain or create the ElectionRecord
+	// 1. 获取或者创建ElectionRecord
 	oldLeaderElectionRecord, err := le.config.Lock.Get()
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			klog.Errorf("error retrieving resource lock %v: %v", le.config.Lock.Describe(), err)
 			return false
 		}
+		// 如果锁还不存在，则创建之
 		if err = le.config.Lock.Create(leaderElectionRecord); err != nil {
 			klog.Errorf("error initially creating leader election record: %v", err)
+			// 创建失败则直接退出
 			return false
 		}
 		le.observedRecord = leaderElectionRecord
@@ -340,27 +359,34 @@ func (le *LeaderElector) tryAcquireOrRenew() bool {
 	}
 
 	// 2. Record obtained, check the Identity & Time
+	// 2. 获取了Record，检查Identity以及Time
 	if !reflect.DeepEqual(le.observedRecord, *oldLeaderElectionRecord) {
+		// 如果Record发生了变更，则更新LeaderElector的observedRecord以及observedTime
 		le.observedRecord = *oldLeaderElectionRecord
 		le.observedTime = le.clock.Now()
 	}
 	if len(oldLeaderElectionRecord.HolderIdentity) > 0 &&
+		// 如果observedTime加上LeaseDuration大于当前时间则表示没有过期
 		le.observedTime.Add(le.config.LeaseDuration).After(now.Time) &&
 		!le.IsLeader() {
+		// lock被其他人掌控并且没有超时
 		klog.V(4).Infof("lock is held by %v and has not yet expired", oldLeaderElectionRecord.HolderIdentity)
 		return false
 	}
 
 	// 3. We're going to try to update. The leaderElectionRecord is set to it's default
 	// here. Let's correct it before updating.
+	// 如果我们是leader，则更新Record，但是AcquireTime不变，LeaderTransitions也不变
 	if le.IsLeader() {
 		leaderElectionRecord.AcquireTime = oldLeaderElectionRecord.AcquireTime
 		leaderElectionRecord.LeaderTransitions = oldLeaderElectionRecord.LeaderTransitions
 	} else {
+		// 如果我们不是leader，则LeaderTransitions加一
 		leaderElectionRecord.LeaderTransitions = oldLeaderElectionRecord.LeaderTransitions + 1
 	}
 
 	// update the lock itself
+	// 更新lock
 	if err = le.config.Lock.Update(leaderElectionRecord); err != nil {
 		klog.Errorf("Failed to update lock: %v", err)
 		return false

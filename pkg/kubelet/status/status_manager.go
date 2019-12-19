@@ -87,6 +87,7 @@ type PodDeletionSafetyProvider interface {
 
 // Manager is the Source of truth for kubelet pod status, and should be kept up-to-date with
 // the latest v1.PodStatus. It also syncs updates back to the API server.
+// Manager是kubelet管理的pod的状态的来源，它将状态返回到API server
 type Manager interface {
 	PodStatusProvider
 
@@ -511,6 +512,7 @@ func (m *manager) syncBatch() {
 }
 
 // syncPod syncs the given status with the API server. The caller must not hold the lock.
+// syncPod和API Server同步状态
 func (m *manager) syncPod(uid types.UID, status versionedPodStatus) {
 	if !m.needsUpdate(uid, status) {
 		klog.V(1).Infof("Status for pod %q is up-to-date; skipping", uid)
@@ -539,6 +541,7 @@ func (m *manager) syncPod(uid types.UID, status versionedPodStatus) {
 	}
 
 	oldStatus := pod.Status.DeepCopy()
+	// 对pod的状态进行更新
 	newPod, patchBytes, err := statusutil.PatchPodStatus(m.kubeClient, pod.Namespace, pod.Name, *oldStatus, mergePodStatus(*oldStatus, status.status))
 	klog.V(3).Infof("Patch status for pod %q with %q", format.Pod(pod), patchBytes)
 	if err != nil {

@@ -83,6 +83,7 @@ type objState struct {
 }
 
 // New returns an etcd3 implementation of storage.Interface.
+// New返回一个storage.Interface的etcd3实现
 func New(c *clientv3.Client, codec runtime.Codec, prefix string, transformer value.Transformer, pagingEnabled bool) storage.Interface {
 	return newStore(c, pagingEnabled, codec, prefix, transformer)
 }
@@ -99,6 +100,7 @@ func newStore(c *clientv3.Client, pagingEnabled bool, codec runtime.Codec, prefi
 		// no-op for default prefix of '/registry'.
 		// keeps compatibility with etcd2 impl for custom prefixes that don't start with '/'
 		pathPrefix:   path.Join("/", prefix),
+		// 构建新的watcher
 		watcher:      newWatcher(c, codec, versioner, transformer),
 		leaseManager: newDefaultLeaseManager(c),
 	}
@@ -115,6 +117,7 @@ func (s *store) Get(ctx context.Context, key string, resourceVersion string, out
 	key = path.Join(s.pathPrefix, key)
 	startTime := time.Now()
 	getResp, err := s.client.KV.Get(ctx, key, s.getOps...)
+	// 记录从etcd获取请求的时间
 	metrics.RecordEtcdRequestLatency("get", getTypeName(out), startTime)
 	if err != nil {
 		return err
@@ -161,6 +164,7 @@ func (s *store) Create(ctx context.Context, key string, obj, out runtime.Object,
 	}
 
 	startTime := time.Now()
+	// 将kv写入etcd
 	txnResp, err := s.client.KV.Txn(ctx).If(
 		notFound(key),
 	).Then(
@@ -484,6 +488,7 @@ func encodeContinue(key, keyPrefix string, resourceVersion int64) (string, error
 }
 
 // List implements storage.Interface.List.
+// List实现了storage.Interface.List接口
 func (s *store) List(ctx context.Context, key, resourceVersion string, pred storage.SelectionPredicate, listObj runtime.Object) error {
 	trace := utiltrace.New("List etcd3",
 		utiltrace.Field{"key", key},
@@ -574,6 +579,7 @@ func (s *store) List(ctx context.Context, key, resourceVersion string, pred stor
 	}
 
 	// loop until we have filled the requested limit from etcd or there are no more results
+	// 循环直到达到了requested limit或者没有更多的结果
 	var lastKey []byte
 	var hasMore bool
 	var getResp *clientv3.GetResponse
@@ -634,6 +640,7 @@ func (s *store) List(ctx context.Context, key, resourceVersion string, pred stor
 
 	// instruct the client to begin querying from immediately after the last key we returned
 	// we never return a key that the client wouldn't be allowed to see
+	// 告诉client从我们返回的上一个key开始querying
 	if hasMore {
 		// we want to start immediately after the last key
 		next, err := encodeContinue(string(lastKey)+"\x00", keyPrefix, returnedRV)
@@ -800,6 +807,7 @@ func (s *store) ttlOpts(ctx context.Context, ttl int64) ([]clientv3.OpOption, er
 
 // decode decodes value of bytes into object. It will also set the object resource version to rev.
 // On success, objPtr would be set to the object.
+// decode将bytes的值解析到object，它也会将object的resource version设置到rev
 func decode(codec runtime.Codec, versioner storage.Versioner, value []byte, objPtr runtime.Object, rev int64) error {
 	if _, err := conversion.EnforcePtr(objPtr); err != nil {
 		return fmt.Errorf("unable to convert output object to pointer: %v", err)

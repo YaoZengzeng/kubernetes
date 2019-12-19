@@ -26,14 +26,18 @@ import (
 )
 
 // Interface can be implemented by anything that knows how to watch and report changes.
+// Interface可以被任何知道watch以及report changes的东西实现
 type Interface interface {
 	// Stops watching. Will close the channel returned by ResultChan(). Releases
 	// any resources used by the watch.
+	// 停止监听，会关掉由ResultChan()返回的channel，释放watch使用的资源
 	Stop()
 
 	// Returns a chan which will receive all the events. If an error occurs
 	// or Stop() is called, this channel will be closed, in which case the
 	// watch should be completely cleaned up.
+	// 返回一个chan，它会收到所有的events，如果有error发生或者调用了Stop()，这个channel会被
+	// 关闭，在这种情况下watch应该被完整地清理
 	ResultChan() <-chan Event
 }
 
@@ -62,6 +66,8 @@ type Event struct {
 	//    only ResourceVersion field is set. On successful restart of watch from a
 	//    bookmark resourceVersion, client is guaranteed to not get repeat event
 	//    nor miss any events.
+	//  * 如果Type为Bookmark：对象中只有ResourceVersion被设置，从一个bookmark resourceVersion
+	//    被成功重启的，client保证不会获取重复的events或者丢失任何的events
 	//  * If Type is Error: *api.Status is recommended; other types may make sense
 	//    depending on context.
 	Object runtime.Object

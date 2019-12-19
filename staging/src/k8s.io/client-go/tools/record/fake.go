@@ -26,6 +26,8 @@ import (
 // FakeRecorder is used as a fake during tests. It is thread safe. It is usable
 // when created manually and not by NewFakeRecorder, however all events may be
 // thrown away in this case.
+// FakeRecorder在测试中作为fake，它是线程安全的，它在手动而不是通过NewFakeRecorder创建的时候是有用的
+// 然而在这种情况下，所有events都可能被丢弃
 type FakeRecorder struct {
 	Events chan string
 }

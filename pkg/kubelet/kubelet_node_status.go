@@ -50,6 +50,7 @@ import (
 // registerWithAPIServer registers the node with the cluster master. It is safe
 // to call multiple times, but not concurrently (kl.registrationCompleted is
 // not locked).
+// registerWithAPIServer将节点注册到cluster master，调用多次（非并发）是安全的
 func (kl *Kubelet) registerWithAPIServer() {
 	if kl.registrationCompleted {
 		return
@@ -95,6 +96,7 @@ func (kl *Kubelet) tryRegisterWithAPIServer(node *v1.Node) bool {
 		return false
 	}
 
+	// 首先判断同名的node名字是否存在
 	existingNode, err := kl.kubeClient.CoreV1().Nodes().Get(string(kl.nodeName), metav1.GetOptions{})
 	if err != nil {
 		klog.Errorf("Unable to register node %q with API server: error getting existing node: %v", kl.nodeName, err)
@@ -214,6 +216,7 @@ func (kl *Kubelet) reconcileCMADAnnotationWithExistingNode(node, existingNode *v
 
 // initialNode constructs the initial v1.Node for this Kubelet, incorporating node
 // labels, information from the cloud provider, and Kubelet configuration.
+// initialNode为这个Kubelet构建一个初始的v1.Node结构，加入node labels以及cloud provider的信息以及Kubelet的配置
 func (kl *Kubelet) initialNode() (*v1.Node, error) {
 	node := &v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
@@ -358,8 +361,10 @@ func (kl *Kubelet) initialNode() (*v1.Node, error) {
 }
 
 // syncNodeStatus should be called periodically from a goroutine.
+// syncNodeStatus应该在一个goroutine中阶段性地被调用
 // It synchronizes node status to master if there is any change or enough time
 // passed from the last sync, registering the kubelet first if necessary.
+// 它同步节点状态到master，如果发生了任何变更或者从上次同步过后经过了足够多的时间，首先注册kubelet
 func (kl *Kubelet) syncNodeStatus() {
 	kl.syncNodeStatusMux.Lock()
 	defer kl.syncNodeStatusMux.Unlock()

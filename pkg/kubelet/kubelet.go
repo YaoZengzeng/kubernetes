@@ -241,6 +241,7 @@ type Builder func(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 // Dependencies is a bin for things we might consider "injected dependencies" -- objects constructed
 // at runtime that are necessary for running the Kubelet. This is a temporary solution for grouping
 // these objects while we figure out a more comprehensive dependency injection story for the Kubelet.
+// Dependencies是一种依赖注入 -- 为了运行Kubelet在运行时构建的各种对象
 type Dependencies struct {
 	Options []Option
 
@@ -253,6 +254,7 @@ type Dependencies struct {
 	EventClient             v1core.EventsGetter
 	HeartbeatClient         clientset.Interface
 	OnHeartbeatFailure      func()
+	// clientset
 	KubeClient              clientset.Interface
 	Mounter                 mount.Interface
 	HostUtil                hostutil.HostUtils
@@ -444,6 +446,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 		PodCgroupRoot:            kubeDeps.ContainerManager.GetPodCgroupRoot(),
 	}
 
+	// 创建service的reflector
 	serviceIndexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
 	if kubeDeps.KubeClient != nil {
 		serviceLW := cache.NewListWatchFromClient(kubeDeps.KubeClient.CoreV1().RESTClient(), "services", metav1.NamespaceAll, fields.Everything())
@@ -452,6 +455,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 	}
 	serviceLister := corelisters.NewServiceLister(serviceIndexer)
 
+	// 创建node的indexer
 	nodeIndexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
 	if kubeDeps.KubeClient != nil {
 		fieldSelector := fields.Set{api.ObjectNameField: string(nodeName)}.AsSelector()
@@ -459,6 +463,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 		r := cache.NewReflector(nodeLW, &v1.Node{}, nodeIndexer, 0)
 		go r.Run(wait.NeverStop)
 	}
+	// 对node info进行缓存
 	nodeInfo := &CachedNodeInfo{NodeLister: corelisters.NewNodeLister(nodeIndexer)}
 
 	// TODO: get the real node object of ourself,
@@ -1418,6 +1423,7 @@ func (kl *Kubelet) Run(updates <-chan kubetypes.PodUpdate) {
 
 	if kl.kubeClient != nil {
 		// Start syncing node status immediately, this may set up things the runtime needs to run.
+		// 开始立刻同步节点状态
 		go wait.Until(kl.syncNodeStatus, kl.nodeStatusUpdateFrequency, wait.NeverStop)
 		go kl.fastStatusUpdateOnce()
 
@@ -2314,6 +2320,7 @@ type CachedNodeInfo struct {
 }
 
 // GetNodeInfo returns cached data for the node name.
+// GetNodeInfo返回node name到缓存数据
 func (c *CachedNodeInfo) GetNodeInfo(nodeName string) (*v1.Node, error) {
 	node, err := c.Get(nodeName)
 

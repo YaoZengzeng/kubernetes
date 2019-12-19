@@ -78,6 +78,7 @@ func createAggregatorConfig(
 	}
 
 	// copy the etcd options so we don't mutate originals.
+	// 拷贝etcd的配置，这样我们就不会修改originals
 	etcdOptions := *commandOptions.Etcd
 	etcdOptions.StorageConfig.Paging = utilfeature.DefaultFeatureGate.Enabled(features.APIListChunking)
 	etcdOptions.StorageConfig.Codec = aggregatorscheme.Codecs.LegacyCodec(v1beta1.SchemeGroupVersion, v1.SchemeGroupVersion)
@@ -128,6 +129,7 @@ func createAggregatorServer(aggregatorConfig *aggregatorapiserver.Config, delega
 	}
 
 	// create controllers for auto-registration
+	// 创建controllers用于自动注册
 	apiRegistrationClient, err := apiregistrationclient.NewForConfig(aggregatorConfig.GenericConfig.LoopbackClientConfig)
 	if err != nil {
 		return nil, err

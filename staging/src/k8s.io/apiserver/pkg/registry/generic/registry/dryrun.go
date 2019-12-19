@@ -25,6 +25,7 @@ import (
 )
 
 type DryRunnableStorage struct {
+	// 底层存储
 	Storage storage.Interface
 	Codec   runtime.Codec
 }

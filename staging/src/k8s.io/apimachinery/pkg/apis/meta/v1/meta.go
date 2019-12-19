@@ -30,6 +30,7 @@ type ObjectMetaAccessor interface {
 // internal API objects. Attempting to set or retrieve a field on an object that does
 // not support that field (Name, UID, Namespace on lists) will be a no-op and return
 // a default value.
+// Object能够让你对任何版本或者内部的API对象得到对象的metadata
 type Object interface {
 	GetNamespace() string
 	SetNamespace(namespace string)
@@ -84,6 +85,7 @@ type Common interface {
 // ListInterface lets you work with list metadata from any of the versioned or
 // internal API objects. Attempting to set or retrieve a field on an object that does
 // not support that field will be a no-op and return a default value.
+// ListInterface能够让你从versioned或者internal API对象获取list metadata
 // TODO: move this, and TypeMeta and ListMeta, to a different package
 type ListInterface interface {
 	GetResourceVersion() string

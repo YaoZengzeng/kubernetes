@@ -33,6 +33,7 @@ func PatchPodStatus(c clientset.Interface, namespace, name string, oldPodStatus,
 		return nil, nil, err
 	}
 
+	// 直接用Patch方法对status进行更新
 	updatedPod, err := c.CoreV1().Pods(namespace).Patch(name, types.StrategicMergePatchType, patchBytes, "status")
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to patch status %q for pod %q/%q: %v", patchBytes, namespace, name, err)

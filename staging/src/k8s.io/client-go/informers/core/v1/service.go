@@ -33,6 +33,7 @@ import (
 
 // ServiceInformer provides access to a shared informer and lister for
 // Services.
+// ServiceInformer包含Informer()和Lister()两部分组成
 type ServiceInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() v1.ServiceLister
@@ -81,9 +82,11 @@ func (f *serviceInformer) defaultInformer(client kubernetes.Interface, resyncPer
 }
 
 func (f *serviceInformer) Informer() cache.SharedIndexInformer {
+	// 利用factory找到对应的Informer
 	return f.factory.InformerFor(&corev1.Service{}, f.defaultInformer)
 }
 
 func (f *serviceInformer) Lister() v1.ServiceLister {
+	// Lister也是通过调用NewServiceLister，参数也是为f.Informer().GetIndexer()
 	return v1.NewServiceLister(f.Informer().GetIndexer())
 }

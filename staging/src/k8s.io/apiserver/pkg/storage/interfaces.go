@@ -103,6 +103,7 @@ func ValidateAllObjectFunc(ctx context.Context, obj runtime.Object) error {
 }
 
 // Preconditions must be fulfilled before an operation (update, delete, etc.) is carried out.
+// Preconditions必须被填充，在操作被执行之前（update, delete等等）
 type Preconditions struct {
 	// Specifies the target UID.
 	// +optional
@@ -149,6 +150,7 @@ func (p *Preconditions) Check(key string, obj runtime.Object) error {
 
 // Interface offers a common interface for object marshaling/unmarshaling operations and
 // hides all the storage-related operations behind it.
+// Interface提供了对于对象的marshal/unmarshal的通用接口并且隐藏了它背后所有存储相关的操作
 type Interface interface {
 	// Returns Versioner associated with this interface.
 	Versioner() Versioner
@@ -156,6 +158,8 @@ type Interface interface {
 	// Create adds a new object at a key unless it already exists. 'ttl' is time-to-live
 	// in seconds (0 means forever). If no error is returned and out is not nil, out will be
 	// set to the read value from database.
+	// Create创建一个新的键值为key的对象，除非它已经存在了，'ttl'是对象存在的时间（0代表永久），如果没有错误返回
+	// 并且out不为nil，out就是从数据库读取的值
 	Create(ctx context.Context, key string, obj, out runtime.Object, ttl uint64) error
 
 	// Delete removes the specified key and returns the value that existed at that spot.
@@ -164,11 +168,14 @@ type Interface interface {
 
 	// Watch begins watching the specified key. Events are decoded into API objects,
 	// and any items selected by 'p' are sent down to returned watch.Interface.
+	// Watch开始监听特定的key，Events会被解码到API对象并且任何由p选择的items都会通过watch.Interface返回
 	// resourceVersion may be used to specify what version to begin watching,
 	// which should be the current resourceVersion, and no longer rv+1
 	// (e.g. reconnecting without missing any updates).
+	// resourceVersion可以用来从特定的版本号进行监听，它应该为当前的resourceVersion而不应该是rv+1
 	// If resource version is "0", this interface will get current object at given key
 	// and send it in an "ADDED" event, before watch starts.
+	// 如果resource version为"0"，这个接口会获得给定key的当前对象并且在一个"ADDED"事件里发送，在watch开始之前
 	Watch(ctx context.Context, key string, resourceVersion string, p SelectionPredicate) (watch.Interface, error)
 
 	// WatchList begins watching the specified key's items. Items are decoded into API
@@ -197,10 +204,12 @@ type Interface interface {
 	// into *List api object (an object that satisfies runtime.IsList definition).
 	// The returned contents may be delayed, but it is guaranteed that they will
 	// be have at least 'resourceVersion'.
+	// List解码由key定义的目录的jsons并且将它们写入*List对象中
 	List(ctx context.Context, key string, resourceVersion string, p SelectionPredicate, listObj runtime.Object) error
 
 	// GuaranteedUpdate keeps calling 'tryUpdate()' to update key 'key' (of type 'ptrToType')
 	// retrying the update until success if there is index conflict.
+	// GuaranteedUpdate持续调用'tryUpdate()'来更新key，重试更新直到成功
 	// Note that object passed to tryUpdate may change across invocations of tryUpdate() if
 	// other writers are simultaneously updating it, so tryUpdate() needs to take into account
 	// the current contents of the object when deciding how the update object should look.

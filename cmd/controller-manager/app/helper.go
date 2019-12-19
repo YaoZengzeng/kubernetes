@@ -28,6 +28,7 @@ import (
 )
 
 // WaitForAPIServer waits for the API Server's /healthz endpoint to report "ok" with timeout.
+// WaitForAPIServer等待API Server的/healthz端口回复"ok"并且有timeout的限制
 func WaitForAPIServer(client clientset.Interface, timeout time.Duration) error {
 	var lastErr error
 

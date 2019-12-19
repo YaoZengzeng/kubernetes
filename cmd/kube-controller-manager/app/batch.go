@@ -35,6 +35,7 @@ func startJobController(ctx ControllerContext) (http.Handler, bool, error) {
 		return nil, false, nil
 	}
 	go job.NewJobController(
+		// 创建各个informers
 		ctx.InformerFactory.Core().V1().Pods(),
 		ctx.InformerFactory.Batch().V1().Jobs(),
 		ctx.ClientBuilder.ClientOrDie("job-controller"),

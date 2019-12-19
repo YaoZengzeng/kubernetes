@@ -101,6 +101,7 @@ var (
 type ResyncPeriodFunc func() time.Duration
 
 // Returns 0 for resyncPeriod in case resyncing is not needed.
+// 返回的resyncPeriod为0，如果不需要resyncing不需要的话
 func NoResyncPeriodFunc() time.Duration {
 	return 0
 }
@@ -153,6 +154,7 @@ type ControllerExpectationsInterface interface {
 }
 
 // ControllerExpectations is a cache mapping controllers to what they expect to see before being woken up for a sync.
+// ControllerExpectations是一个cache用于映射controllers到它们想要看到的东西，在被唤醒进行同步之前
 type ControllerExpectations struct {
 	cache.Store
 }
@@ -261,6 +263,7 @@ type Expectations interface {
 }
 
 // ControlleeExpectations track controllee creates/deletes.
+// ControlleeExpectations记录被控制者的creates/deletes
 type ControlleeExpectations struct {
 	// Important: Since these two int64 fields are using sync/atomic, they have to be at the top of the struct due to a bug on 32-bit platforms
 	// See: https://golang.org/pkg/sync/atomic/ for more information
@@ -433,6 +436,7 @@ type ControllerRevisionControlInterface interface {
 }
 
 // RealControllerRevisionControl is the default implementation of ControllerRevisionControlInterface.
+// RealControllerRevisionControl是ControllerRevisionControlInterface的默认实现
 type RealControllerRevisionControl struct {
 	KubeClient clientset.Interface
 }
@@ -440,12 +444,14 @@ type RealControllerRevisionControl struct {
 var _ ControllerRevisionControlInterface = &RealControllerRevisionControl{}
 
 func (r RealControllerRevisionControl) PatchControllerRevision(namespace, name string, data []byte) error {
+	// 直接给revision打patch
 	_, err := r.KubeClient.AppsV1().ControllerRevisions(namespace).Patch(name, types.StrategicMergePatchType, data)
 	return err
 }
 
 // PodControlInterface is an interface that knows how to add or delete pods
 // created as an interface to allow testing.
+// PodControlInterface是一个接口，它知道如何增加或者删除pods，作为一个接口用于测试
 type PodControlInterface interface {
 	// CreatePods creates new pods according to the spec.
 	CreatePods(namespace string, template *v1.PodTemplateSpec, object runtime.Object) error
@@ -560,6 +566,7 @@ func GetPodFromTemplate(template *v1.PodTemplateSpec, parentObject runtime.Objec
 		},
 	}
 	if controllerRef != nil {
+		// 设置pod的OwnerReferences
 		pod.OwnerReferences = append(pod.OwnerReferences, *controllerRef)
 	}
 	pod.Spec = *template.Spec.DeepCopy()
@@ -572,22 +579,27 @@ func (r RealPodControl) createPods(nodeName, namespace string, template *v1.PodT
 		return err
 	}
 	if len(nodeName) != 0 {
+		// 设置NodeName
 		pod.Spec.NodeName = nodeName
 	}
 	if len(labels.Set(pod.Labels)) == 0 {
+		// pods必须有labels
 		return fmt.Errorf("unable to create pods, no labels")
 	}
+	// 创建新的Pods
 	newPod, err := r.KubeClient.CoreV1().Pods(namespace).Create(pod)
 	if err != nil {
 		r.Recorder.Eventf(object, v1.EventTypeWarning, FailedCreatePodReason, "Error creating: %v", err)
 		return err
 	}
+	// 获取pods的元数据
 	accessor, err := meta.Accessor(object)
 	if err != nil {
 		klog.Errorf("parentObject does not have ObjectMeta, %v", err)
 		return nil
 	}
 	klog.V(4).Infof("Controller %v created pod %v", accessor.GetName(), newPod.Name)
+	// 产生事件
 	r.Recorder.Eventf(object, v1.EventTypeNormal, SuccessfulCreatePodReason, "Created pod: %v", newPod.Name)
 
 	return nil

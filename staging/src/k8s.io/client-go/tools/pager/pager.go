@@ -32,9 +32,11 @@ const defaultPageSize = 500
 const defaultPageBufferSize = 10
 
 // ListPageFunc returns a list object for the given list options.
+// ListPageFunc为给定的list options返回一个list object
 type ListPageFunc func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error)
 
 // SimplePageFunc adapts a context-less list function into one that accepts a context.
+// SimplePageFunc将一个context-less的list函数适配到能够接受一个context
 func SimplePageFunc(fn func(opts metav1.ListOptions) (runtime.Object, error)) ListPageFunc {
 	return func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error) {
 		return fn(opts)
@@ -45,6 +47,8 @@ func SimplePageFunc(fn func(opts metav1.ListOptions) (runtime.Object, error)) Li
 // smaller chunks of PageSize or smaller. PageFn is expected to accept a
 // metav1.ListOptions that supports paging and return a list. The pager does
 // not alter the field or label selectors on the initial options list.
+// ListPager帮助client code将大的list queries划分为多个小的PageSize的chunks或者更小
+// PageFn期望接受一个metav1.ListOptions能够支持paging并且返回一个list
 type ListPager struct {
 	PageSize int64
 	PageFn   ListPageFunc
@@ -58,6 +62,8 @@ type ListPager struct {
 // New creates a new pager from the provided pager function using the default
 // options. It will fall back to a full list if an expiration error is encountered
 // as a last resort.
+// New用默认的配置从给定的pager function创建一个新的pager，如果上一次报错是expiration error
+// 则它会回到一个full list的状态
 func New(fn ListPageFunc) *ListPager {
 	return &ListPager{
 		PageSize:          defaultPageSize,
@@ -73,6 +79,8 @@ func New(fn ListPageFunc) *ListPager {
 // List returns a single list object, but attempts to retrieve smaller chunks from the
 // server to reduce the impact on the server. If the chunk attempt fails, it will load
 // the full list instead. The Limit field on options, if unset, will default to the page size.
+// List返回单个的list object，但是试着从server获取更小的chunks来减小对server的压力，如果尝试获取chunk失败
+// 它会转而载入完整的list，options中的Limit字段会默认设置为page size
 func (p *ListPager) List(ctx context.Context, options metav1.ListOptions) (runtime.Object, error) {
 	if options.Limit == 0 {
 		options.Limit = p.PageSize
@@ -91,27 +99,33 @@ func (p *ListPager) List(ctx context.Context, options metav1.ListOptions) (runti
 				return nil, err
 			}
 			// the list expired while we were processing, fall back to a full list
+			// 我们在处理的时候list过期了，重新回到full list
+			// 可能是server的配置发生了变化
 			options.Limit = 0
 			options.Continue = ""
 			return p.PageFn(ctx, options)
 		}
+		// 从对象中解析出ListAccessor
 		m, err := meta.ListAccessor(obj)
 		if err != nil {
 			return nil, fmt.Errorf("returned object must be a list: %v", err)
 		}
 
 		// exit early and return the object we got if we haven't processed any pages
+		// 如果我们没有处理任何的pages则提早退出并且返回我们已经获取的对象
 		if len(m.GetContinue()) == 0 && list == nil {
 			return obj, nil
 		}
 
 		// initialize the list and fill its contents
+		// 初始化list并且用它的内容进行填充
 		if list == nil {
 			list = &metainternalversion.List{Items: make([]runtime.Object, 0, options.Limit+1)}
 			list.ResourceVersion = m.GetResourceVersion()
 			list.SelfLink = m.GetSelfLink()
 		}
 		if err := meta.EachListItem(obj, func(obj runtime.Object) error {
+			// 扩展list的Items对象
 			list.Items = append(list.Items, obj)
 			return nil
 		}); err != nil {
@@ -119,11 +133,13 @@ func (p *ListPager) List(ctx context.Context, options metav1.ListOptions) (runti
 		}
 
 		// if we have no more items, return the list
+		// 如果没有更多的items，则直接返回list
 		if len(m.GetContinue()) == 0 {
 			return list, nil
 		}
 
 		// set the next loop up
+		// 开始下一次循环
 		options.Continue = m.GetContinue()
 	}
 }

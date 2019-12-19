@@ -37,4 +37,5 @@ type SharedInformerFactory interface {
 }
 
 // TweakListOptionsFunc is a function that transforms a v1.ListOptions.
+// TweakListOptionsFunc是一个函数用于转换一个v1.ListOptions
 type TweakListOptionsFunc func(*v1.ListOptions)

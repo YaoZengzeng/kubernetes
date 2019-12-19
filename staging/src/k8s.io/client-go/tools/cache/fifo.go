@@ -25,6 +25,7 @@ import (
 
 // PopProcessFunc is passed to Pop() method of Queue interface.
 // It is supposed to process the element popped from the queue.
+// PopProcessFunc传输给Queue接口的Pop()方法，它应该处理从队列中弹出的element
 type PopProcessFunc func(interface{}) error
 
 // ErrRequeue may be returned by a PopProcessFunc to safely requeue
@@ -45,13 +46,17 @@ func (e ErrRequeue) Error() string {
 }
 
 // Queue is exactly like a Store, but has a Pop() method too.
+// Queue和Store非常类似，但是同时有一个Pop()方法
 type Queue interface {
 	Store
 
 	// Pop blocks until it has something to process.
+	// Pop阻塞直到有什么东西可以处理
 	// It returns the object that was process and the result of processing.
+	// 它返回处理的对象以及处理的结果
 	// The PopProcessFunc may return an ErrRequeue{...} to indicate the item
 	// should be requeued before releasing the lock on the queue.
+	// PopProcessFunc可能返回一个ErrRequeue{...}用来表示item应该被重新入队，在释放队列的锁之前
 	Pop(PopProcessFunc) (interface{}, error)
 
 	// AddIfNotPresent adds a value previously
@@ -297,6 +302,8 @@ func (f *FIFO) Pop(process PopProcessFunc) (interface{}, error) {
 // 'f' takes ownership of the map, you should not reference the map again
 // after calling this function. f's queue is reset, too; upon return, it
 // will contain the items in the map, in no particular order.
+// Replace会删除'f'的内容而使用给定的map，f会获取map的所有权，在调用这个函数之后不应该再引用这个map
+// f的队列被重置了，在返回的时候，它会在map中保存items，并没有特定的顺序
 func (f *FIFO) Replace(list []interface{}, resourceVersion string) error {
 	items := make(map[string]interface{}, len(list))
 	for _, item := range list {

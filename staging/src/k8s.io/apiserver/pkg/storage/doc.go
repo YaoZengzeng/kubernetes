@@ -15,4 +15,5 @@ limitations under the License.
 */
 
 // Interfaces for database-related operations.
+// storage包包含了数据库相关的操作
 package storage // import "k8s.io/apiserver/pkg/storage"

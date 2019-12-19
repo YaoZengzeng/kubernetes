@@ -160,6 +160,7 @@ var (
 // startCompactorOnce start one compactor per transport. If the interval get smaller on repeated calls, the
 // compactor is replaced. A destroy func is returned. If all destroy funcs with the same transport are called,
 // the compactor is stopped.
+// startCompactorOnce每个transport启动一个compactor
 func startCompactorOnce(c storagebackend.TransportConfig, interval time.Duration) (func(), error) {
 	lock.Lock()
 	defer lock.Unlock()
@@ -212,6 +213,7 @@ func newETCD3Storage(c storagebackend.Config) (storage.Interface, DestroyFunc, e
 		return nil, nil, err
 	}
 
+	// 创建etcd client
 	client, err := newETCD3Client(c.Transport)
 	if err != nil {
 		stopCompactor()
@@ -224,6 +226,7 @@ func newETCD3Storage(c storagebackend.Config) (storage.Interface, DestroyFunc, e
 		// Hence, we only destroy once.
 		// TODO: fix duplicated storage destroy calls higher level
 		once.Do(func() {
+			// DestroyFunc就是关闭Compactor和client
 			stopCompactor()
 			client.Close()
 		})

@@ -53,6 +53,7 @@ func ParseKindArg(arg string) (*GroupVersionKind, GroupKind) {
 
 // GroupResource specifies a Group and a Resource, but does not force a version.  This is useful for identifying
 // concepts during lookup stages without having partially valid types
+// GroupResource指定了一个Group和一个Resource，但是没有要求version
 type GroupResource struct {
 	Group    string
 	Resource string
@@ -139,6 +140,7 @@ func (gk GroupKind) String() string {
 
 // GroupVersionKind unambiguously identifies a kind.  It doesn't anonymously include GroupVersion
 // to avoid automatic coercion.  It doesn't use a GroupVersion to avoid custom marshalling
+// GroupVersionKind明确地标识了一个类型
 type GroupVersionKind struct {
 	Group   string
 	Version string

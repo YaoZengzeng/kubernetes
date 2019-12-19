@@ -23,6 +23,7 @@ import (
 
 func IsJobFinished(j *batch.Job) bool {
 	for _, c := range j.Status.Conditions {
+		// 如果Condition的类型为JobComplete或者JobFailed，或者Condition.Status为ConditionTrue，则说明Job已经结束
 		if (c.Type == batch.JobComplete || c.Type == batch.JobFailed) && c.Status == v1.ConditionTrue {
 			return true
 		}

@@ -25,6 +25,7 @@ import (
 
 // FullChannelBehavior controls how the Broadcaster reacts if a watcher's watch
 // channel is full.
+// FullChannelBehavior控制当watcher的watch channel满的时候，Broadcaster如何反应
 type FullChannelBehavior int
 
 const (
@@ -39,6 +40,7 @@ const incomingQueueLength = 25
 
 // Broadcaster distributes event notifications among any number of watchers. Every event
 // is delivered to every watcher.
+// Broadcaster在一系列的watchers之间分发event notifications，每个event都分发到每个watcher
 type Broadcaster struct {
 	// TODO: see if this lock is needed now that new watchers go through
 	// the incoming channel.

@@ -70,6 +70,7 @@ type ExtraConfig struct {
 	ProxyTransport *http.Transport
 
 	// Mechanism by which the Aggregator will resolve services. Required.
+	// Aggregator会用ServiceResolver来解析services
 	ServiceResolver ServiceResolver
 
 	EnableAggregatedDiscoveryTimeout bool

@@ -90,6 +90,7 @@ var toDiscoveryKubeVerb = map[string]string{
 }
 
 // Install handlers for API resources.
+// Install为API资源对象注册handlers
 func (a *APIInstaller) Install() ([]metav1.APIResource, *restful.WebService, []error) {
 	var apiResources []metav1.APIResource
 	var errors []error
@@ -116,6 +117,7 @@ func (a *APIInstaller) Install() ([]metav1.APIResource, *restful.WebService, []e
 }
 
 // newWebService creates a new restful webservice with the api installer's prefix and version.
+// newWebService用api installer的prefix以及version创建一个新的restful webservice
 func (a *APIInstaller) newWebService() *restful.WebService {
 	ws := new(restful.WebService)
 	ws.Path(a.prefix)
@@ -632,6 +634,7 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 			if isSubresource {
 				doc = "read " + subresource + " of the specified " + kind
 			}
+			// 增加route
 			route := ws.GET(action.Path).To(handler).
 				Doc(doc).
 				Param(ws.QueryParameter("pretty", "If 'true', then the output is pretty printed.")).
@@ -706,6 +709,7 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 			addParams(route, action.Params)
 			routes = append(routes, route)
 		case "PATCH": // Partially update a resource
+			// 部分地更新一个resource
 			doc := "partially update the specified " + kind
 			if isSubresource {
 				doc = "partially update " + subresource + " of the specified " + kind
@@ -736,6 +740,7 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 		case "POST": // Create a resource.
 			var handler restful.RouteFunction
 			if isNamedCreater {
+				// 创建named resource的handler
 				handler = restfulCreateNamedResource(namedCreater, reqScope, admit)
 			} else {
 				handler = restfulCreateResource(creater, reqScope, admit)

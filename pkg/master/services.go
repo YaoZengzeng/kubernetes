@@ -40,6 +40,7 @@ func ServiceIPRange(passedServiceClusterIPRange net.IPNet) (net.IPNet, net.IP, e
 	}
 
 	// Select the first valid IP from ServiceClusterIPRange to use as the GenericAPIServer service IP.
+	// 从ServiceClusterIPRange获取第一个合法的IP作为GenericAPIServer的service IP
 	apiServerServiceIP, err := ipallocator.GetIndexedIP(&serviceClusterIPRange, 1)
 	if err != nil {
 		return net.IPNet{}, net.IP{}, err

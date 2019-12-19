@@ -37,6 +37,7 @@ import (
 
 const (
 	// We have set a buffer in order to reduce times of context switches.
+	// 我们设置了一个buffer为了减少context switches的时间
 	incomingBufSize = 100
 	outgoingBufSize = 100
 )
@@ -73,6 +74,7 @@ type watcher struct {
 }
 
 // watchChan implements watch.Interface.
+// watchChan实现了watch.Interface
 type watchChan struct {
 	watcher           *watcher
 	key               string
@@ -98,9 +100,13 @@ func newWatcher(client *clientv3.Client, codec runtime.Codec, versioner storage.
 // Watch watches on a key and returns a watch.Interface that transfers relevant notifications.
 // If rev is zero, it will return the existing object(s) and then start watching from
 // the maximum revision+1 from returned objects.
+// Watch监听一个key并且返回一个watch.Interface，它会转换相应的notifications
+// 如果rev为0，它会返回已经存在的对象并且从返回对象的最大的revision+1开始监听
 // If rev is non-zero, it will watch events happened after given revision.
+// 如果rev非零，它会从给定的revision开始监听
 // If recursive is false, it watches on given key.
 // If recursive is true, it watches any children and directories under the key, excluding the root key itself.
+// 如果recursive为fasle，则它会监听任何的children以及key之下的目录，除了root key自身
 // pred must be non-nil. Only if pred matches the change, it will be returned.
 func (w *watcher) Watch(ctx context.Context, key string, rev int64, recursive bool, pred storage.SelectionPredicate) (watch.Interface, error) {
 	if recursive && !strings.HasSuffix(key, "/") {
@@ -132,6 +138,7 @@ func (w *watcher) createWatchChan(ctx context.Context, key string, rev int64, re
 
 func (wc *watchChan) run() {
 	watchClosedCh := make(chan struct{})
+	// 开始进行watch
 	go wc.startWatching(watchClosedCh)
 
 	var resultChanWG sync.WaitGroup
@@ -157,9 +164,12 @@ func (wc *watchChan) run() {
 
 	// We use wc.ctx to reap all goroutines. Under whatever condition, we should stop them all.
 	// It's fine to double cancel.
+	// 我们用wc.ctx来收割所有的goroutines，无论在什么情况下，我们都应该把它们都停止了
+	// cancel两次都是OK的
 	wc.cancel()
 
 	// we need to wait until resultChan wouldn't be used anymore
+	// 我们需要等待，直到resultChan不再使用
 	resultChanWG.Wait()
 	close(wc.resultChan)
 }
@@ -194,6 +204,9 @@ func (wc *watchChan) sync() error {
 // startWatching does:
 // - get current objects if initialRev=0; set initialRev to current rev
 // - watch on given key and send events to process.
+// startWatching做的事情如下：
+// - 如果initialRev为0，则获取当前的对象；设置initialRev为当前的rev
+// - 监听给定的key并且发送events到进程
 func (wc *watchChan) startWatching(watchClosedCh chan struct{}) {
 	if wc.initialRev == 0 {
 		if err := wc.sync(); err != nil {
@@ -206,15 +219,18 @@ func (wc *watchChan) startWatching(watchClosedCh chan struct{}) {
 	if wc.recursive {
 		opts = append(opts, clientv3.WithPrefix())
 	}
+	// 调用etcd的client进行watch
 	wch := wc.watcher.client.Watch(wc.ctx, wc.key, opts...)
 	for wres := range wch {
 		if wres.Err() != nil {
 			err := wres.Err()
 			// If there is an error on server (e.g. compaction), the channel will return it before closed.
+			// 如果server有错误（比如 compaction），则channel会在关闭之前返回它
 			klog.Errorf("watch chan error: %v", err)
 			wc.sendError(err)
 			return
 		}
+		// 对watch得到的events进行处理
 		for _, e := range wres.Events {
 			parsedEvent, err := parseEvent(e)
 			if err != nil {
@@ -227,8 +243,11 @@ func (wc *watchChan) startWatching(watchClosedCh chan struct{}) {
 	}
 	// When we come to this point, it's only possible that client side ends the watch.
 	// e.g. cancel the context, close the client.
+	// 当我们到达这里的时候，只有可能是客户端结束了watch，比如取消了context，关闭了client
 	// If this watch chan is broken and context isn't cancelled, other goroutines will still hang.
 	// We should notify the main thread that this goroutine has exited.
+	// 如果watch chan在这里broken了，context没有被取消，其他goroutine还是会hang住
+	// 因此我们需要通知main thread，这个goroutine已经退出了
 	close(watchClosedCh)
 }
 
@@ -250,6 +269,7 @@ func (wc *watchChan) processEvent(wg *sync.WaitGroup) {
 			// If user couldn't receive results fast enough, we also block incoming events from watcher.
 			// Because storing events in local will cause more memory usage.
 			// The worst case would be closing the fast watcher.
+			// 将events存储在本地可能会导致更多的内存使用，最坏的情况是关闭fast watcher
 			select {
 			case wc.resultChan <- *res:
 			case <-wc.ctx.Done():
@@ -351,11 +371,13 @@ func (wc *watchChan) sendError(err error) {
 
 func (wc *watchChan) sendEvent(e *event) {
 	if len(wc.incomingEventChan) == incomingBufSize {
+		// watcher更快但是处理地慢，可能是因为解码太慢，用户接受不够快以及其他原因造成的
 		klog.V(3).Infof("Fast watcher, slow processing. Number of buffered events: %d."+
 			"Probably caused by slow decoding, user not receiving fast, or other processing logic",
 			incomingBufSize)
 	}
 	select {
+	// 直接将event放入channel
 	case wc.incomingEventChan <- e:
 	case <-wc.ctx.Done():
 	}
@@ -367,6 +389,7 @@ func (wc *watchChan) prepareObjs(e *event) (curObj runtime.Object, oldObj runtim
 		if err != nil {
 			return nil, nil, err
 		}
+		// 对数据进行解码
 		curObj, err = decodeObj(wc.watcher.codec, wc.watcher.versioner, data, e.rev)
 		if err != nil {
 			return nil, nil, err

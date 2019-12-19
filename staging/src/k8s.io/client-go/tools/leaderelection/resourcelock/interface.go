@@ -33,8 +33,10 @@ const (
 )
 
 // LeaderElectionRecord is the record that is stored in the leader election annotation.
+// LeaderElectionRecord是一个record，它会存放在leader election的annotation中
 // This information should be used for observational purposes only and could be replaced
 // with a random string (e.g. UUID) with only slight modification of this code.
+// 这个信息只是用于可视化的目的，并且可以用一个随机字符串替换
 // TODO(mikedanese): this should potentially be versioned
 type LeaderElectionRecord struct {
 	// HolderIdentity is the ID that owns the lease. If empty, no one owns this lease and
@@ -59,6 +61,7 @@ type EventRecorder interface {
 type ResourceLockConfig struct {
 	// Identity is the unique string identifying a lease holder across
 	// all participants in an election.
+	// Identity用于标识在一个选举中的一个lease holder
 	Identity string
 	// EventRecorder is optional.
 	EventRecorder EventRecorder
@@ -69,6 +72,8 @@ type ResourceLockConfig struct {
 // to hide the details on specific implementations in order to allow
 // them to change over time.  This interface is strictly for use
 // by the leaderelection code.
+// Interface提供了对于在选主中锁住任意资源的通用接口，Interface用于隐藏具体的实现，从而
+// 允许它们能够变更
 type Interface interface {
 	// Get returns the LeaderElectionRecord
 	Get() (*LeaderElectionRecord, error)
@@ -83,14 +88,17 @@ type Interface interface {
 	RecordEvent(string)
 
 	// Identity will return the locks Identity
+	// Identity返回锁的标识
 	Identity() string
 
 	// Describe is used to convert details on current resource lock
 	// into a string
+	// Describe将当前资源锁的细节转换为字符串
 	Describe() string
 }
 
 // Manufacture will create a lock of a given type according to the input parameters
+// 根据输入参数构造一个给定类型的锁
 func New(lockType string, ns string, name string, coreClient corev1.CoreV1Interface, coordinationClient coordinationv1.CoordinationV1Interface, rlc ResourceLockConfig) (Interface, error) {
 	switch lockType {
 	case EndpointsResourceLock:

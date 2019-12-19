@@ -21,4 +21,6 @@ limitations under the License.
 // list currently available nodes), and one that additionally acts as
 // a FIFO queue (for example, to allow a scheduler to process incoming
 // pods).
+// 提供了两个stores，一个简单地缓存对象（比如，让scheduler能够list当前的所有nodes）
+// 另一个是增量式地作为FIFO队列（比如允许scheduler处理incoming pods）
 package cache // import "k8s.io/client-go/tools/cache"

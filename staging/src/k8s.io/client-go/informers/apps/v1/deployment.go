@@ -33,6 +33,7 @@ import (
 
 // DeploymentInformer provides access to a shared informer and lister for
 // Deployments.
+// DeploymentInformer提供对于一个shared informer以及Deployments的lister的访问
 type DeploymentInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() v1.DeploymentLister

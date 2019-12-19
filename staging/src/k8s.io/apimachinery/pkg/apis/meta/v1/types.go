@@ -40,6 +40,7 @@ import (
 // +k8s:deepcopy-gen=false
 type TypeMeta struct {
 	// Kind is a string value representing the REST resource this object represents.
+	// Kind代表了这个对象的REST资源
 	// Servers may infer this from the endpoint the client submits requests to.
 	// Cannot be updated.
 	// In CamelCase.
@@ -50,6 +51,7 @@ type TypeMeta struct {
 	// APIVersion defines the versioned schema of this representation of an object.
 	// Servers should convert recognized schemas to the latest internal value, and
 	// may reject unrecognized values.
+	// Servers应该将识别到的schemas转换成最新的internal value并且对于无法识别的值应该拒绝
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
 	// +optional
 	APIVersion string `json:"apiVersion,omitempty" protobuf:"bytes,2,opt,name=apiVersion"`
@@ -241,6 +243,9 @@ type ObjectMeta struct {
 	// been deleted, this object will be garbage collected. If this object is managed by a controller,
 	// then an entry in this list will point to this controller, with the controller field set to true.
 	// There cannot be more than one managing controller.
+	// OwnerReference是这个对象依赖的一系列对象，如果在这个list里的所有对象都被删除了，那么这个对象会被垃圾回收，如果这个对象
+	// 被一个controller管理，那么这个list的一个entry会指向这个controller，并且controller字段设置为true
+	// 不能有超过一个managing controller
 	// +optional
 	// +patchMergeKey=uid
 	// +patchStrategy=merge
@@ -288,6 +293,8 @@ const (
 // OwnerReference contains enough information to let you identify an owning
 // object. An owning object must be in the same namespace as the dependent, or
 // be cluster-scoped, so there is no namespace field.
+// OwnerReference包含了足够的信息让你能够识别一个owning object，owing object必须和dependent
+// 在同一个namespace或者是cluster-scope，因此没有namespace字段
 type OwnerReference struct {
 	// API version of the referent.
 	APIVersion string `json:"apiVersion" protobuf:"bytes,5,opt,name=apiVersion"`
@@ -301,11 +308,14 @@ type OwnerReference struct {
 	// More info: http://kubernetes.io/docs/user-guide/identifiers#uids
 	UID types.UID `json:"uid" protobuf:"bytes,4,opt,name=uid,casttype=k8s.io/apimachinery/pkg/types.UID"`
 	// If true, this reference points to the managing controller.
+	// 如果Controller为true，则reference指向managing controller
 	// +optional
 	Controller *bool `json:"controller,omitempty" protobuf:"varint,6,opt,name=controller"`
 	// If true, AND if the owner has the "foregroundDeletion" finalizer, then
 	// the owner cannot be deleted from the key-value store until this
 	// reference is removed.
+	// 如果为true，并且如果owner有"foregroundDeletion" finalizer，那么owner不能从key-value
+	// store中删除，直到reference被移除
 	// Defaults to false.
 	// To set this field, a user needs "delete" permission of the owner,
 	// otherwise 422 (Unprocessable Entity) will be returned.
@@ -324,6 +334,7 @@ type ListOptions struct {
 	// +optional
 	LabelSelector string `json:"labelSelector,omitempty" protobuf:"bytes,1,opt,name=labelSelector"`
 	// A selector to restrict the list of returned objects by their fields.
+	// 根据字段对返回的对象的list进行限制
 	// Defaults to everything.
 	// +optional
 	FieldSelector string `json:"fieldSelector,omitempty" protobuf:"bytes,2,opt,name=fieldSelector"`
@@ -332,9 +343,12 @@ type ListOptions struct {
 
 	// Watch for changes to the described resources and return them as a stream of
 	// add, update, and remove notifications. Specify resourceVersion.
+	// Watch监听给定资源对象的变更并且以add, update以及remove notifications的流的形式返回它们
+	// 指定resourceVersion
 	// +optional
 	Watch bool `json:"watch,omitempty" protobuf:"varint,3,opt,name=watch"`
 	// allowWatchBookmarks requests watch events with type "BOOKMARK".
+	// allowWatchBookmarks请求类型为"BOOKMARK"的watch events
 	// Servers that do not implement bookmarks may ignore this flag and
 	// bookmarks are sent at the server's discretion. Clients should not
 	// assume bookmarks are returned at any specific interval, nor may they
@@ -342,8 +356,10 @@ type ListOptions struct {
 	// If this is not a watch, this field is ignored.
 	// If the feature gate WatchBookmarks is not enabled in apiserver,
 	// this field is ignored.
+	// 如果特性WatchBookmark在apiserver中没有使能，则这个flag会被忽略
 	//
 	// This field is beta.
+	// 这个字段处于beta状态
 	//
 	// +optional
 	AllowWatchBookmarks bool `json:"allowWatchBookmarks,omitempty" protobuf:"varint,9,opt,name=allowWatchBookmarks"`
@@ -352,7 +368,9 @@ type ListOptions struct {
 	// Defaults to changes from the beginning of history.
 	// When specified for list:
 	// - if unset, then the result is returned from remote storage based on quorum-read flag;
+	// - 如果未设置，则基于quorum-read flag从远程存储返回结果
 	// - if it's 0, then we simply return what we currently have in cache, no guarantee;
+	// - 如果设置为0，则简单地返回当前位于cache中的结果
 	// - if set to non zero, then the result is at least as fresh as given rv.
 	// +optional
 	ResourceVersion string `json:"resourceVersion,omitempty" protobuf:"bytes,4,opt,name=resourceVersion"`
@@ -369,7 +387,10 @@ type ListOptions struct {
 	// more results are available. Servers may choose not to support the limit argument and will return
 	// all of the available results. If limit is specified and the continue field is empty, clients may
 	// assume that no more results are available. This field is not supported if watch is true.
-	//
+	// limit是一个list call返回的最大的responses数目，如果还有更多的itmes存在，server会设置在list metadata的`continue`
+	// 字段，可用用来喝初始的query一样获取下一部份的result
+	// clients应该只使用continue是否出现来决定是否有更多的results可用，如果limit被设置而continue字段为空，则clients
+	// 要假设没有更多的结果available
 	// The server guarantees that the objects returned when using continue will be identical to issuing
 	// a single list call without a limit - that is, no objects created, modified, or deleted after the
 	// first request is issued will be included in any subsequent continued requests. This is sometimes
@@ -389,6 +410,8 @@ type ListOptions struct {
 	// a list starting from the next key, but from the latest snapshot, which is inconsistent from the
 	// previous list results - objects that are created, modified, or deleted after the first list request
 	// will be included in the response, as long as their keys are after the "next key".
+	// Continue字段是由server定义的，clients只能使用前一个有着相同查询参数的query的continue值，server可能会拒绝
+	// continue的值，如果它没有识别出来的话
 	//
 	// This field is not supported when watch is true. Clients may start a watch from the last
 	// resourceVersion value returned by the server and not miss any modifications.
@@ -431,6 +454,7 @@ const (
 	DeletePropagationOrphan DeletionPropagation = "Orphan"
 	// Deletes the object from the key-value store, the garbage collector will
 	// delete the dependents in the background.
+	// 从key-value store中删除对象，GC会从后端将dependents删除
 	DeletePropagationBackground DeletionPropagation = "Background"
 	// The object exists in the key-value store until the garbage collector
 	// deletes all the dependents whose ownerReference.blockOwnerDeletion=true

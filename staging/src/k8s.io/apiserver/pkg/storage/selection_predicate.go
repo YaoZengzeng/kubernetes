@@ -25,6 +25,7 @@ import (
 
 // AttrFunc returns label and field sets and the uninitialized flag for List or Watch to match.
 // In any failure to parse given object, it returns error.
+// AttrFunc返回设置的label以及field以及未初始化的flag用于List和Watch去匹配
 type AttrFunc func(obj runtime.Object) (labels.Set, fields.Set, error)
 
 // FieldMutationFunc allows the mutation of the field selection fields.  It is mutating to
@@ -70,6 +71,7 @@ func (f AttrFunc) WithFieldMutation(fieldMutator FieldMutationFunc) AttrFunc {
 }
 
 // SelectionPredicate is used to represent the way to select objects from api storage.
+// SelectionPredicate用于表示从api storage中选择对象的方式
 type SelectionPredicate struct {
 	Label               labels.Selector
 	Field               fields.Selector

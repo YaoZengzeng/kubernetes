@@ -30,6 +30,7 @@ type DeploymentLister interface {
 	// List lists all Deployments in the indexer.
 	List(selector labels.Selector) (ret []*v1.Deployment, err error)
 	// Deployments returns an object that can list and get Deployments.
+	// Deployments返回一个对象，它可以list以及get Deployments
 	Deployments(namespace string) DeploymentNamespaceLister
 	DeploymentListerExpansion
 }

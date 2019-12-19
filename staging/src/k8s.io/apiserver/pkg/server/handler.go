@@ -35,6 +35,7 @@ import (
 )
 
 // APIServerHandlers holds the different http.Handlers used by the API server.
+// APIServerHandlers包含了API server所用的不同的http.Handlers
 // This includes the full handler chain, the director (which chooses between gorestful and nonGoRestful,
 // the gorestful handler (used for the API) which falls through to the nonGoRestful handler on unregistered paths,
 // and the nonGoRestful handler (which can contain a fallthrough of its own)
@@ -42,8 +43,10 @@ import (
 type APIServerHandler struct {
 	// FullHandlerChain is the one that is eventually served with.  It should include the full filter
 	// chain and then call the Director.
+	// FullHandlerChain是最终调用的，它包括完整的filter chain并且最终调用Director
 	FullHandlerChain http.Handler
 	// The registered APIs.  InstallAPIs uses this.  Other servers probably shouldn't access this directly.
+	// 注册的APIs，InstallAPIs使用它
 	GoRestfulContainer *restful.Container
 	// NonGoRestfulMux is the final HTTP handler in the chain.
 	// It comes after all filters and the API handling
@@ -76,6 +79,7 @@ func NewAPIServerHandler(name string, s runtime.NegotiatedSerializer, handlerCha
 		nonGoRestfulMux.NotFoundHandler(notFoundHandler)
 	}
 
+	// 构建restful container
 	gorestfulContainer := restful.NewContainer()
 	gorestfulContainer.ServeMux = http.NewServeMux()
 	gorestfulContainer.Router(restful.CurlyRouter{}) // e.g. for proxy/{kind}/{name}/{*}

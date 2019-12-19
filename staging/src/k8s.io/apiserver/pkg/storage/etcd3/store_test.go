@@ -67,6 +67,7 @@ func init() {
 }
 
 // prefixTransformer adds and verifies that all data has the correct prefix on its way in and out.
+// prefixTransformer添加并且确认所有的数据都有正确的prefix
 type prefixTransformer struct {
 	prefix []byte
 	stale  bool
@@ -1339,6 +1340,7 @@ func TestListInconsistentContinuation(t *testing.T) {
 func testSetup(t *testing.T) (context.Context, *store, *integration.ClusterV3) {
 	codec := apitesting.TestCodec(codecs, examplev1.SchemeGroupVersion)
 	cluster := integration.NewClusterV3(t, &integration.ClusterConfig{Size: 1})
+	// prefix为空
 	store := newStore(cluster.RandClient(), true, codec, "", prefixTransformer{prefix: []byte(defaultTestPrefix)})
 	ctx := context.Background()
 	// As 30s is the default timeout for testing in glboal configuration,

@@ -44,12 +44,16 @@ type TransportConfig struct {
 }
 
 // Config is configuration for creating a storage backend.
+// Config是创建一个storage backend的配置
 type Config struct {
 	// Type defines the type of storage backend. Default ("") is "etcd3".
+	// storage backend的类型，默认的""为"etcd3"
 	Type string
 	// Prefix is the prefix to all keys passed to storage.Interface methods.
+	// Prefix是所有传递给storage.Interface方法的keys的前缀
 	Prefix string
 	// Transport holds all connection related info, i.e. equal TransportConfig means equal servers we talk to.
+	// Transport维护了所有连接的信息
 	Transport TransportConfig
 	// Paging indicates whether the server implementation should allow paging (if it is
 	// supported). This is generally configured by feature gating, or by a specific
@@ -64,6 +68,7 @@ type Config struct {
 	// converted to before persisted in etcd.
 	EncodeVersioner runtime.GroupVersioner
 	// Transformer allows the value to be transformed prior to persisting into etcd.
+	// Transformer允许将数据持久化到etcd之前进行transformed
 	Transformer value.Transformer
 
 	// CompactionInterval is an interval of requesting compaction from apiserver.

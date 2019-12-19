@@ -27,6 +27,9 @@ import (
 // and update a store. A generic store is provided, which allows Reflector to be used
 // as a local caching system, and an LRU store, which allows Reflector to work like a
 // queue of items yet to be processed.
+// Store是一个通用类型的存储接口，Reflector知道如何监听一个server并且更新store，Store是一个通用的
+// 存储，允许Reflector将它作为一个本地缓存系统使用，以及一个LRU store，允许Reflector可能作为一个队列
+// 被处理
 //
 // Store makes no assumptions about stored object identity; it is the responsibility
 // of a Store implementation to provide a mechanism to correctly key objects and to
@@ -48,6 +51,7 @@ type Store interface {
 }
 
 // KeyFunc knows how to make a key from an object. Implementations should be deterministic.
+// KeyFunc知道如何从一个对象创建一个key，实现应该是确定性的
 type KeyFunc func(obj interface{}) (string, error)
 
 // KeyError will be returned any time a KeyFunc gives an error; it includes the object
@@ -68,8 +72,11 @@ type ExplicitKey string
 
 // MetaNamespaceKeyFunc is a convenient default KeyFunc which knows how to make
 // keys for API objects which implement meta.Interface.
+// MetaNamespaceKeyFunc是一个方便的默认的KeyFunc函数，它知道如何为实现了meta.Interface的
+// API对象创建keys
 // The key uses the format <namespace>/<name> unless <namespace> is empty, then
 // it's just <name>.
+// key用的格式为<namespace>/<name>，如果<namespace>为空，则为<name>
 //
 // TODO: replace key-as-string with a key-as-struct so that this
 // packing/unpacking won't be necessary.
@@ -109,6 +116,9 @@ func SplitMetaNamespaceKey(key string) (namespace, name string, err error) {
 // cache responsibilities are limited to:
 //	1. Computing keys for objects via keyFunc
 //  2. Invoking methods of a ThreadSafeStorage interface
+// cache的责任仅限于：
+//  1. 通过keyFunc为对象计算keys
+//  2. 调用一个ThreadSafeStorage接口的方法
 type cache struct {
 	// cacheStorage bears the burden of thread safety for the cache
 	cacheStorage ThreadSafeStore

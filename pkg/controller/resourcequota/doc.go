@@ -15,4 +15,5 @@ limitations under the License.
 */
 
 // resourcequota contains a controller that makes resource quota usage observations
+// resourcequota包含了一个controller，让resource quota使用量可视化
 package resourcequota // import "k8s.io/kubernetes/pkg/controller/resourcequota"

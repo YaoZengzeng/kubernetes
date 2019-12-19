@@ -67,6 +67,8 @@ type GenericStore interface {
 // embeddable and allows the consumer to implement any non-generic functions
 // that are required. This object is intended to be copyable so that it can be
 // used in different ways but share the same underlying behavior.
+// Store实现了pkg/api/rest.StandardStorage，它主要用于嵌入式并且允许consumer实现任何需要的
+// 非通用的逻辑
 //
 // All fields are required unless specified.
 //
@@ -181,6 +183,8 @@ type Store struct {
 	// Storage is the interface for the underlying storage for the
 	// resource. It is wrapped into a "DryRunnableStorage" that will
 	// either pass-through or simply dry-run.
+	// Storage是该资源底层存储的接口，它被封装进了"DryRunnableStorage"用于pass-through
+	// 或者就是简单的dry-run
 	Storage DryRunnableStorage
 	// StorageVersioner outputs the <group/version/kind> an object will be
 	// converted to before persisted in etcd, given a list of possible
@@ -1189,6 +1193,7 @@ func (e *Store) Export(ctx context.Context, name string, opts metav1.ExportOptio
 
 // CompleteWithOptions updates the store with the provided options and
 // defaults common fields.
+// CompleteWithOptions用提供的options以及默认的通用字段更新store
 func (e *Store) CompleteWithOptions(options *generic.StoreOptions) error {
 	if e.DefaultQualifiedResource.Empty() {
 		return fmt.Errorf("store %#v must have a non-empty qualified resource", e)
@@ -1306,6 +1311,7 @@ func (e *Store) CompleteWithOptions(options *generic.StoreOptions) error {
 	if e.Storage.Storage == nil {
 		e.Storage.Codec = opts.StorageConfig.Codec
 		var err error
+		// 构建Storage
 		e.Storage.Storage, e.DestroyFunc, err = opts.Decorator(
 			opts.StorageConfig,
 			prefix,

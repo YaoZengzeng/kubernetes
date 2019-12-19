@@ -41,6 +41,7 @@ var defaultSleepDuration = 10 * time.Second
 const maxQueuedEvents = 1000
 
 // EventSink knows how to store events (client.Client implements it.)
+// EventSink知道如何存储events
 // EventSink must respect the namespace that will be embedded in 'event'.
 // It is assumed that EventSink will return the same sorts of errors as
 // pkg/client's REST client.
@@ -85,8 +86,10 @@ type CorrelatorOptions struct {
 }
 
 // EventRecorder knows how to record events on behalf of an EventSource.
+// EventRecorder知道如何代表一个EventSource记录events
 type EventRecorder interface {
 	// Event constructs an event from the given information and puts it in the queue for sending.
+	// Event从给定的信息构造一个event并且将它放入队列中用于发送
 	// 'object' is the object this event is about. Event will make a reference-- or you may also
 	// pass a reference to the object directly.
 	// 'type' of this event, and can be one of Normal, Warning. New types could be added in future
@@ -115,6 +118,8 @@ type EventBroadcaster interface {
 	// StartEventWatcher starts sending events received from this EventBroadcaster to the given
 	// event handler function. The return value can be ignored or used to stop recording, if
 	// desired.
+	// StartEventWatcher开始将从EventBroadcaster收到的events到给定的event handler function
+	// 返回的值可以被忽略或者用于停止recording，如果想要的话
 	StartEventWatcher(eventHandler func(*v1.Event)) watch.Interface
 
 	// StartRecordingToSink starts sending events received from this EventBroadcaster to the given
@@ -123,6 +128,8 @@ type EventBroadcaster interface {
 
 	// StartLogging starts sending events received from this EventBroadcaster to the given logging
 	// function. The return value can be ignored or used to stop recording, if desired.
+	// StartLogging开始发送从这个EventBroadcaster收到的events到给定的logging function，返回的value可以被忽略
+	// 或者用于停止recording，如果想要的话
 	StartLogging(logf func(format string, args ...interface{})) watch.Interface
 
 	// NewRecorder returns an EventRecorder that can be used to send events to this EventBroadcaster

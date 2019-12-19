@@ -193,6 +193,7 @@ func NewKubeControllerManagerOptions() (*KubeControllerManagerOptions, error) {
 	}
 
 	s.GarbageCollectorController.GCIgnoredResources = gcIgnoredResources
+	// 设置LeaderElection
 	s.Generic.LeaderElection.ResourceName = "kube-controller-manager"
 	s.Generic.LeaderElection.ResourceNamespace = "kube-system"
 
@@ -247,6 +248,7 @@ func (s *KubeControllerManagerOptions) Flags(allControllers []string, disabledBy
 	s.TTLAfterFinishedController.AddFlags(fss.FlagSet("ttl-after-finished controller"))
 
 	fs := fss.FlagSet("misc")
+	// Master的地址以及config的位置信息
 	fs.StringVar(&s.Master, "master", s.Master, "The address of the Kubernetes API server (overrides any value in kubeconfig).")
 	fs.StringVar(&s.Kubeconfig, "kubeconfig", s.Kubeconfig, "Path to kubeconfig file with authorization and master location information.")
 	utilfeature.DefaultMutableFeatureGate.AddFlag(fss.FlagSet("generic"))
@@ -390,6 +392,7 @@ func (s *KubeControllerManagerOptions) Validate(allControllers []string, disable
 }
 
 // Config return a controller manager config objective
+// Config返回一个controller manager的配置对象
 func (s KubeControllerManagerOptions) Config(allControllers []string, disabledByDefaultControllers []string) (*kubecontrollerconfig.Config, error) {
 	if err := s.Validate(allControllers, disabledByDefaultControllers); err != nil {
 		return nil, err
@@ -408,6 +411,7 @@ func (s KubeControllerManagerOptions) Config(allControllers []string, disabledBy
 	kubeconfig.QPS = s.Generic.ClientConnection.QPS
 	kubeconfig.Burst = int(s.Generic.ClientConnection.Burst)
 
+	// 构建kubernetes client
 	client, err := clientset.NewForConfig(restclient.AddUserAgent(kubeconfig, KubeControllerManagerUserAgent))
 	if err != nil {
 		return nil, err
@@ -416,8 +420,10 @@ func (s KubeControllerManagerOptions) Config(allControllers []string, disabledBy
 	// shallow copy, do not modify the kubeconfig.Timeout.
 	config := *kubeconfig
 	config.Timeout = s.Generic.LeaderElection.RenewDeadline.Duration
+	// 创建leaderElectionClient
 	leaderElectionClient := clientset.NewForConfigOrDie(restclient.AddUserAgent(&config, "leader-election"))
 
+	// 创建Event Recorder
 	eventRecorder := createRecorder(client, KubeControllerManagerUserAgent)
 
 	c := &kubecontrollerconfig.Config{

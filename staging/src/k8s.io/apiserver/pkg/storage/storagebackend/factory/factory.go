@@ -27,11 +27,14 @@ import (
 type DestroyFunc func()
 
 // Create creates a storage backend based on given config.
+// Create基于给定的配置创建一个storage backend
 func Create(c storagebackend.Config) (storage.Interface, DestroyFunc, error) {
 	switch c.Type {
 	case "etcd2":
+		// etcd2已经不再支持
 		return nil, nil, fmt.Errorf("%v is no longer a supported storage backend", c.Type)
 	case storagebackend.StorageTypeUnset, storagebackend.StorageTypeETCD3:
+		// 创建etcd3作为Storage backend
 		return newETCD3Storage(c)
 	default:
 		return nil, nil, fmt.Errorf("unknown storage type: %s", c.Type)

@@ -77,6 +77,7 @@ func (r *RequestConstructionError) Error() string {
 // Request allows for building up a request to a server in a chained fashion.
 // Any errors are stored until the end of your call, so you only have to
 // check once.
+// Request允许以一种chained fashion构建一个到server的请求
 type Request struct {
 	// required
 	client HTTPClient
@@ -542,6 +543,7 @@ func (r *Request) tryThrottle() error {
 }
 
 // Watch attempts to begin watching the requested location.
+// Watch从请求的位置开始监听
 // Returns a watch.Interface, or an error.
 func (r *Request) Watch() (watch.Interface, error) {
 	return r.WatchWithSpecificDecoders(

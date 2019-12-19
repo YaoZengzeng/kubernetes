@@ -52,6 +52,7 @@ func ListAll(store Store, selector labels.Selector, appendFn AppendFunc) error {
 }
 
 // ListAllByNamespace used to list items belongs to namespace from Indexer.
+// ListAllByNamespace用于从Indexer中list所有属于某个namespace到items
 func ListAllByNamespace(indexer Indexer, namespace string, selector labels.Selector, appendFn AppendFunc) error {
 	selectAll := selector.Empty()
 	if namespace == metav1.NamespaceAll {

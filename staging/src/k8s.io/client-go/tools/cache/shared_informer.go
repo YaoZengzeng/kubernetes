@@ -143,6 +143,7 @@ type SharedInformer interface {
 	// HasSynced returns true if the shared informer's store has been
 	// informed by at least one full LIST of the authoritative state
 	// of the informer's object collection.  This is unrelated to "resync".
+	// HasSynced返回true，如果shared informer的store已经通过至少一个完整的LIST操作通知过一次
 	HasSynced() bool
 	// LastSyncResourceVersion is the resource version observed when last synced with the underlying
 	// store. The value returned is not synchronized with access to the underlying store and is not
@@ -180,6 +181,7 @@ func NewSharedIndexInformer(lw ListerWatcher, objType runtime.Object, defaultEve
 }
 
 // InformerSynced is a function that can be used to determine if an informer has synced.  This is useful for determining if caches have synced.
+// InformerSynced是一个函数用于确认一个informer是否已经同步了，这在判断缓存是否同步的时候是很有用的
 type InformerSynced func() bool
 
 const (
@@ -193,6 +195,8 @@ const (
 // WaitForNamedCacheSync is a wrapper around WaitForCacheSync that generates log messages
 // indicating that the caller identified by name is waiting for syncs, followed by
 // either a successful or failed sync.
+// WaitForNamedCacheSync说一个WaitForCacheSync的wrapper，它产生log messages，表示由name识别的caller
+// 在等待同步，伴随着一个成功的或者失败的sync
 func WaitForNamedCacheSync(controllerName string, stopCh <-chan struct{}, cacheSyncs ...InformerSynced) bool {
 	klog.Infof("Waiting for caches to sync for %s", controllerName)
 
@@ -207,6 +211,7 @@ func WaitForNamedCacheSync(controllerName string, stopCh <-chan struct{}, cacheS
 
 // WaitForCacheSync waits for caches to populate.  It returns true if it was successful, false
 // if the controller should shutdown
+// WaitForCacheSync等待caches填充完成，它返回true如果成功的话，如果controller应该关闭的话，则返回false
 // callers should prefer WaitForNamedCacheSync()
 func WaitForCacheSync(stopCh <-chan struct{}, cacheSyncs ...InformerSynced) bool {
 	err := wait.PollImmediateUntil(syncedPollPeriod,
@@ -277,6 +282,7 @@ func (v *dummyController) LastSyncResourceVersion() string {
 	return ""
 }
 
+// 各种通知方式的类型
 type updateNotification struct {
 	oldObj interface{}
 	newObj interface{}
@@ -293,6 +299,7 @@ type deleteNotification struct {
 func (s *sharedIndexInformer) Run(stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 
+	// 构建FIFO队列
 	fifo := NewDeltaFIFO(MetaNamespaceKeyFunc, s.indexer)
 
 	cfg := &Config{
@@ -335,9 +342,11 @@ func (s *sharedIndexInformer) HasSynced() bool {
 	s.startedLock.Lock()
 	defer s.startedLock.Unlock()
 
+	// 对于HasSynced()函数，如果controller为nil，则直接返回false
 	if s.controller == nil {
 		return false
 	}
+	// 否则调用controller的HasSynced()方法
 	return s.controller.HasSynced()
 }
 
@@ -424,6 +433,7 @@ func (s *sharedIndexInformer) AddEventHandlerWithResyncPeriod(handler ResourceEv
 		}
 	}
 
+	// EventController仅仅只是为了增加一个ProcessListener
 	listener := newProcessListener(handler, resyncPeriod, determineResyncPeriod(resyncPeriod, s.resyncCheckPeriod), s.clock.Now(), initialBufferSize)
 
 	if !s.started {
@@ -441,6 +451,7 @@ func (s *sharedIndexInformer) AddEventHandlerWithResyncPeriod(handler ResourceEv
 
 	s.processor.addListener(listener)
 	for _, item := range s.indexer.List() {
+		// 将indexer的所有items都加入到listener中，以addNotification的方式
 		listener.add(addNotification{newObj: item})
 	}
 }
@@ -608,6 +619,7 @@ func newProcessListener(handler ResourceEventHandler, requestedResyncPeriod, res
 }
 
 func (p *processorListener) add(notification interface{}) {
+	// 将通知类型注入到addCh中
 	p.addCh <- notification
 }
 

@@ -134,6 +134,7 @@ type ExtraConfig struct {
 
 	// Values to build the IP addresses used by discovery
 	// The range of IPs to be assigned to services with type=ClusterIP or greater
+	// 用于赋值给类型为ClusterIP的IP范围
 	ServiceIPRange net.IPNet
 	// The IP address for the GenericAPIServer service (must be inside ServiceIPRange)
 	APIServerServiceIP net.IP
@@ -212,6 +213,7 @@ type EndpointReconcilerConfig struct {
 }
 
 // Master contains state for a Kubernetes cluster master/api server.
+// Master包含了一个Kubernetes cluster master/api server的状态
 type Master struct {
 	GenericAPIServer *genericapiserver.GenericAPIServer
 
@@ -272,6 +274,7 @@ func (c *Config) createEndpointReconciler() reconcilers.EndpointReconciler {
 }
 
 // Complete fills in any fields not set that are required to have valid data. It's mutating the receiver.
+// Complete填充任何应该有着合法字段而没有被填充的字段
 func (cfg *Config) Complete() CompletedConfig {
 	c := completedConfig{
 		cfg.GenericConfig.Complete(cfg.ExtraConfig.VersionedInformers),
@@ -319,7 +322,9 @@ func (cfg *Config) Complete() CompletedConfig {
 }
 
 // New returns a new instance of Master from the given config.
+// New从给定配置返回一个新的Master的实例
 // Certain config fields will be set to a default value if unset.
+// 如果有字段没设置就会被设置为默认字段
 // Certain config fields must be specified, including:
 //   KubeletClientConfig
 func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget) (*Master, error) {
@@ -327,6 +332,7 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
 		return nil, fmt.Errorf("Master.New() called with empty config.KubeletClientConfig")
 	}
 
+	// 创建generic api server
 	s, err := c.GenericConfig.New("kube-apiserver", delegationTarget)
 	if err != nil {
 		return nil, err
@@ -341,7 +347,9 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
 	}
 
 	// install legacy rest storage
+	// 安装legacy rest storage
 	if c.ExtraConfig.APIResourceConfigSource.VersionEnabled(apiv1.SchemeGroupVersion) {
+		// 创建legacy REST storage provider
 		legacyRESTStorageProvider := corerest.LegacyRESTStorageProvider{
 			StorageFactory:              c.ExtraConfig.StorageFactory,
 			ProxyTransport:              c.ExtraConfig.ProxyTransport,
@@ -355,13 +363,16 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
 			ServiceAccountMaxExpiration: c.ExtraConfig.ServiceAccountMaxExpiration,
 			APIAudiences:                c.GenericConfig.Authentication.APIAudiences,
 		}
+		// 注册legacy API
 		if err := m.InstallLegacyAPI(&c, c.GenericConfig.RESTOptionsGetter, legacyRESTStorageProvider); err != nil {
 			return nil, err
 		}
 	}
 
 	// The order here is preserved in discovery.
+	// 顺序保留
 	// If resources with identical names exist in more than one of these groups (e.g. "deployments.apps"" and "deployments.extensions"),
+	// 如果有着同样名字的resources的存在在多个groups里，则在这个列表中的顺序决定了一个resouce name应该更倾向于哪个group
 	// the order of this list determines which group an unqualified resource name (e.g. "deployments") should prefer.
 	// This priority order is used for local discovery, but it ends up aggregated in `k8s.io/kubernetes/cmd/kube-apiserver/app/aggregator.go
 	// with specific priorities.

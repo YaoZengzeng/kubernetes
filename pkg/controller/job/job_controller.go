@@ -65,6 +65,7 @@ type JobController struct {
 	podControl controller.PodControlInterface
 
 	// To allow injection of updateJobStatus for testing.
+	// updateHandler允许注入updateJobStatus用于测试
 	updateHandler func(job *batch.Job) error
 	syncHandler   func(jobKey string) (bool, error)
 	// podStoreSynced returns true if the pod store has been synced at least once.
@@ -75,6 +76,7 @@ type JobController struct {
 	jobStoreSynced cache.InformerSynced
 
 	// A TTLCache of pod creates/deletes each rc expects to see
+	// TTLCache是pod的creates/deletes，每个rc都期望看到
 	expectations controller.ControllerExpectationsInterface
 
 	// A store of jobs
@@ -360,6 +362,7 @@ func (jm *JobController) enqueueController(obj interface{}, immediate bool) {
 
 	backoff := time.Duration(0)
 	if !immediate {
+		// 确定加入队列的延迟时间
 		backoff = getBackoff(jm.queue, key)
 	}
 
@@ -386,23 +389,29 @@ func (jm *JobController) processNextWorkItem() bool {
 	}
 	defer jm.queue.Done(key)
 
+	// 调用syncHandler对新的item进行同步
 	forget, err := jm.syncHandler(key.(string))
 	if err == nil {
 		if forget {
+			// 如果forget为true，则从队列中将这个key遗忘
 			jm.queue.Forget(key)
 		}
 		return true
 	}
 
 	utilruntime.HandleError(fmt.Errorf("Error syncing job: %v", err))
+	// 如果处理失败，则重新入队
 	jm.queue.AddRateLimited(key)
 
 	return true
 }
 
 // getPodsForJob returns the set of pods that this Job should manage.
+// getPodsForJob获取一系列这个Job应该管理的pods
 // It also reconciles ControllerRef by adopting/orphaning.
+// 同时它也通过adopting/orphaning对ControllerRef进行调谐
 // Note that the returned Pods are pointers into the cache.
+// 注意返回的Pods是指向cache的pointers
 func (jm *JobController) getPodsForJob(j *batch.Job) ([]*v1.Pod, error) {
 	selector, err := metav1.LabelSelectorAsSelector(j.Spec.Selector)
 	if err != nil {
@@ -433,6 +442,8 @@ func (jm *JobController) getPodsForJob(j *batch.Job) ([]*v1.Pod, error) {
 // syncJob will sync the job with the given key if it has had its expectations fulfilled, meaning
 // it did not expect to see any more of its pods created or deleted. This function is not meant to be invoked
 // concurrently with the same key.
+// syncJob会用给定的key同步job，从而满足它的期望，这意味着它不想看到更多的pods被创建或删除
+// 这个函数不会用同样的key并行调用
 func (jm *JobController) syncJob(key string) (bool, error) {
 	startTime := time.Now()
 	defer func() {
@@ -449,6 +460,7 @@ func (jm *JobController) syncJob(key string) (bool, error) {
 	sharedJob, err := jm.jobLister.Jobs(ns).Get(name)
 	if err != nil {
 		if errors.IsNotFound(err) {
+			// 如果是error.IsNotFound，则说明Job已经被删除
 			klog.V(4).Infof("Job has been deleted: %v", key)
 			jm.expectations.DeleteExpectations(key)
 			return true, nil

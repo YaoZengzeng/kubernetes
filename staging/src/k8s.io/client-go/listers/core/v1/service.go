@@ -26,8 +26,10 @@ import (
 )
 
 // ServiceLister helps list Services.
+// ServiceLister帮助list所有的Services
 type ServiceLister interface {
 	// List lists all Services in the indexer.
+	// List会list在indexer中的所有的Services
 	List(selector labels.Selector) (ret []*v1.Service, err error)
 	// Services returns an object that can list and get Services.
 	Services(namespace string) ServiceNamespaceLister

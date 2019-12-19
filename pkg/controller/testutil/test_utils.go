@@ -351,6 +351,7 @@ func (m *FakeNodeHandler) Patch(name string, pt types.PatchType, data []byte, su
 }
 
 // FakeRecorder is used as a fake during testing.
+// FakeRecorder在测试中作为一个fake 
 type FakeRecorder struct {
 	sync.Mutex
 	source v1.EventSource

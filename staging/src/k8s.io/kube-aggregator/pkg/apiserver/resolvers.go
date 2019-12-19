@@ -24,6 +24,7 @@ import (
 )
 
 // A ServiceResolver knows how to get a URL given a service.
+// 一个ServiceResolver知道如何利用一个给定的service获取一个URL
 type ServiceResolver interface {
 	ResolveEndpoint(namespace, name string, port int32) (*url.URL, error)
 }

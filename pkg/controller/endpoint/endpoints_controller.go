@@ -100,9 +100,11 @@ func NewEndpointController(podInformer coreinformers.PodInformer, serviceInforme
 		},
 		DeleteFunc: e.enqueueService,
 	})
+	// 构建endpoints controller的service lister
 	e.serviceLister = serviceInformer.Lister()
 	e.servicesSynced = serviceInformer.Informer().HasSynced
 
+	// 首先创建informer，再获取Lister
 	podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    e.addPod,
 		UpdateFunc: e.updatePod,
@@ -124,6 +126,7 @@ func NewEndpointController(podInformer coreinformers.PodInformer, serviceInforme
 }
 
 // EndpointController manages selector-based service endpoints.
+// EndpointController管理基于selector的service endpoints
 type EndpointController struct {
 	client           clientset.Interface
 	eventBroadcaster record.EventBroadcaster
@@ -131,8 +134,10 @@ type EndpointController struct {
 
 	// serviceLister is able to list/get services and is populated by the shared informer passed to
 	// NewEndpointController.
+	// serviceLister能够list/get services并且由传输给NewEndpointController的shared informer进行填充
 	serviceLister corelisters.ServiceLister
 	// servicesSynced returns true if the service shared informer has been synced at least once.
+	// servicesSynced返回true，如果service shared informer至少同步了一次
 	// Added as a member to the struct to allow injection for testing.
 	servicesSynced cache.InformerSynced
 
@@ -357,6 +362,7 @@ func (e *EndpointController) syncService(key string) error {
 	if err != nil {
 		return err
 	}
+	// 从cache中用key找到相应的service
 	service, err := e.serviceLister.Services(namespace).Get(name)
 	if err != nil {
 		if !errors.IsNotFound(err) {
@@ -364,6 +370,7 @@ func (e *EndpointController) syncService(key string) error {
 		}
 
 		// Delete the corresponding endpoint, as the service has been deleted.
+		// 因为service已经被删除了，删除相应的endpoint
 		// TODO: Please note that this will delete an endpoint when a
 		// service is deleted. However, if we're down at the time when
 		// the service is deleted, we will miss that deletion, so this
@@ -383,6 +390,7 @@ func (e *EndpointController) syncService(key string) error {
 	}
 
 	klog.V(5).Infof("About to update endpoints for service %q", key)
+	// 根据selector找到后端的pods
 	pods, err := e.podLister.Pods(service.Namespace).List(labels.Set(service.Spec.Selector).AsSelectorPreValidated())
 	if err != nil {
 		// Since we're getting stuff from a local cache, it is
@@ -421,6 +429,7 @@ func (e *EndpointController) syncService(key string) error {
 			continue
 		}
 
+		// 将pod转换为service的endpoint
 		ep, err := podToEndpointAddressForService(service, pod)
 		if err != nil {
 			// this will happen, if the cluster runs with some nodes configured as dual stack and some as not
@@ -467,6 +476,7 @@ func (e *EndpointController) syncService(key string) error {
 	currentEndpoints, err := e.endpointsLister.Endpoints(service.Namespace).Get(service.Name)
 	if err != nil {
 		if errors.IsNotFound(err) {
+			// 	如果currentEndpoints不存在，则创建之
 			currentEndpoints = &v1.Endpoints{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   service.Name,
@@ -478,6 +488,7 @@ func (e *EndpointController) syncService(key string) error {
 		}
 	}
 
+	// 根据当前endpoints的ResourceVersion来判断是否需要创建endpoints
 	createEndpoints := len(currentEndpoints.ResourceVersion) == 0
 
 	if !createEndpoints &&
@@ -486,6 +497,7 @@ func (e *EndpointController) syncService(key string) error {
 		klog.V(5).Infof("endpoints are equal for %s/%s, skipping update", service.Namespace, service.Name)
 		return nil
 	}
+	// 创建新的enpoints
 	newEndpoints := currentEndpoints.DeepCopy()
 	newEndpoints.Subsets = subsets
 	newEndpoints.Labels = service.Labels
@@ -513,9 +525,11 @@ func (e *EndpointController) syncService(key string) error {
 	klog.V(4).Infof("Update endpoints for %v/%v, ready: %d not ready: %d", service.Namespace, service.Name, totalReadyEps, totalNotReadyEps)
 	if createEndpoints {
 		// No previous endpoints, create them
+		// 之前没有endpoints，创建之
 		_, err = e.client.CoreV1().Endpoints(service.Namespace).Create(newEndpoints)
 	} else {
 		// Pre-existing
+		// 否则更新已有的endpoints
 		_, err = e.client.CoreV1().Endpoints(service.Namespace).Update(newEndpoints)
 	}
 	if err != nil {

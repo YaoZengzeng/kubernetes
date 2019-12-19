@@ -536,6 +536,7 @@ func (config *inClusterClientConfig) Possible() bool {
 // components. Warnings should reflect this usage. If neither masterUrl or kubeconfigPath
 // are passed in we fallback to inClusterConfig. If inClusterConfig fails, we fallback
 // to the default config.
+// BuildConfigFromFlags是一个helper函数，能够从一个master url或者kubeconfig的文件路径构建configs
 func BuildConfigFromFlags(masterUrl, kubeconfigPath string) (*restclient.Config, error) {
 	if kubeconfigPath == "" && masterUrl == "" {
 		klog.Warningf("Neither --kubeconfig nor --master was specified.  Using the inClusterConfig.  This might not work.")

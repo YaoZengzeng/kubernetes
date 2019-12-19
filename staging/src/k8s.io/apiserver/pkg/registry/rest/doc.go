@@ -15,4 +15,5 @@ limitations under the License.
 */
 
 // Package rest defines common logic around changes to Kubernetes-style resources.
+// rest包定义了对于Kubernetes风格的资源的通用逻辑
 package rest // import "k8s.io/apiserver/pkg/registry/rest"

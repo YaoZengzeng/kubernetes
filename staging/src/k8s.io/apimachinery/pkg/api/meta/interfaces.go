@@ -24,12 +24,14 @@ import (
 )
 
 type ListMetaAccessor interface {
+	// ListMetaAccessor包含一个GetListMeta()方法，用于返回一个List结构
 	GetListMeta() List
 }
 
 // List lets you work with list metadata from any of the versioned or
 // internal API objects. Attempting to set or retrieve a field on an object that does
 // not support that field will be a no-op and return a default value.
+// List让你能够从任何的versioned或者内部的API对象list元数据
 type List metav1.ListInterface
 
 // Type exposes the type and APIVersion of versioned or internal API objects.

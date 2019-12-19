@@ -527,6 +527,7 @@ func (nc *Controller) Run(stopCh <-chan struct{}) {
 	}
 
 	// Incorporate the results of node health signal pushed from kubelet to master.
+	// 将节点的health signal的结果从kubelet合并到master
 	go wait.Until(func() {
 		if err := nc.monitorNodeHealth(); err != nil {
 			klog.Errorf("Error monitoring node health: %v", err)

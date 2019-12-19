@@ -24,6 +24,7 @@ import (
 )
 
 // ThreadSafeStore is an interface that allows concurrent access to a storage backend.
+// ThreadSafeStore允许能够对一个storage backend进行并发地读写
 // TL;DR caveats: you must not modify anything returned by Get or List as it will break
 // the indexing feature in addition to not being thread safe.
 //
@@ -62,6 +63,7 @@ type threadSafeMap struct {
 	// indexers maps a name to an IndexFunc
 	indexers Indexers
 	// indices maps a name to an Index
+	// indices是name到一个Index的映射
 	indices Indices
 }
 
@@ -77,6 +79,7 @@ func (c *threadSafeMap) Update(key string, obj interface{}) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	oldObject := c.items[key]
+	// 仅仅更新items
 	c.items[key] = obj
 	c.updateIndices(oldObject, obj, key)
 }
@@ -85,7 +88,9 @@ func (c *threadSafeMap) Delete(key string) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if obj, exists := c.items[key]; exists {
+		// 调整索引
 		c.deleteFromIndices(obj, key)
+		// 将key从c.items中删除
 		delete(c.items, key)
 	}
 }
@@ -132,11 +137,13 @@ func (c *threadSafeMap) Replace(items map[string]interface{}, resourceVersion st
 }
 
 // Index returns a list of items that match on the index function
+// Index返回一系列匹配index function的函数
 // Index is thread-safe so long as you treat all items as immutable
 func (c *threadSafeMap) Index(indexName string, obj interface{}) ([]interface{}, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
+	// 根据indexName找到indexFunc
 	indexFunc := c.indexers[indexName]
 	if indexFunc == nil {
 		return nil, fmt.Errorf("Index with name %s does not exist", indexName)
@@ -149,6 +156,7 @@ func (c *threadSafeMap) Index(indexName string, obj interface{}) ([]interface{},
 	index := c.indices[indexName]
 
 	var returnKeySet sets.String
+	// 找到indexName以及indexKeys对应的各个value
 	if len(indexKeys) == 1 {
 		// In majority of cases, there is exactly one value matching.
 		// Optimize the most common path - deduping is not needed here.
@@ -165,6 +173,7 @@ func (c *threadSafeMap) Index(indexName string, obj interface{}) ([]interface{},
 	}
 
 	list := make([]interface{}, 0, returnKeySet.Len())
+	// 遍历value并且返回
 	for absoluteKey := range returnKeySet {
 		list = append(list, c.items[absoluteKey])
 	}
@@ -261,6 +270,7 @@ func (c *threadSafeMap) updateIndices(oldObj interface{}, newObj interface{}, ke
 		index := c.indices[name]
 		if index == nil {
 			index = Index{}
+			// index是一系列的key到value的映射
 			c.indices[name] = index
 		}
 
@@ -303,6 +313,7 @@ func (c *threadSafeMap) Resync() error {
 }
 
 // NewThreadSafeStore creates a new instance of ThreadSafeStore.
+// NewThreadSafeStore创建一个ThreadSafeStore的实例
 func NewThreadSafeStore(indexers Indexers, indices Indices) ThreadSafeStore {
 	return &threadSafeMap{
 		items:    map[string]interface{}{},

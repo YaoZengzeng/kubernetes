@@ -15,4 +15,5 @@ limitations under the License.
 */
 
 // Package endpoints contains the generic code that provides a RESTful Kubernetes-style API service.
+// endpoints包含了通用的代码用于提供一个RESTful Kubernetes风格的API服务
 package endpoints // import "k8s.io/apiserver/pkg/endpoints"

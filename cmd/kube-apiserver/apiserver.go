@@ -16,6 +16,7 @@ limitations under the License.
 
 // apiserver is the main api server and master for the cluster.
 // it is responsible for serving the cluster management API.
+// apiserver是main api server以及集群的master，它负责提供集群管理服务的API
 package main
 
 import (

@@ -33,6 +33,7 @@ import (
 
 // APIServiceInformer provides access to a shared informer and lister for
 // APIServices.
+// APIServiceInformer提供了对于shared informer的访问以及对于APIServices的lister
 type APIServiceInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() v1.APIServiceLister
@@ -53,6 +54,7 @@ func NewAPIServiceInformer(client clientset.Interface, resyncPeriod time.Duratio
 // NewFilteredAPIServiceInformer constructs a new informer for APIService type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// 总是优先使用一个informer factory来获取一个shared informer而不是获取一个独立的，这会降低memory footprint以及和server的连接
 func NewFilteredAPIServiceInformer(client clientset.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{

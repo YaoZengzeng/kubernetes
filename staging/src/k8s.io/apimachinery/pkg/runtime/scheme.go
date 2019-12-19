@@ -33,6 +33,9 @@ import (
 // registry for converting group, version, and kind information to and from Go
 // schemas, and mappings between Go schemas of different versions. A scheme is the
 // foundation for a versioned API and versioned configuration over time.
+// Scheme定义了序列化和反序列化API对象的方法，一个type registry用于在group, version, kind和
+// Go schemas之间进行转换，以及在不同版本的Go schemas之间进行映射，一个scheme是一个versioned API
+// 和versioned configuration的基础
 //
 // In a Scheme, a Type is a particular Go struct, a Version is a point-in-time
 // identifier for a particular representation of that Type (typically backwards

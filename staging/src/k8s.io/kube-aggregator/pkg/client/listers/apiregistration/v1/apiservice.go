@@ -26,6 +26,7 @@ import (
 )
 
 // APIServiceLister helps list APIServices.
+// APIServiceLister用于list所有的APIServices
 type APIServiceLister interface {
 	// List lists all APIServices in the indexer.
 	List(selector labels.Selector) (ret []*v1.APIService, err error)

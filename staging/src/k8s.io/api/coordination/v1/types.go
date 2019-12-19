@@ -51,6 +51,7 @@ type LeaseSpec struct {
 	AcquireTime *metav1.MicroTime `json:"acquireTime,omitempty" protobuf:"bytes,3,opt,name=acquireTime"`
 	// renewTime is a time when the current holder of a lease has last
 	// updated the lease.
+	// renewTime是当前的lease的所有者更新lease的时间
 	// +optional
 	RenewTime *metav1.MicroTime `json:"renewTime,omitempty" protobuf:"bytes,4,opt,name=renewTime"`
 	// leaseTransitions is the number of transitions of a lease between

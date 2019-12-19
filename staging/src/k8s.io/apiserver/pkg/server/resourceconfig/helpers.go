@@ -29,6 +29,7 @@ import (
 )
 
 // GroupVersionRegistry provides access to registered group versions.
+// GroupVersionRegistry提供了对于已经注册的group version的访问
 type GroupVersionRegistry interface {
 	// IsGroupRegistered returns true if given group is registered.
 	IsGroupRegistered(group string) bool

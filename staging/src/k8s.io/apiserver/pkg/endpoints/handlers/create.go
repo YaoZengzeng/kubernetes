@@ -49,6 +49,7 @@ func createHandler(r rest.NamedCreater, scope *RequestScope, admit admission.Int
 		trace := utiltrace.New("Create", utiltrace.Field{"url", req.URL.Path})
 		defer trace.LogIfLong(500 * time.Millisecond)
 
+		// 是否为dry run
 		if isDryRun(req.URL) && !utilfeature.DefaultFeatureGate.Enabled(features.DryRun) {
 			scope.err(errors.NewBadRequest("the dryRun alpha feature is disabled"), w, req)
 			return
@@ -57,6 +58,7 @@ func createHandler(r rest.NamedCreater, scope *RequestScope, admit admission.Int
 		// TODO: we either want to remove timeout or document it (if we document, move timeout out of this function and declare it in api_installer)
 		timeout := parseTimeout(req.URL.Query().Get("timeout"))
 
+		// 从请求中获取namespace和name
 		namespace, name, err := scope.Namer.Name(req)
 		if err != nil {
 			if includeName {
@@ -76,6 +78,7 @@ func createHandler(r rest.NamedCreater, scope *RequestScope, admit admission.Int
 		ctx, cancel := context.WithTimeout(req.Context(), timeout)
 		defer cancel()
 		ctx = request.WithNamespace(ctx, namespace)
+		// 协议编码类型
 		outputMediaType, _, err := negotiation.NegotiateOutputMediaType(req, scope.Serializer, scope)
 		if err != nil {
 			scope.err(err, w, req)
@@ -161,6 +164,7 @@ func createHandler(r rest.NamedCreater, scope *RequestScope, admit admission.Int
 		}
 
 		trace.Step("About to store object in database")
+		// 准备将对象存入数据库
 		result, err := finishRequest(timeout, func() (runtime.Object, error) {
 			return r.Create(
 				ctx,
@@ -174,6 +178,7 @@ func createHandler(r rest.NamedCreater, scope *RequestScope, admit admission.Int
 			scope.err(err, w, req)
 			return
 		}
+		// 对象已经存储到数据库中
 		trace.Step("Object stored in database")
 
 		code := http.StatusCreated
@@ -192,6 +197,7 @@ func CreateNamedResource(r rest.NamedCreater, scope *RequestScope, admission adm
 }
 
 // CreateResource returns a function that will handle a resource creation.
+// CreateResource返回一个function，它会处理一个资源的创建
 func CreateResource(r rest.Creater, scope *RequestScope, admission admission.Interface) http.HandlerFunc {
 	return createHandler(&namedCreaterAdapter{r}, scope, admission, false)
 }

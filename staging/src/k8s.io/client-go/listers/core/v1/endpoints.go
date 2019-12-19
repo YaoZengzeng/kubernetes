@@ -40,11 +40,13 @@ type endpointsLister struct {
 }
 
 // NewEndpointsLister returns a new EndpointsLister.
+// NewEndpointsLister返回一个新的EndpointsLister
 func NewEndpointsLister(indexer cache.Indexer) EndpointsLister {
 	return &endpointsLister{indexer: indexer}
 }
 
 // List lists all Endpoints in the indexer.
+// List列举在indexer中的所有Endpoints
 func (s *endpointsLister) List(selector labels.Selector) (ret []*v1.Endpoints, err error) {
 	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
 		ret = append(ret, m.(*v1.Endpoints))
@@ -53,6 +55,7 @@ func (s *endpointsLister) List(selector labels.Selector) (ret []*v1.Endpoints, e
 }
 
 // Endpoints returns an object that can list and get Endpoints.
+// Endpoints返回一个对象，它能够list并且get到Endpoints
 func (s *endpointsLister) Endpoints(namespace string) EndpointsNamespaceLister {
 	return endpointsNamespaceLister{indexer: s.indexer, namespace: namespace}
 }

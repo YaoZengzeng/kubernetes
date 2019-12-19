@@ -92,6 +92,7 @@ type APIGroupVersion struct {
 }
 
 // InstallREST registers the REST handlers (storage, watch, proxy and redirect) into a restful Container.
+// InstallREST注册REST handlers（storage, watch, proxy以及redirect）到一个restful Container
 // It is expected that the provided path root prefix will serve all operations. Root MUST NOT end
 // in a slash.
 func (g *APIGroupVersion) InstallREST(container *restful.Container) error {

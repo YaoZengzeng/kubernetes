@@ -81,6 +81,7 @@ type Config struct {
 	CacheCapacity int
 
 	// An underlying storage.Interface.
+	// 底层的storage.Interface接口
 	Storage storage.Interface
 
 	// An underlying storage.Versioner.
@@ -231,6 +232,7 @@ type indexedTriggerFunc struct {
 // based on the underlying storage contents.
 // Cacher implements storage.Interface (although most of the calls are just
 // delegated to the underlying storage).
+// Cacher实现了storage.Interface，虽然大多数调用都只是传递到了底层的storage
 type Cacher struct {
 	// HighWaterMarks for performance debugging.
 	// Important: Since HighWaterMark is using sync/atomic, it has to be at the top of the struct due to a bug on 32-bit platforms
@@ -308,6 +310,7 @@ type Cacher struct {
 // NewCacherFromConfig creates a new Cacher responsible for servicing WATCH and LIST requests from
 // its internal cache and updating its cache in the background based on the
 // given configuration.
+// NewCacherFromConfig创建一个新的Cacher负责服务WATCH和LIST请求
 func NewCacherFromConfig(config Config) (*Cacher, error) {
 	stopCh := make(chan struct{})
 	obj := config.NewFunc()

@@ -84,6 +84,7 @@ type StorageFactoryConfig struct {
 	EncryptionProviderConfigFilepath string
 }
 
+// 用EtcdOptions来完善StorageFactoryConfig
 func (c *StorageFactoryConfig) Complete(etcdOptions *serveroptions.EtcdOptions) (*completedStorageFactoryConfig, error) {
 	c.StorageConfig = etcdOptions.StorageConfig
 	c.DefaultStorageMediaType = etcdOptions.DefaultStorageMediaType

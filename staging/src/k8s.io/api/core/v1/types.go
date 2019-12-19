@@ -3398,6 +3398,7 @@ type EphemeralContainer struct {
 // PodStatus represents information about the status of a pod. Status may trail the actual
 // state of a system, especially if the node that hosts the pod cannot contact the control
 // plane.
+// PodStatus代表了一个pod的信息，Status可能会落后于系统的真实状态，特别地如果pod所在的节点不能和控制面交互的时候
 type PodStatus struct {
 	// The phase of a Pod is a simple, high-level summary of where the Pod is in its lifecycle.
 	// The conditions array, the reason and message fields, and the individual container status
@@ -5010,11 +5011,14 @@ type SerializedReference struct {
 }
 
 // EventSource contains information for an event.
+// EventSource包含了一个event的信息
 type EventSource struct {
 	// Component from which the event is generated.
+	// event产生的Component
 	// +optional
 	Component string `json:"component,omitempty" protobuf:"bytes,1,opt,name=component"`
 	// Node name on which the event is generated.
+	// event产生的Node name
 	// +optional
 	Host string `json:"host,omitempty" protobuf:"bytes,2,opt,name=host"`
 }

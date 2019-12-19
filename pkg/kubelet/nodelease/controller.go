@@ -160,6 +160,7 @@ func (c *controller) ensureLease() (*coordinationv1.Lease, bool, error) {
 
 // retryUpdateLease attempts to update the lease for maxUpdateRetries,
 // call this once you're sure the lease has been created
+// retryUpdateLease尝试更新lease共maxUpdateRetries次
 func (c *controller) retryUpdateLease(base *coordinationv1.Lease) error {
 	for i := 0; i < maxUpdateRetries; i++ {
 		lease, err := c.leaseClient.Update(c.newLease(base))
@@ -182,6 +183,7 @@ func (c *controller) retryUpdateLease(base *coordinationv1.Lease) error {
 
 // newLease constructs a new lease if base is nil, or returns a copy of base
 // with desired state asserted on the copy.
+// newLease构建一个新的lease对象如果base为nil
 func (c *controller) newLease(base *coordinationv1.Lease) *coordinationv1.Lease {
 	// Use the bare minimum set of fields; other fields exist for debugging/legacy,
 	// but we don't need to make node heartbeats more complicated by using them.
@@ -200,6 +202,7 @@ func (c *controller) newLease(base *coordinationv1.Lease) *coordinationv1.Lease 
 	} else {
 		lease = base.DeepCopy()
 	}
+	// 更行lease的RenewTime
 	lease.Spec.RenewTime = &metav1.MicroTime{Time: c.clock.Now()}
 
 	// Setting owner reference needs node's UID. Note that it is different from

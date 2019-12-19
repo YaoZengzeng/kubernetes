@@ -40,6 +40,7 @@ func GetControllerOf(controllee Object) *OwnerReference {
 }
 
 // NewControllerRef creates an OwnerReference pointing to the given owner.
+// NewControllerRef创建一个OwnerReference指向给定的owner
 func NewControllerRef(owner Object, gvk schema.GroupVersionKind) *OwnerReference {
 	blockOwnerDeletion := true
 	isController := true

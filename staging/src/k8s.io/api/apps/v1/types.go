@@ -336,9 +336,11 @@ type DeploymentStrategyType string
 
 const (
 	// Kill all existing pods before creating new ones.
+	// Recreate是在创建新的pod之前杀死所有已经存在的pods
 	RecreateDeploymentStrategyType DeploymentStrategyType = "Recreate"
 
 	// Replace the old ReplicaSets by new one using rolling update i.e gradually scale down the old ReplicaSets and scale up the new one.
+	// RollingUpdate是通过滚动升级的方式用新的替换旧的ReplicaSets，逐渐scale donw老的ReplicaSets并且scale up新的
 	RollingUpdateDeploymentStrategyType DeploymentStrategyType = "RollingUpdate"
 )
 

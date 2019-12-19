@@ -73,6 +73,7 @@ type Codec Serializer
 // ParameterCodec defines methods for serializing and deserializing API objects to url.Values and
 // performing any necessary conversion. Unlike the normal Codec, query parameters are not self describing
 // and the desired version must be specified.
+// ParameterCodec定义了方法用于将API对象序列化以及反序列化到url.Values
 type ParameterCodec interface {
 	// DecodeParameters takes the given url.Values in the specified group version and decodes them
 	// into the provided object, or returns an error.
@@ -251,6 +252,7 @@ type SelfLinker interface {
 // expected to be serialized to the wire, the interface an Object must provide to the Scheme allows
 // serializers to set the kind, version, and group the object is represented as. An Object may choose
 // to return a no-op ObjectKindAccessor in cases where it is not expected to be serialized.
+// Object接口必须被所有Scheme注册的API类型支持
 type Object interface {
 	GetObjectKind() schema.ObjectKind
 	DeepCopyObject() Object

@@ -15,4 +15,5 @@ limitations under the License.
 */
 
 // Package registry implements the storage and system logic for the core of the api server.
+// registry实现了api server核心的storage以及system logic
 package registry // import "k8s.io/kubernetes/pkg/registry"

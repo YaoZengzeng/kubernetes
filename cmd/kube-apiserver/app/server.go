@@ -17,6 +17,8 @@ limitations under the License.
 // Package app does all of the work necessary to create a Kubernetes
 // APIServer by binding together the API, master and APIServer infrastructure.
 // It can be configured and called directly or via the hyperkube framework.
+// app包做了创建一个Kubernetes APIServer所需的所有工作，通过将API, master和APIServer infrastructure向结合
+// 它可以直接被配置或者调用，也能通过hyperkube framework
 package app
 
 import (
@@ -105,6 +107,7 @@ cluster's shared state through which all other components interact.`,
 			utilflag.PrintFlags(cmd.Flags())
 
 			// set default options
+			// 设置默认的配置
 			completedOptions, err := Complete(s)
 			if err != nil {
 				return err
@@ -144,6 +147,7 @@ cluster's shared state through which all other components interact.`,
 }
 
 // Run runs the specified APIServer.  This should never exit.
+// Run运行特定的APIServer，它不应该退出
 func Run(completeOptions completedServerRunOptions, stopCh <-chan struct{}) error {
 	// To help debugging, immediately log version
 	klog.Infof("Version: %+v", version.Get())
@@ -153,6 +157,7 @@ func Run(completeOptions completedServerRunOptions, stopCh <-chan struct{}) erro
 		return err
 	}
 
+	// 准备运行
 	prepared, err := server.PrepareRun()
 	if err != nil {
 		return err
@@ -162,18 +167,21 @@ func Run(completeOptions completedServerRunOptions, stopCh <-chan struct{}) erro
 }
 
 // CreateServerChain creates the apiservers connected via delegation.
+// CreateServerChain创建通过delegation连接的apiservers
 func CreateServerChain(completedOptions completedServerRunOptions, stopCh <-chan struct{}) (*aggregatorapiserver.APIAggregator, error) {
 	nodeTunneler, proxyTransport, err := CreateNodeDialer(completedOptions)
 	if err != nil {
 		return nil, err
 	}
 
+	// 创建kubeAPIServerConfig
 	kubeAPIServerConfig, insecureServingInfo, serviceResolver, pluginInitializer, admissionPostStartHook, err := CreateKubeAPIServerConfig(completedOptions, nodeTunneler, proxyTransport)
 	if err != nil {
 		return nil, err
 	}
 
 	// If additional API servers are added, they should be gated.
+	// 如果有额外的API servers加入，它们应该通过gate
 	apiExtensionsConfig, err := createAPIExtensionsConfig(*kubeAPIServerConfig.GenericConfig, kubeAPIServerConfig.ExtraConfig.VersionedInformers, pluginInitializer, completedOptions.ServerRunOptions, completedOptions.MasterCount,
 		serviceResolver, webhook.NewDefaultAuthenticationInfoResolverWrapper(proxyTransport, kubeAPIServerConfig.GenericConfig.LoopbackClientConfig))
 	if err != nil {
@@ -190,6 +198,7 @@ func CreateServerChain(completedOptions completedServerRunOptions, stopCh <-chan
 	}
 
 	// aggregator comes last in the chain
+	// aggregator最后加入chain
 	aggregatorConfig, err := createAggregatorConfig(*kubeAPIServerConfig.GenericConfig, completedOptions.ServerRunOptions, kubeAPIServerConfig.ExtraConfig.VersionedInformers, serviceResolver, proxyTransport, pluginInitializer)
 	if err != nil {
 		return nil, err
@@ -211,6 +220,7 @@ func CreateServerChain(completedOptions completedServerRunOptions, stopCh <-chan
 }
 
 // CreateKubeAPIServer creates and wires a workable kube-apiserver
+// CreateKubeAPIServer创建并且连接一个可以运行的kube-apiserver
 func CreateKubeAPIServer(kubeAPIServerConfig *master.Config, delegateAPIServer genericapiserver.DelegationTarget, admissionPostStartHook genericapiserver.PostStartHookFunc) (*master.Master, error) {
 	kubeAPIServer, err := kubeAPIServerConfig.Complete().New(delegateAPIServer)
 	if err != nil {
@@ -223,6 +233,7 @@ func CreateKubeAPIServer(kubeAPIServerConfig *master.Config, delegateAPIServer g
 }
 
 // CreateNodeDialer creates the dialer infrastructure to connect to the nodes.
+// CreateNodeDialer创建dialer infrastructure用于连接nodes
 func CreateNodeDialer(s completedServerRunOptions) (tunneler.Tunneler, *http.Transport, error) {
 	// Setup nodeTunneler if needed
 	var nodeTunneler tunneler.Tunneler
@@ -259,6 +270,7 @@ func CreateNodeDialer(s completedServerRunOptions) (tunneler.Tunneler, *http.Tra
 		proxyDialerFn = nodeTunneler.Dial
 	}
 	// Proxying to pods and services is IP-based... don't expect to be able to verify the hostname
+	// 代理到pods和services是基于IP的，不要期望检测hostname
 	proxyTLSClientConfig := &tls.Config{InsecureSkipVerify: true}
 	proxyTransport := utilnet.SetTransportDefaults(&http.Transport{
 		DialContext:     proxyDialerFn,
@@ -268,6 +280,7 @@ func CreateNodeDialer(s completedServerRunOptions) (tunneler.Tunneler, *http.Tra
 }
 
 // CreateKubeAPIServerConfig creates all the resources for running the API server, but runs none of them
+// CreateKubeAPIServerConfig创建所有运行API server所需的资源，但是并不运行
 func CreateKubeAPIServerConfig(
 	s completedServerRunOptions,
 	nodeTunneler tunneler.Tunneler,
@@ -331,7 +344,9 @@ func CreateKubeAPIServerConfig(
 	}
 
 	config = &master.Config{
+		// GenericConfig
 		GenericConfig: genericConfig,
+		// ExtraConfig
 		ExtraConfig: master.ExtraConfig{
 			ClientCARegistrationHook: master.ClientCARegistrationHook{
 				ClientCA:                         clientCA,
@@ -372,6 +387,7 @@ func CreateKubeAPIServerConfig(
 
 	if nodeTunneler != nil {
 		// Use the nodeTunneler's dialer to connect to the kubelet
+		// 使用nodeTunneler的dialer来连接到kubelet
 		config.ExtraConfig.KubeletClientConfig.Dial = nodeTunneler.Dial
 	}
 	if config.GenericConfig.EgressSelector != nil {
@@ -383,6 +399,7 @@ func CreateKubeAPIServerConfig(
 }
 
 // BuildGenericConfig takes the master server options and produces the genericapiserver.Config associated with it
+// BuildGenericConfig获取master到server options并且产生和它相关的genericapiserver.Config
 func buildGenericConfig(
 	s *options.ServerRunOptions,
 	proxyTransport *http.Transport,
@@ -396,6 +413,7 @@ func buildGenericConfig(
 	storageFactory *serverstorage.DefaultStorageFactory,
 	lastErr error,
 ) {
+	// 构建generic apiserver的generic config
 	genericConfig = genericapiserver.NewConfig(legacyscheme.Codecs)
 	genericConfig.MergedResourceConfig = master.DefaultAPIResourceConfigSource()
 
@@ -432,6 +450,7 @@ func buildGenericConfig(
 	kubeVersion := version.Get()
 	genericConfig.Version = &kubeVersion
 
+	// 创建storageFactoryConfig
 	storageFactoryConfig := kubeapiserver.NewStorageFactoryConfig()
 	storageFactoryConfig.ApiResourceConfig = genericConfig.MergedResourceConfig
 	completedStorageFactoryConfig, err := storageFactoryConfig.Complete(s.Etcd)
@@ -439,6 +458,7 @@ func buildGenericConfig(
 		lastErr = err
 		return
 	}
+	// 创建Storage Factory
 	storageFactory, lastErr = completedStorageFactoryConfig.New()
 	if lastErr != nil {
 		return
@@ -482,6 +502,7 @@ func buildGenericConfig(
 		genericConfig.DisabledPostStartHooks.Insert(rbacrest.PostStartHookName)
 	}
 
+	// 配置admission config
 	admissionConfig := &kubeapiserveradmission.Config{
 		ExternalInformers:    versionedInformers,
 		LoopbackClientConfig: genericConfig.LoopbackClientConfig,
@@ -511,6 +532,7 @@ func buildGenericConfig(
 		return
 	}
 
+	// 构建admission
 	err = s.Admission.ApplyTo(
 		genericConfig,
 		versionedInformers,
@@ -548,12 +570,14 @@ func BuildAuthorizer(s *options.ServerRunOptions, versionedInformers clientgoinf
 }
 
 // completedServerRunOptions is a private wrapper that enforces a call of Complete() before Run can be invoked.
+// completedServerRunOptions是一个私有的wrapper，它强制在Run之前调用Complete()的调用
 type completedServerRunOptions struct {
 	*options.ServerRunOptions
 }
 
 // Complete set default ServerRunOptions.
 // Should be called after kube-apiserver flags parsed.
+// Complete设置默认的ServerRunOptions,应该在kube-apiserver的flags被解析之后被调用
 func Complete(s *options.ServerRunOptions) (completedServerRunOptions, error) {
 	var options completedServerRunOptions
 	// set defaults
@@ -662,8 +686,10 @@ func Complete(s *options.ServerRunOptions) (completedServerRunOptions, error) {
 		s.ServiceAccountTokenMaxExpiration = s.Authentication.ServiceAccounts.MaxExpiration
 	}
 
+	// 是否启动ectd watch cache
 	if s.Etcd.EnableWatchCache {
 		klog.V(2).Infof("Initializing cache sizes based on %dMB limit", s.GenericServerRunOptions.TargetRAMMB)
+		// 创建watch cache
 		sizes := cachesize.NewHeuristicWatchCacheSizes(s.GenericServerRunOptions.TargetRAMMB)
 		if userSpecified, err := serveroptions.ParseWatchCacheSizes(s.Etcd.WatchCacheSizes); err == nil {
 			for resource, size := range userSpecified {

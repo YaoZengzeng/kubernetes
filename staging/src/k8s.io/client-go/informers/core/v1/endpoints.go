@@ -52,8 +52,10 @@ func NewEndpointsInformer(client kubernetes.Interface, namespace string, resyncP
 }
 
 // NewFilteredEndpointsInformer constructs a new informer for Endpoints type.
+// NewFilteredEndpointsInformer为Endpoints类型构建一个新的informer
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// 总是优先使用informer factory来获取一个shared informer而不是获取一个独立的，这能够降低内存占用以及到server的连接数
 func NewFilteredEndpointsInformer(client kubernetes.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
@@ -81,6 +83,7 @@ func (f *endpointsInformer) defaultInformer(client kubernetes.Interface, resyncP
 }
 
 func (f *endpointsInformer) Informer() cache.SharedIndexInformer {
+	// 调用f的factory的InformerFor
 	return f.factory.InformerFor(&corev1.Endpoints{}, f.defaultInformer)
 }
 

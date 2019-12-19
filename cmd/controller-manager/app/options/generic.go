@@ -36,6 +36,7 @@ type GenericControllerManagerConfigurationOptions struct {
 // NewGenericControllerManagerConfigurationOptions returns generic configuration default values for both
 // the kube-controller-manager and the cloud-contoller-manager. Any common changes should
 // be made here. Any individual changes should be made in that controller.
+// NewGenericControllerManagerConfigurationOptions返回kube-controller-manager和cloud-controller-manager的通用配置
 func NewGenericControllerManagerConfigurationOptions(cfg *kubectrlmgrconfig.GenericControllerManagerConfiguration) *GenericControllerManagerConfigurationOptions {
 	o := &GenericControllerManagerConfigurationOptions{
 		GenericControllerManagerConfiguration: cfg,
@@ -60,6 +61,7 @@ func (o *GenericControllerManagerConfigurationOptions) AddFlags(fss *cliflag.Nam
 	genericfs.Float32Var(&o.ClientConnection.QPS, "kube-api-qps", o.ClientConnection.QPS, "QPS to use while talking with kubernetes apiserver.")
 	genericfs.Int32Var(&o.ClientConnection.Burst, "kube-api-burst", o.ClientConnection.Burst, "Burst to use while talking with kubernetes apiserver.")
 	genericfs.DurationVar(&o.ControllerStartInterval.Duration, "controller-start-interval", o.ControllerStartInterval.Duration, "Interval between starting controller managers.")
+	// 选择开启以及关闭的controller
 	genericfs.StringSliceVar(&o.Controllers, "controllers", o.Controllers, fmt.Sprintf(""+
 		"A list of controllers to enable. '*' enables all on-by-default controllers, 'foo' enables the controller "+
 		"named 'foo', '-foo' disables the controller named 'foo'.\nAll controllers: %s\nDisabled-by-default controllers: %s",

@@ -27,6 +27,7 @@ type NodeConditionPredicate func(node *v1.Node) bool
 
 // NodeListerExpansion allows custom methods to be added to
 // NodeLister.
+// NodeListerExpansion允许自定义的方法被加入到NodeLister中
 type NodeListerExpansion interface {
 	ListWithPredicate(predicate NodeConditionPredicate) ([]*v1.Node, error)
 }

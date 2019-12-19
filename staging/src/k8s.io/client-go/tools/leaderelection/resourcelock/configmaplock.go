@@ -44,6 +44,7 @@ type ConfigMapLock struct {
 func (cml *ConfigMapLock) Get() (*LeaderElectionRecord, error) {
 	var record LeaderElectionRecord
 	var err error
+	// 获取ConfigMap
 	cml.cm, err = cml.Client.ConfigMaps(cml.ConfigMapMeta.Namespace).Get(cml.ConfigMapMeta.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -56,15 +57,18 @@ func (cml *ConfigMapLock) Get() (*LeaderElectionRecord, error) {
 			return nil, err
 		}
 	}
+	// 从configmap的annotation中找到annotation并且返回
 	return &record, nil
 }
 
 // Create attempts to create a LeaderElectionRecord annotation
 func (cml *ConfigMapLock) Create(ler LeaderElectionRecord) error {
+	// 将LeaderElectionRecord编码
 	recordBytes, err := json.Marshal(ler)
 	if err != nil {
 		return err
 	}
+	// Create会尝试创建一个LeaderElectionRecord annotation
 	cml.cm, err = cml.Client.ConfigMaps(cml.ConfigMapMeta.Namespace).Create(&v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cml.ConfigMapMeta.Name,
@@ -78,6 +82,7 @@ func (cml *ConfigMapLock) Create(ler LeaderElectionRecord) error {
 }
 
 // Update will update an existing annotation on a given resource.
+// Update会尝试更新给定资源已经存在的annotation
 func (cml *ConfigMapLock) Update(ler LeaderElectionRecord) error {
 	if cml.cm == nil {
 		return errors.New("configmap not initialized, call get or create first")
@@ -102,6 +107,7 @@ func (cml *ConfigMapLock) RecordEvent(s string) {
 
 // Describe is used to convert details on current resource lock
 // into a string
+// Describe用于将当前resource lock的细节转换为string
 func (cml *ConfigMapLock) Describe() string {
 	return fmt.Sprintf("%v/%v", cml.ConfigMapMeta.Namespace, cml.ConfigMapMeta.Name)
 }

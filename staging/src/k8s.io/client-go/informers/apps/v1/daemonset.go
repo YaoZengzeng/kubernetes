@@ -33,8 +33,11 @@ import (
 
 // DaemonSetInformer provides access to a shared informer and lister for
 // DaemonSets.
+// DaemonSetInformer提供了对于DaemonSets的shared informer以及lister的访问
 type DaemonSetInformer interface {
+	// Informer获取事件
 	Informer() cache.SharedIndexInformer
+	// Lister用于直接获取某个DeamonSet的信息
 	Lister() v1.DaemonSetLister
 }
 

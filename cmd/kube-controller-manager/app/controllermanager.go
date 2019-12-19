@@ -107,6 +107,7 @@ Kubernetes today are the replication controller, endpoints controller, namespace
 controller, and serviceaccounts controller.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			verflag.PrintAndExitIfRequested()
+			// 解析并且打印flags
 			utilflag.PrintFlags(cmd.Flags())
 
 			c, err := s.Config(KnownControllers(), ControllersDisabledByDefault.List())
@@ -167,6 +168,7 @@ func Run(c *config.CompletedConfig, stopCh <-chan struct{}) error {
 	}
 
 	// Setup any healthz checks we will want to use.
+	// 创建任何我们想要使用的healthz checks
 	var checks []healthz.HealthChecker
 	var electionChecker *leaderelection.HealthzAdaptor
 	if c.ComponentConfig.Generic.LeaderElection.LeaderElect {
@@ -175,6 +177,7 @@ func Run(c *config.CompletedConfig, stopCh <-chan struct{}) error {
 	}
 
 	// Start the controller manager HTTP server
+	// 设置controller manager的HTTP server
 	// unsecuredMux is the handler for these controller *after* authn/authz filters have been applied
 	var unsecuredMux *mux.PathRecorderMux
 	if c.SecureServing != nil {
@@ -225,6 +228,7 @@ func Run(c *config.CompletedConfig, stopCh <-chan struct{}) error {
 		} else {
 			clientBuilder = rootClientBuilder
 		}
+		// 创建ControllerContext
 		controllerContext, err := CreateControllerContext(c, rootClientBuilder, clientBuilder, ctx.Done())
 		if err != nil {
 			klog.Fatalf("error building controller context: %v", err)
@@ -235,6 +239,7 @@ func Run(c *config.CompletedConfig, stopCh <-chan struct{}) error {
 			klog.Fatalf("error starting controllers: %v", err)
 		}
 
+		// 启动InformerFactory
 		controllerContext.InformerFactory.Start(controllerContext.Stop)
 		controllerContext.ObjectOrMetadataInformerFactory.Start(controllerContext.Stop)
 		close(controllerContext.InformersStarted)
@@ -243,6 +248,7 @@ func Run(c *config.CompletedConfig, stopCh <-chan struct{}) error {
 	}
 
 	if !c.ComponentConfig.Generic.LeaderElection.LeaderElect {
+		// 如果没有选主，则直接运行
 		run(context.TODO())
 		panic("unreachable")
 	}
@@ -253,9 +259,11 @@ func Run(c *config.CompletedConfig, stopCh <-chan struct{}) error {
 	}
 
 	// add a uniquifier so that two processes on the same host don't accidentally both become active
+	// 增加一个uniquifier，因此同一个host上的两个host不会同时变为active
 	id = id + "_" + string(uuid.NewUUID())
 
 	rl, err := resourcelock.New(c.ComponentConfig.Generic.LeaderElection.ResourceLock,
+		// 输入ResourceName以及ResourceNamespace
 		c.ComponentConfig.Generic.LeaderElection.ResourceNamespace,
 		c.ComponentConfig.Generic.LeaderElection.ResourceName,
 		c.LeaderElectionClient.CoreV1(),
@@ -274,6 +282,7 @@ func Run(c *config.CompletedConfig, stopCh <-chan struct{}) error {
 		RenewDeadline: c.ComponentConfig.Generic.LeaderElection.RenewDeadline.Duration,
 		RetryPeriod:   c.ComponentConfig.Generic.LeaderElection.RetryPeriod.Duration,
 		Callbacks: leaderelection.LeaderCallbacks{
+			// 选主成功，则调用run运行
 			OnStartedLeading: run,
 			OnStoppedLeading: func() {
 				klog.Fatalf("leaderelection lost")
@@ -289,9 +298,11 @@ func Run(c *config.CompletedConfig, stopCh <-chan struct{}) error {
 // ControllerContext定义了controller的context object
 type ControllerContext struct {
 	// ClientBuilder will provide a client for this controller to use
+	// ClientBuilder会提供一个client供这个controller使用
 	ClientBuilder controller.ControllerClientBuilder
 
 	// InformerFactory gives access to informers for the controller.
+	// InformerFactory让controller能够访问controller的informers
 	InformerFactory informers.SharedInformerFactory
 
 	// ObjectOrMetadataInformerFactory gives access to informers for typed resources
@@ -301,6 +312,7 @@ type ControllerContext struct {
 	ObjectOrMetadataInformerFactory controller.InformerFactory
 
 	// ComponentConfig provides access to init options for a given controller
+	// ComponentConfig提供对于给定的controller的init options的访问
 	ComponentConfig kubectrlmgrconfig.KubeControllerManagerConfiguration
 
 	// DeferredDiscoveryRESTMapper is a RESTMapper that will defer
@@ -342,9 +354,12 @@ func (c ControllerContext) IsControllerEnabled(name string) bool {
 // InitFunc is used to launch a particular controller.  It may run additional "should I activate checks".
 // Any error returned will cause the controller process to `Fatal`
 // The bool indicates whether the controller was enabled.
+// InitFunc用于启动一个特定的controller，它可能返回额外的"Shoudl I activate checks"，任何返回的error都会导致controller process
+// 进入Fatal
 type InitFunc func(ctx ControllerContext) (debuggingHandler http.Handler, enabled bool, err error)
 
 // KnownControllers returns all known controllers's name
+// KnownControllers返回所有已知的controllers的名字
 func KnownControllers() []string {
 	ret := sets.StringKeySet(NewControllerInitializers(IncludeCloudLoops))
 
@@ -360,6 +375,7 @@ func KnownControllers() []string {
 }
 
 // ControllersDisabledByDefault is the set of controllers which is disabled by default
+// ControllersDisabledByDefault是一系列默认关闭的controllers
 var ControllersDisabledByDefault = sets.NewString(
 	"bootstrapsigner",
 	"endpointslice",
@@ -375,6 +391,7 @@ const (
 // NewControllerInitializers是一个named controller groups的public map（可以在一个init func中启动超过一个）
 func NewControllerInitializers(loopMode ControllerLoopMode) map[string]InitFunc {
 	controllers := map[string]InitFunc{}
+	// InitFunc统一用ControllerContext作为参数
 	controllers["endpoint"] = startEndpointController
 	controllers["endpointslice"] = startEndpointSliceController
 	controllers["replicationcontroller"] = startReplicationController
@@ -400,6 +417,7 @@ func NewControllerInitializers(loopMode ControllerLoopMode) map[string]InitFunc 
 	controllers["nodeipam"] = startNodeIpamController
 	controllers["nodelifecycle"] = startNodeLifecycleController
 	if loopMode == IncludeCloudLoops {
+		// service依赖cloud?
 		controllers["service"] = startServiceController
 		controllers["route"] = startRouteController
 		controllers["cloud-node-lifecycle"] = startCloudNodeLifecycleController
@@ -418,6 +436,7 @@ func NewControllerInitializers(loopMode ControllerLoopMode) map[string]InitFunc 
 }
 
 // GetAvailableResources gets the map which contains all available resources of the apiserver
+// GetAvailableResources获取apiserver的所有资源，并且创建一个map
 // TODO: In general, any controller checking this needs to be dynamic so
 // users don't have to restart their controller manager if they change the apiserver.
 // Until we get there, the structure here needs to be exposed for the construction of a proper ControllerContext.
@@ -449,8 +468,11 @@ func GetAvailableResources(clientBuilder controller.ControllerClientBuilder) (ma
 // CreateControllerContext creates a context struct containing references to resources needed by the
 // controllers such as the cloud provider and clientBuilder. rootClientBuilder is only used for
 // the shared-informers client and token controller.
+// CreateControllerContext创建一个context结构包含controller例如cloud provider以及clientBuilder所需的资源
+// rootClientBuilder只用于shared-informers client以及token controller
 func CreateControllerContext(s *config.CompletedConfig, rootClientBuilder, clientBuilder controller.ControllerClientBuilder, stop <-chan struct{}) (ControllerContext, error) {
 	versionedClient := rootClientBuilder.ClientOrDie("shared-informers")
+	// 创建sharddInformers
 	sharedInformers := informers.NewSharedInformerFactory(versionedClient, ResyncPeriod(s)())
 
 	metadataClient := metadata.NewForConfigOrDie(rootClientBuilder.ConfigOrDie("metadata-informers"))
@@ -458,6 +480,7 @@ func CreateControllerContext(s *config.CompletedConfig, rootClientBuilder, clien
 
 	// If apiserver is not running we should wait for some time and fail only then. This is particularly
 	// important when we start apiserver and controller manager at the same time.
+	// 如果apiserver不在运行，我们应该等待一段时间之后再fail，这在我们同时启动apiserver和controller manager的时候是非常重要的
 	if err := genericcontrollermanager.WaitForAPIServer(versionedClient, 10*time.Second); err != nil {
 		return ControllerContext{}, fmt.Errorf("failed to wait for apiserver being healthy: %v", err)
 	}
@@ -498,6 +521,7 @@ func CreateControllerContext(s *config.CompletedConfig, rootClientBuilder, clien
 }
 
 // StartControllers starts a set of controllers with a specified ControllerContext
+// StartControllers用给定的ControllerContext启动一系列的controllers
 func StartControllers(ctx ControllerContext, startSATokenController InitFunc, controllers map[string]InitFunc, unsecuredMux *mux.PathRecorderMux) error {
 	// Always start the SA token controller first using a full-power client, since it needs to mint tokens for the rest
 	// If this fails, just return here and fail since other controllers won't be able to get credentials.
@@ -512,6 +536,7 @@ func StartControllers(ctx ControllerContext, startSATokenController InitFunc, co
 	}
 
 	for controllerName, initFn := range controllers {
+		// 判断对应的controller是否使能
 		if !ctx.IsControllerEnabled(controllerName) {
 			klog.Warningf("%q is disabled", controllerName)
 			continue
@@ -520,6 +545,7 @@ func StartControllers(ctx ControllerContext, startSATokenController InitFunc, co
 		time.Sleep(wait.Jitter(ctx.ComponentConfig.Generic.ControllerStartInterval.Duration, ControllerStartJitter))
 
 		klog.V(1).Infof("Starting %q", controllerName)
+		// 启动Controller
 		debugHandler, started, err := initFn(ctx)
 		if err != nil {
 			klog.Errorf("Error starting %q", controllerName)

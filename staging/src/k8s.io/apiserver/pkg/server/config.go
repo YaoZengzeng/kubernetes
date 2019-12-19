@@ -73,14 +73,17 @@ import (
 
 const (
 	// DefaultLegacyAPIPrefix is where the legacy APIs will be located.
+	// DefaultLegacyAPIPrefix是老的APIs所在的地方
 	DefaultLegacyAPIPrefix = "/api"
 
 	// APIGroupPrefix is where non-legacy API group will be located.
+	// APIGroupPrefix是non-legacy API group所在的地方
 	APIGroupPrefix = "/apis"
 )
 
 // Config is a structure used to configure a GenericAPIServer.
 // Its members are sorted roughly in order of importance for composers.
+// Config是用于构建一个GenericAPIServer所需的结构
 type Config struct {
 	// SecureServing is required to serve https
 	SecureServing *SecureServingInfo
@@ -105,6 +108,7 @@ type Config struct {
 	RuleResolver authorizer.RuleResolver
 	// AdmissionControl performs deep inspection of a given request (including content)
 	// to set values and determine whether its allowed
+	// AdmissionControl对一个给定的请求做深入的检查来设置values以及决定有些值是否允许
 	AdmissionControl      admission.Interface
 	CorsAllowedOriginList []string
 
@@ -157,6 +161,7 @@ type Config struct {
 	OpenAPIConfig *openapicommon.Config
 
 	// RESTOptionsGetter is used to construct RESTStorage types via the generic registry.
+	// RESTOptionsGetter用于通过generic registry构建RESTStorage类型
 	RESTOptionsGetter genericregistry.RESTOptionsGetter
 
 	// If specified, all requests except those which match the LongRunningFunc predicate will timeout
@@ -310,6 +315,7 @@ func NewConfig(codecs serializer.CodecFactory) *Config {
 		// proto when persisted in etcd. Assuming the upper bound of
 		// the size ratio is 10:1, we set 100MB as the largest request
 		// body size to be accepted and decoded in a write request.
+		// 10MB是etcd server能够接受的最大的client请求大小
 		MaxRequestBodyBytes: int64(100 * 1024 * 1024),
 
 		// Default to treating watch as a long-running operation
@@ -470,6 +476,7 @@ func (c *RecommendedConfig) Complete() CompletedConfig {
 }
 
 // New creates a new server which logically combines the handling chain with the passed server.
+// New创建一个新的server，它从逻辑上组合了传递过来的server
 // name is used to differentiate for logging. The handler chain in particular can be difficult as it starts delgating.
 // delegationTarget may not be nil.
 func (c completedConfig) New(name string, delegationTarget DelegationTarget) (*GenericAPIServer, error) {
@@ -486,6 +493,7 @@ func (c completedConfig) New(name string, delegationTarget DelegationTarget) (*G
 	handlerChainBuilder := func(handler http.Handler) http.Handler {
 		return c.BuildHandlerChainFunc(handler, c.Config)
 	}
+	// 创建API Server Handler
 	apiServerHandler := NewAPIServerHandler(name, c.Serializer, handlerChainBuilder, delegationTarget.UnprotectedHandler())
 
 	s := &GenericAPIServer{
@@ -607,6 +615,7 @@ func DefaultBuildHandlerChain(apiHandler http.Handler, c *Config) http.Handler {
 	return handler
 }
 
+// 注册profiling，metrics，discovery
 func installAPI(s *GenericAPIServer, c *Config) {
 	if c.EnableIndex {
 		routes.Index{}.Install(s.listedPathProvider, s.Handler.NonGoRestfulMux)

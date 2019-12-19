@@ -1035,6 +1035,7 @@ type ClusterV3 struct {
 
 // NewClusterV3 returns a launched cluster with a grpc client connection
 // for each cluster member.
+// NewClusterV3返回一个启动的cluster，每个cluster member都有一个grpc client
 func NewClusterV3(t *testing.T, cfg *ClusterConfig) *ClusterV3 {
 	cfg.UseGRPC = true
 	if os.Getenv("CLIENT_DEBUG") != "" {

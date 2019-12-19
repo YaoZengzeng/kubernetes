@@ -57,6 +57,7 @@ type Selector interface {
 }
 
 // Everything returns a selector that matches all labels.
+// Everything返回一个selector，匹配所有的labels
 func Everything() Selector {
 	return internalSelector{}
 }

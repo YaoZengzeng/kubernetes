@@ -78,6 +78,7 @@ func newRSWithStatus(name string, specReplicas, statusReplicas int, selector map
 }
 
 func newDeployment(name string, replicas int, revisionHistoryLimit *int32, maxSurge, maxUnavailable *intstr.IntOrString, selector map[string]string) *apps.Deployment {
+	// 新建Deployment对象
 	d := apps.Deployment{
 		TypeMeta: metav1.TypeMeta{APIVersion: "apps/v1", Kind: "Deployment"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -112,27 +113,34 @@ func newDeployment(name string, replicas int, revisionHistoryLimit *int32, maxSu
 		},
 	}
 	if maxSurge != nil {
+		// 设置maxSurge
 		d.Spec.Strategy.RollingUpdate.MaxSurge = maxSurge
 	}
 	if maxUnavailable != nil {
+		// 设置maxUnavailable
 		d.Spec.Strategy.RollingUpdate.MaxUnavailable = maxUnavailable
 	}
 	return &d
 }
 
 func newReplicaSet(d *apps.Deployment, name string, replicas int) *apps.ReplicaSet {
+	// 新建ReplicaSet
 	return &apps.ReplicaSet{
 		TypeMeta: metav1.TypeMeta{Kind: "ReplicaSet"},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            name,
 			UID:             uuid.NewUUID(),
 			Namespace:       metav1.NamespaceDefault,
+			// 直接将deployment的selector的MatchLabels作为rs的Labels
 			Labels:          d.Spec.Selector.MatchLabels,
+			// 设置OwnerReferences
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(d, controllerKind)},
 		},
 		Spec: apps.ReplicaSetSpec{
+			// rs的selector和deployment的selector一致
 			Selector: d.Spec.Selector,
 			Replicas: func() *int32 { i := int32(replicas); return &i }(),
+			// Template也是和deployment的Template一致
 			Template: d.Spec.Template,
 		},
 	}
@@ -143,12 +151,14 @@ type fixture struct {
 
 	client *fake.Clientset
 	// Objects to put in the store.
+	// 存入store中的对象
 	dLister   []*apps.Deployment
 	rsLister  []*apps.ReplicaSet
 	podLister []*v1.Pod
 
 	// Actions expected to happen on the client. Objects from here are also
 	// preloaded into NewSimpleFake.
+	// 在client发生的Action，这里的对象同时提前加载到NewSimpleFake中
 	actions []core.Action
 	objects []runtime.Object
 }
@@ -181,12 +191,15 @@ func newFixture(t testing.TB) *fixture {
 }
 
 func (f *fixture) newController() (*DeploymentController, informers.SharedInformerFactory, error) {
+	// 新建一个SimpleClientset
 	f.client = fake.NewSimpleClientset(f.objects...)
+	// 一个全局共享的informer
 	informers := informers.NewSharedInformerFactory(f.client, controller.NoResyncPeriodFunc())
 	c, err := NewDeploymentController(informers.Apps().V1().Deployments(), informers.Apps().V1().ReplicaSets(), informers.Core().V1().Pods(), f.client)
 	if err != nil {
 		return nil, nil, err
 	}
+	// 重置eventRecorder以及各个ListerSynced
 	c.eventRecorder = &record.FakeRecorder{}
 	c.dListerSynced = alwaysReady
 	c.rsListerSynced = alwaysReady
@@ -275,7 +288,9 @@ func TestSyncDeploymentCreatesReplicaSet(t *testing.T) {
 
 	rs := newReplicaSet(d, "deploymentrs-4186632231", 1)
 
+	// 期望有一个创建RS的动作
 	f.expectCreateRSAction(rs)
+	// 期望有两个更新Deployment状态的动作
 	f.expectUpdateDeploymentStatusAction(d)
 	f.expectUpdateDeploymentStatusAction(d)
 

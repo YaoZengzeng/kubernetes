@@ -17,6 +17,8 @@ limitations under the License.
 // Package app implements a server that runs a set of active
 // components.  This includes replication controllers, service endpoints and
 // nodes.
+// app包实现了一个server，它运行一系列的active components，包括replication controllers, service endpoints
+// 以及nodes等等
 //
 package app
 
@@ -34,9 +36,11 @@ import (
 )
 
 func startDaemonSetController(ctx ControllerContext) (http.Handler, bool, error) {
+	// 对应的资源对象是否能在ctx.AvailableResources中获取
 	if !ctx.AvailableResources[schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "daemonsets"}] {
 		return nil, false, nil
 	}
+	// 创建新的DaemonSetController
 	dsc, err := daemon.NewDaemonSetsController(
 		ctx.InformerFactory.Apps().V1().DaemonSets(),
 		ctx.InformerFactory.Apps().V1().ControllerRevisions(),
@@ -48,6 +52,7 @@ func startDaemonSetController(ctx ControllerContext) (http.Handler, bool, error)
 	if err != nil {
 		return nil, true, fmt.Errorf("error creating DaemonSets controller: %v", err)
 	}
+	// 运行DaemonSet Controller
 	go dsc.Run(int(ctx.ComponentConfig.DaemonSetController.ConcurrentDaemonSetSyncs), ctx.Stop)
 	return nil, true, nil
 }

@@ -31,6 +31,7 @@ import (
 )
 
 // Creates a cacher based given storageConfig.
+// 用给定的storageConfig返回一个给定的cacher
 func StorageWithCacher(capacity int) generic.StorageDecorator {
 	return func(
 		storageConfig *storagebackend.Config,
@@ -41,6 +42,7 @@ func StorageWithCacher(capacity int) generic.StorageDecorator {
 		getAttrsFunc storage.AttrFunc,
 		triggerFuncs storage.IndexerFuncs) (storage.Interface, factory.DestroyFunc, error) {
 
+		// 构建裸存储
 		s, d, err := generic.NewRawStorage(storageConfig)
 		if err != nil {
 			return s, d, err
@@ -55,6 +57,8 @@ func StorageWithCacher(capacity int) generic.StorageDecorator {
 
 		// TODO: we would change this later to make storage always have cacher and hide low level KV layer inside.
 		// Currently it has two layers of same storage interface -- cacher and low level kv.
+		// 当前有着两层同样layers的接口 --- cacher和底层的kv
+		// 此处构建cacher config
 		cacherConfig := cacherstorage.Config{
 			CacheCapacity:  capacity,
 			Storage:        s,

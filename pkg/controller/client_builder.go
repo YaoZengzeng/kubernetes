@@ -42,6 +42,7 @@ import (
 )
 
 // ControllerClientBuilder allows you to get clients and configs for controllers
+// ControllerClientBuilder允许你为controllers返回clients以及configs
 // Please note a copy also exists in staging/src/k8s.io/cloud-provider/cloud.go
 // TODO: Extract this into a separate controller utilities repo (issues/68947)
 type ControllerClientBuilder interface {

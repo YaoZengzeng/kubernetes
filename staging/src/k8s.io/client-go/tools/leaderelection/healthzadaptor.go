@@ -23,6 +23,7 @@ import (
 )
 
 // HealthzAdaptor associates the /healthz endpoint with the LeaderElection object.
+// HealthzAdaptor将/healthz endpoint和LeaderElection对象相关联
 // It helps deal with the /healthz endpoint being set up prior to the LeaderElection.
 // This contains the code needed to act as an adaptor between the leader
 // election code the health check code. It allows us to provide health
@@ -41,7 +42,9 @@ func (l *HealthzAdaptor) Name() string {
 }
 
 // Check is called by the healthz endpoint handler.
+// Check由healthz endpoint handler调用
 // It fails (returns an error) if we own the lease but had not been able to renew it.
+// 它会fails如果我们拥有lease但是不能renew它
 func (l *HealthzAdaptor) Check(req *http.Request) error {
 	l.pointerLock.Lock()
 	defer l.pointerLock.Unlock()

@@ -135,6 +135,7 @@ type PodPreemptor interface {
 
 // Configurator defines I/O, caching, and other functionality needed to
 // construct a new scheduler.
+// Configurator定义了I/O，缓存一级其他的功能用于构建一个新的scheduler
 type Configurator struct {
 	client clientset.Interface
 	// a means to list all PersistentVolumes
@@ -521,7 +522,9 @@ func (i *podInformer) Lister() corelisters.PodLister {
 }
 
 // NewPodInformer creates a shared index informer that returns only non-terminal pods.
+// NewPodInformer创建一个共享的index informer，只返回non-terminal的pods
 func NewPodInformer(client clientset.Interface, resyncPeriod time.Duration) coreinformers.PodInformer {
+	// 状态不为Success或者Failed的pods
 	selector := fields.ParseSelectorOrDie(
 		"status.phase!=" + string(v1.PodSucceeded) +
 			",status.phase!=" + string(v1.PodFailed))

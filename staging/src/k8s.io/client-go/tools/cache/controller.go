@@ -31,15 +31,19 @@ type Config struct {
 	// The queue for your objects - has to be a DeltaFIFO due to
 	// assumptions in the implementation. Your Process() function
 	// should accept the output of this Queue's Pop() method.
+	// Queue应该是相应对象的DeltaFIFO，Process()函数应该接受来自Queue的
+	// Pop()方法的output
 	Queue
 
 	// Something that can list and watch your objects.
 	ListerWatcher
 
 	// Something that can process your objects.
+	// 处理你的对象的方法
 	Process ProcessFunc
 
 	// The type of your objects.
+	// 对象的类型
 	ObjectType runtime.Object
 
 	// Reprocess everything at least this often.
@@ -80,6 +84,7 @@ type controller struct {
 }
 
 // Controller is a generic controller framework.
+// Controller是一个通用的controller framework
 type Controller interface {
 	Run(stopCh <-chan struct{})
 	HasSynced() bool
@@ -96,17 +101,20 @@ func New(c *Config) Controller {
 }
 
 // Run begins processing items, and will continue until a value is sent down stopCh.
+// Run开始处理items并且会持续直到一个value被发送到stopCh
 // It's an error to call Run more than once.
 // Run blocks; call via go.
 func (c *controller) Run(stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 	go func() {
+		// 如果结束了就关闭队列
 		<-stopCh
 		c.config.Queue.Close()
 	}()
 	r := NewReflector(
 		c.config.ListerWatcher,
 		c.config.ObjectType,
+		// 将Queue作为Store存入
 		c.config.Queue,
 		c.config.FullResyncPeriod,
 	)
@@ -120,12 +128,14 @@ func (c *controller) Run(stopCh <-chan struct{}) {
 	var wg wait.Group
 	defer wg.Wait()
 
+	// 启动reflector
 	wg.StartWithChannel(stopCh, r.Run)
 
 	wait.Until(c.processLoop, time.Second, stopCh)
 }
 
 // Returns true once this controller has completed an initial resource listing
+// 返回true，一旦controller已经完成了初识的resource listing
 func (c *controller) HasSynced() bool {
 	return c.config.Queue.HasSynced()
 }
@@ -295,6 +305,8 @@ func NewInformer(
 // while also providing event notifications. You should only used the returned
 // Index for Get/List operations; Add/Modify/Deletes will cause the event
 // notifications to be faulty.
+// NewIndexerInformer返回一个Indexer以及一个controller用于填充index，同时提供event notification
+// 应该只用返回的Index用于Get/List操作，Add/Modify/Deletes会让event notifications有缺陷
 //
 // Parameters:
 //  * lw is list and watch functions for the source of the resource you want to
@@ -312,9 +324,11 @@ func NewIndexerInformer(
 	objType runtime.Object,
 	resyncPeriod time.Duration,
 	h ResourceEventHandler,
+	// Indexers是一个Indexers的集合
 	indexers Indexers,
 ) (Indexer, Controller) {
 	// This will hold the client state, as we know it.
+	// 这会维护client的状态
 	clientState := NewIndexer(DeletionHandlingMetaNamespaceKeyFunc, indexers)
 
 	return clientState, newInformer(lw, objType, resyncPeriod, h, clientState)
@@ -322,6 +336,7 @@ func NewIndexerInformer(
 
 // newInformer returns a controller for populating the store while also
 // providing event notifications.
+// newInformer返回一个controller用于填充store同时提供event notifications
 //
 // Parameters
 //  * lw is list and watch functions for the source of the resource you want to
@@ -344,6 +359,7 @@ func newInformer(
 	// This will hold incoming changes. Note how we pass clientState in as a
 	// KeyLister, that way resync operations will result in the correct set
 	// of update/delete deltas.
+	// fifo会维护incoming changes
 	fifo := NewDeltaFIFO(MetaNamespaceKeyFunc, clientState)
 
 	cfg := &Config{
@@ -357,11 +373,14 @@ func newInformer(
 			// from oldest to newest
 			for _, d := range obj.(Deltas) {
 				switch d.Type {
+				// 根据Delta的类型进行处理
 				case Sync, Added, Updated:
 					if old, exists, err := clientState.Get(d.Object); err == nil && exists {
+						// 一方面调用clientState的Update方法
 						if err := clientState.Update(d.Object); err != nil {
 							return err
 						}
+						// 再调用Event Handler的OnUpdate接口
 						h.OnUpdate(old, d.Object)
 					} else {
 						if err := clientState.Add(d.Object); err != nil {

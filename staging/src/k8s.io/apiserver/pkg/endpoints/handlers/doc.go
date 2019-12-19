@@ -15,4 +15,5 @@ limitations under the License.
 */
 
 // Package handlers contains HTTP handlers to implement the apiserver APIs.
+// handlers包含了实现apiserver APIs的HTTP handlers
 package handlers // import "k8s.io/apiserver/pkg/endpoints/handlers"

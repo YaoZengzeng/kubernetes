@@ -171,6 +171,7 @@ func DeleteDaemonSetForeground(client clientset.Interface, namespace, name strin
 }
 
 // DeleteDeploymentForeground deletes the specified Deployment in foreground mode; i.e. it blocks until/makes sure all the managed Pods are deleted
+// DeleteDeploymentForeground以foreground模式删除指定的Deployment，它会阻塞或者确定所有管理的Pods都已经被删除了
 func DeleteDeploymentForeground(client clientset.Interface, namespace, name string) error {
 	foregroundDelete := metav1.DeletePropagationForeground
 	deleteOptions := &metav1.DeleteOptions{

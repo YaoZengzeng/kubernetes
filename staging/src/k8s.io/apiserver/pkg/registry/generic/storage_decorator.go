@@ -25,6 +25,8 @@ import (
 
 // StorageDecorator is a function signature for producing a storage.Interface
 // and an associated DestroyFunc from given parameters.
+// StorageDecorator是一个function signature用给定的参数产生一个storage.Interface以及
+// 一个相关的DestroyFunc
 type StorageDecorator func(
 	config *storagebackend.Config,
 	resourcePrefix string,
@@ -49,6 +51,7 @@ func UndecoratedStorage(
 
 // NewRawStorage creates the low level kv storage. This is a work-around for current
 // two layer of same storage interface.
+// NewRawStorage创建底层的kv storage
 // TODO: Once cacher is enabled on all registries (event registry is special), we will remove this method.
 func NewRawStorage(config *storagebackend.Config) (storage.Interface, factory.DestroyFunc, error) {
 	return factory.Create(*config)

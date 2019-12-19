@@ -76,6 +76,7 @@ const (
 	// SelectingAllReason is added to an event when a DaemonSet selects all Pods.
 	SelectingAllReason = "SelectingAll"
 	// FailedPlacementReason is added to an event when a DaemonSet can't schedule a Pod to a specified node.
+	// FailedPlacementReason会在一个DaemonSet不能调度到某个特定节点产生的事件
 	FailedPlacementReason = "FailedPlacement"
 	// FailedDaemonPodReason is added to an event when the status of a Pod of a DaemonSet is 'Failed'.
 	FailedDaemonPodReason = "FailedDaemonPod"
@@ -99,6 +100,7 @@ type DaemonSetsController struct {
 	// To allow injection of syncDaemonSet for testing.
 	syncHandler func(dsKey string) error
 	// used for unit testing
+	// 下面两个函数用于单元测试
 	enqueueDaemonSet            func(ds *apps.DaemonSet)
 	enqueueDaemonSetRateLimited func(ds *apps.DaemonSet)
 	// A TTLCache of pod creates/deletes each ds expects to see
@@ -140,6 +142,7 @@ type DaemonSetsController struct {
 // NewDaemonSetsController creates a new DaemonSetsController
 func NewDaemonSetsController(
 	daemonSetInformer appsinformers.DaemonSetInformer,
+	// ControllerRevisionInformer用于历史版本的记录
 	historyInformer appsinformers.ControllerRevisionInformer,
 	podInformer coreinformers.PodInformer,
 	nodeInformer coreinformers.NodeInformer,
@@ -157,6 +160,7 @@ func NewDaemonSetsController(
 	}
 	dsc := &DaemonSetsController{
 		kubeClient:    kubeClient,
+		// eventRecorder构造event用于发送
 		eventRecorder: eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: "daemonset-controller"}),
 		podControl: controller.RealPodControl{
 			KubeClient: kubeClient,
@@ -175,12 +179,14 @@ func NewDaemonSetsController(
 		AddFunc: func(obj interface{}) {
 			ds := obj.(*apps.DaemonSet)
 			klog.V(4).Infof("Adding daemon set %s", ds.Name)
+			// dsc.enqueueDeemonSet最终被设置为dsc.enqueue
 			dsc.enqueueDaemonSet(ds)
 		},
 		UpdateFunc: func(old, cur interface{}) {
 			oldDS := old.(*apps.DaemonSet)
 			curDS := cur.(*apps.DaemonSet)
 			klog.V(4).Infof("Updating daemon set %s", oldDS.Name)
+			// 将当前的DaemonSet入队
 			dsc.enqueueDaemonSet(curDS)
 		},
 		DeleteFunc: dsc.deleteDaemonset,
@@ -198,6 +204,7 @@ func NewDaemonSetsController(
 
 	// Watch for creation/deletion of pods. The reason we watch is that we don't want a daemon set to create/delete
 	// more pods until all the effects (expectations) of a daemon set's create/delete have been observed.
+	// 监听pods的创建／删除，我们监听的原因是我们不想一个daemon set创建／删除更多的pods直到一个daemon set的创建／删除都已经被发现
 	podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    dsc.addPod,
 		UpdateFunc: dsc.updatePod,
@@ -209,6 +216,7 @@ func NewDaemonSetsController(
 	podInformer.Informer().GetIndexer().AddIndexers(cache.Indexers{
 		"nodeName": indexByPodNodeName,
 	})
+	// 获取node的索引
 	dsc.podNodeIndex = podInformer.Informer().GetIndexer()
 	dsc.podStoreSynced = podInformer.Informer().HasSynced
 
@@ -249,6 +257,7 @@ func (dsc *DaemonSetsController) deleteDaemonset(obj interface{}) {
 			utilruntime.HandleError(fmt.Errorf("Couldn't get object from tombstone %#v", obj))
 			return
 		}
+		// 从cache.DeletedFinalStateUnknown中获取DaemonSet
 		ds, ok = tombstone.Obj.(*apps.DaemonSet)
 		if !ok {
 			utilruntime.HandleError(fmt.Errorf("Tombstone contained object that is not a DaemonSet %#v", obj))
@@ -306,6 +315,7 @@ func (dsc *DaemonSetsController) processNextWorkItem() bool {
 }
 
 func (dsc *DaemonSetsController) enqueue(ds *apps.DaemonSet) {
+	// 获取daemonset对应的key
 	key, err := controller.KeyFunc(ds)
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("Couldn't get key for object %#v: %v", ds, err))
@@ -369,11 +379,13 @@ func (dsc *DaemonSetsController) getDaemonSetsForHistory(history *apps.Controlle
 
 // addHistory enqueues the DaemonSet that manages a ControllerRevision when the ControllerRevision is created
 // or when the controller manager is restarted.
+// addHistory将一个管理一个ControllerRevision的DaemonSet入队，当ControllerRevision被创建或者controller manager被重启的时候
 func (dsc *DaemonSetsController) addHistory(obj interface{}) {
 	history := obj.(*apps.ControllerRevision)
 	if history.DeletionTimestamp != nil {
 		// On a restart of the controller manager, it's possible for an object to
 		// show up in a state that is already pending deletion.
+		// 在controller manager重启的时候，可能一个对象已经处于pending deletion的状态
 		dsc.deleteHistory(history)
 		return
 	}
@@ -390,12 +402,14 @@ func (dsc *DaemonSetsController) addHistory(obj interface{}) {
 
 	// Otherwise, it's an orphan. Get a list of all matching DaemonSets and sync
 	// them to see if anyone wants to adopt it.
+	// 否则，这是一个orphan，获取一系列匹配的DaemonSets并且同步它们，看一看是否有人想要收留它
 	daemonSets := dsc.getDaemonSetsForHistory(history)
 	if len(daemonSets) == 0 {
 		return
 	}
 	klog.V(4).Infof("Orphan ControllerRevision %s added.", history.Name)
 	for _, ds := range daemonSets {
+		// 否则将愿意接受ControllerRevision的DaemonSet入队
 		dsc.enqueueDaemonSet(ds)
 	}
 }
@@ -702,12 +716,14 @@ func (dsc *DaemonSetsController) addNode(obj interface{}) {
 		return
 	}
 	node := obj.(*v1.Node)
+	// 遍历DaemonSet，判断node是否应该运行它
 	for _, ds := range dsList {
 		_, shouldSchedule, _, err := dsc.nodeShouldRunDaemonPod(node, ds)
 		if err != nil {
 			continue
 		}
 		if shouldSchedule {
+			// 如果应该调度的话，将ds入队
 			dsc.enqueueDaemonSet(ds)
 		}
 	}
@@ -946,6 +962,7 @@ func (dsc *DaemonSetsController) podsShouldBeOnNode(
 }
 
 // manage manages the scheduling and running of Pods of ds on nodes.
+// manage管理ds的Pods在节点上的调度和运行
 // After figuring out which nodes should run a Pod of ds but not yet running one and
 // which nodes should not run a Pod of ds but currently running one, it calls function
 // syncNodes with a list of pods to remove and a list of nodes to run a Pod of ds.
@@ -1007,6 +1024,7 @@ func (dsc *DaemonSetsController) syncNodes(ds *apps.DaemonSet, podsToDelete, nod
 	dsc.expectations.SetExpectations(dsKey, createDiff, deleteDiff)
 
 	// error channel to communicate back failures.  make the buffer big enough to avoid any blocking
+	// error channel用来communicate back failures，确保buffer足够大来避免任何的blocking
 	errCh := make(chan error, createDiff+deleteDiff)
 
 	klog.V(4).Infof("Nodes needing daemon pods for daemon set %s: %+v, creating %d", ds.Name, nodesNeedingDaemonPods, createDiff)
@@ -1040,13 +1058,16 @@ func (dsc *DaemonSetsController) syncNodes(ds *apps.DaemonSet, podsToDelete, nod
 					// The pod's NodeAffinity will be updated to make sure the Pod is bound
 					// to the target node by default scheduler. It is safe to do so because there
 					// should be no conflicting node affinity with the target node.
+					// pod的NodeAffinity应该更新，从而确保Pod会被默认的scheduler绑定到target node
 					podTemplate.Spec.Affinity = util.ReplaceDaemonSetPodNodeNameNodeAffinity(
 						podTemplate.Spec.Affinity, nodesNeedingDaemonPods[ix])
 
+					// 调用PodControl创建Pods，并且绑定ControllerRef
 					err = dsc.podControl.CreatePodsWithControllerRef(ds.Namespace, podTemplate,
 						ds, metav1.NewControllerRef(ds, controllerKind))
 				} else {
 					// If pod is scheduled by DaemonSetController, set its '.spec.scheduleName'.
+					// 如果pod是被DaemonSetController调度到，设置它的'.spec.scheduleName'
 					podTemplate.Spec.SchedulerName = "kubernetes.io/daemonset-controller"
 
 					err = dsc.podControl.CreatePodsOnNode(nodesNeedingDaemonPods[ix], ds.Namespace, podTemplate,
@@ -1084,11 +1105,13 @@ func (dsc *DaemonSetsController) syncNodes(ds *apps.DaemonSet, podsToDelete, nod
 	}
 
 	klog.V(4).Infof("Pods to delete for daemon set %s: %+v, deleting %d", ds.Name, podsToDelete, deleteDiff)
+	// 设置了WaitGroup，因此不会向关闭的errCh发送error
 	deleteWait := sync.WaitGroup{}
 	deleteWait.Add(deleteDiff)
 	for i := 0; i < deleteDiff; i++ {
 		go func(ix int) {
 			defer deleteWait.Done()
+			// 并发地删除pods
 			if err := dsc.podControl.DeletePod(ds.Namespace, podsToDelete[ix], ds); err != nil {
 				klog.V(2).Infof("Failed deletion, decrementing expectations for set %q/%q", ds.Namespace, ds.Name)
 				dsc.expectations.DeletionObserved(dsKey)
@@ -1221,6 +1244,7 @@ func (dsc *DaemonSetsController) syncDaemonSet(key string) error {
 	}
 	ds, err := dsc.dsLister.DaemonSets(namespace).Get(name)
 	if errors.IsNotFound(err) {
+		// 如果是daemonset删除的事件，则将它的key从expectations中移除
 		klog.V(3).Infof("daemon set has been deleted %v", key)
 		dsc.expectations.DeleteExpectations(key)
 		return nil
@@ -1241,6 +1265,7 @@ func (dsc *DaemonSetsController) syncDaemonSet(key string) error {
 	}
 
 	// Don't process a daemon set until all its creations and deletions have been processed.
+	// 不要处理一个daemon set直到它的creations以及deletions都已经被处理了
 	// For example if daemon set foo asked for 3 new daemon pods in the previous call to manage,
 	// then we do not want to call manage on foo until the daemon pods have been created.
 	dsKey, err := controller.KeyFunc(ds)
@@ -1261,6 +1286,7 @@ func (dsc *DaemonSetsController) syncDaemonSet(key string) error {
 	}
 
 	// Construct histories of the DaemonSet, and get the hash of current history
+	// 获取当前history的hash
 	cur, old, err := dsc.constructHistory(ds)
 	if err != nil {
 		return fmt.Errorf("failed to construct revisions of DaemonSet: %v", err)
@@ -1272,6 +1298,7 @@ func (dsc *DaemonSetsController) syncDaemonSet(key string) error {
 		return dsc.updateDaemonSetStatus(ds, nodeList, hash, false)
 	}
 
+	// 参数为当前处理的daemonset以及所有的node列表
 	err = dsc.manage(ds, nodeList, hash)
 	if err != nil {
 		return err
@@ -1289,6 +1316,7 @@ func (dsc *DaemonSetsController) syncDaemonSet(key string) error {
 		}
 	}
 
+	// 清除history
 	err = dsc.cleanupHistory(ds, old)
 	if err != nil {
 		return fmt.Errorf("failed to clean up revisions of DaemonSet: %v", err)
@@ -1342,6 +1370,7 @@ func (dsc *DaemonSetsController) nodeShouldRunDaemonPod(node *v1.Node, ds *apps.
 	// A bool should probably not be set to true after this line.
 	wantToRun, shouldSchedule, shouldContinueRunning = true, true, true
 	// If the daemon set specifies a node name, check that it matches with node.Name.
+	// 如果daemonset指定了node name，检查它是否匹配node.Name
 	if !(ds.Spec.Template.Spec.NodeName == "" || ds.Spec.Template.Spec.NodeName == node.Name) {
 		return false, false, false, nil
 	}
@@ -1414,6 +1443,7 @@ func (dsc *DaemonSetsController) nodeShouldRunDaemonPod(node *v1.Node, ds *apps.
 	}
 	// only emit this event if insufficient resource is the only thing
 	// preventing the daemon pod from scheduling
+	// 发射事件，只有在资源不足是唯一影响daemon pods调度到这个节点的原因的时候
 	if shouldSchedule && insufficientResourceErr != nil {
 		dsc.eventRecorder.Eventf(ds, v1.EventTypeWarning, FailedPlacementReason, "failed to place pod on %q: %s", node.ObjectMeta.Name, insufficientResourceErr.Error())
 		shouldSchedule = false

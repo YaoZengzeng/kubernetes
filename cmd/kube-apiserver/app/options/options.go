@@ -36,6 +36,7 @@ import (
 )
 
 // ServerRunOptions runs a kubernetes api server.
+// ServerRunOptions运行一个kubernetes api server
 type ServerRunOptions struct {
 	GenericServerRunOptions *genericoptions.ServerRunOptions
 	Etcd                    *genericoptions.EtcdOptions
@@ -81,6 +82,7 @@ type ServerRunOptions struct {
 }
 
 // NewServerRunOptions creates a new ServerRunOptions object with default parameters
+// NewServerRunOptions用默认的参数创建一个新的ServerRunOptions
 func NewServerRunOptions() *ServerRunOptions {
 	s := ServerRunOptions{
 		GenericServerRunOptions: genericoptions.NewServerRunOptions(),
@@ -122,6 +124,7 @@ func NewServerRunOptions() *ServerRunOptions {
 	}
 
 	// Overwrite the default for storage data format.
+	// 默认的存储数据类型为protobuf
 	s.Etcd.DefaultStorageMediaType = "application/vnd.kubernetes.protobuf"
 
 	return &s

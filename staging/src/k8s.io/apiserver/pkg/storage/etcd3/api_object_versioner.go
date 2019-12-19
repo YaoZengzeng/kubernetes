@@ -87,10 +87,12 @@ func (a APIObjectVersioner) ObjectResourceVersion(obj runtime.Object) (uint64, e
 // the etcd version. For watch we should pass to helper.Watch(). Because resourceVersion is
 // an opaque value, the default watch behavior for non-zero watch is to watch
 // the next value (if you pass "1", you will see updates from "2" onwards).
+// ParseResourceVersion将一个resouce version参数转变为etcd version
 func (a APIObjectVersioner) ParseResourceVersion(resourceVersion string) (uint64, error) {
 	if resourceVersion == "" || resourceVersion == "0" {
 		return 0, nil
 	}
+	// 其实就是简单的转换
 	version, err := strconv.ParseUint(resourceVersion, 10, 64)
 	if err != nil {
 		return 0, storage.NewInvalidError(field.ErrorList{

@@ -67,6 +67,7 @@ type ListOptions struct {
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // List holds a list of objects, which may not be known by the server.
+// List维护了一系列的对象，server可能并不了解
 type List struct {
 	metav1.TypeMeta
 	// +optional

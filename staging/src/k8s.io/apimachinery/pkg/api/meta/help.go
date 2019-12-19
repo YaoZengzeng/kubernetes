@@ -112,6 +112,7 @@ func getItemsPtr(list runtime.Object) (interface{}, error) {
 
 // EachListItem invokes fn on each runtime.Object in the list. Any error immediately terminates
 // the loop.
+// EachListItem为list中的各个runtime.Object调用fn函数，任何错误都会立刻中止这个循环
 func EachListItem(obj runtime.Object, fn func(runtime.Object) error) error {
 	if unstructured, ok := obj.(runtime.Unstructured); ok {
 		return unstructured.EachListItem(fn)
@@ -165,7 +166,9 @@ func EachListItem(obj runtime.Object, fn func(runtime.Object) error) error {
 }
 
 // ExtractList returns obj's Items element as an array of runtime.Objects.
+// ExtractList返回obj的Items element作为一个runtime.Objects的队列
 // Returns an error if obj is not a List type (does not have an Items member).
+// 返回error如果obj不是一个List类型（没有Items这个member）
 func ExtractList(obj runtime.Object) ([]runtime.Object, error) {
 	itemsPtr, err := GetItemsPtr(obj)
 	if err != nil {

@@ -38,6 +38,7 @@ type ClientConnectionConfiguration struct {
 
 // LeaderElectionConfiguration defines the configuration of leader election
 // clients for components that can run with leader election enabled.
+// LeaderElectionConfiguration是leader election clients的配置
 type LeaderElectionConfiguration struct {
 	// leaderElect enables a leader election client to gain leadership
 	// before executing the main loop. Enable this when running replicated

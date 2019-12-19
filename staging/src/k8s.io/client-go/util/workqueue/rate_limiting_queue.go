@@ -50,6 +50,7 @@ func NewNamedRateLimitingQueue(rateLimiter RateLimiter, name string) RateLimitin
 }
 
 // rateLimitingType wraps an Interface and provides rateLimited re-enquing
+// rateLimitingType封装了一个Interface并且提供rateLimited re-enquing
 type rateLimitingType struct {
 	DelayingInterface
 
@@ -57,6 +58,7 @@ type rateLimitingType struct {
 }
 
 // AddRateLimited AddAfter's the item based on the time when the rate limiter says it's ok
+// AddRateLimited会根据rate limiter决定的时间调用AddAfter
 func (q *rateLimitingType) AddRateLimited(item interface{}) {
 	q.DelayingInterface.AddAfter(item, q.rateLimiter.When(item))
 }

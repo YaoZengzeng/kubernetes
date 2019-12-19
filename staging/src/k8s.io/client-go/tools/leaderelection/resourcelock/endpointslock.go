@@ -32,6 +32,7 @@ type EndpointsLock struct {
 	EndpointsMeta metav1.ObjectMeta
 	Client        corev1client.EndpointsGetter
 	LockConfig    ResourceLockConfig
+	// 创建出来的endpoint也会保留
 	e             *v1.Endpoints
 }
 
@@ -39,6 +40,7 @@ type EndpointsLock struct {
 func (el *EndpointsLock) Get() (*LeaderElectionRecord, error) {
 	var record LeaderElectionRecord
 	var err error
+	// 设置el的endpoint
 	el.e, err = el.Client.Endpoints(el.EndpointsMeta.Namespace).Get(el.EndpointsMeta.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -65,6 +67,7 @@ func (el *EndpointsLock) Create(ler LeaderElectionRecord) error {
 			Name:      el.EndpointsMeta.Name,
 			Namespace: el.EndpointsMeta.Namespace,
 			Annotations: map[string]string{
+				// record保存在annotation中
 				LeaderElectionRecordAnnotationKey: string(recordBytes),
 			},
 		},
@@ -81,6 +84,7 @@ func (el *EndpointsLock) Update(ler LeaderElectionRecord) error {
 	if err != nil {
 		return err
 	}
+	// 更新endpoint的Annotation
 	el.e.Annotations[LeaderElectionRecordAnnotationKey] = string(recordBytes)
 	el.e, err = el.Client.Endpoints(el.EndpointsMeta.Namespace).Update(el.e)
 	return err

@@ -52,8 +52,10 @@ type EtcdOptions struct {
 	EnableGarbageCollection bool
 
 	// Set EnableWatchCache to false to disable all watch caches
+	// 设置EnableWatchCache为false用来禁止所有的watch caches
 	EnableWatchCache bool
 	// Set DefaultWatchCacheSize to zero to disable watch caches for those resources that have no explicit cache size set
+	// 将DefaultWatchCacheSize设置为0用来禁止所有没有将cache size显式设置的资源的watch cache
 	DefaultWatchCacheSize int
 	// WatchCacheSizes represents override to a given resource
 	WatchCacheSizes []string
@@ -193,6 +195,7 @@ func (s *EtcdOptions) ApplyWithStorageFactoryTo(factory serverstorage.StorageFac
 	if err := s.addEtcdHealthEndpoint(c); err != nil {
 		return err
 	}
+	// 设置server.Config的RESTOptionsGetter
 	c.RESTOptionsGetter = &StorageFactoryRestOptionsFactory{Options: *s, StorageFactory: factory}
 	return nil
 }
@@ -252,6 +255,7 @@ type StorageFactoryRestOptionsFactory struct {
 }
 
 func (f *StorageFactoryRestOptionsFactory) GetRESTOptions(resource schema.GroupResource) (generic.RESTOptions, error) {
+	// 根据resource生成storageConfig
 	storageConfig, err := f.StorageFactory.NewConfig(resource)
 	if err != nil {
 		return generic.RESTOptions{}, fmt.Errorf("unable to find storage destination for %v, due to %v", resource, err.Error())
@@ -275,6 +279,8 @@ func (f *StorageFactoryRestOptionsFactory) GetRESTOptions(resource schema.GroupR
 			cacheSize = f.Options.DefaultWatchCacheSize
 		}
 		// depending on cache size this might return an undecorated storage
+		// 根据cache的大小，这可能会返回一个undecorated storage
+		// ret.Decorator其实是一个生成器，能够生成storage.Interface
 		ret.Decorator = genericregistry.StorageWithCacher(cacheSize)
 	}
 

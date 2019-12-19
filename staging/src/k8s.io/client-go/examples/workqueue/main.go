@@ -162,6 +162,7 @@ func main() {
 	}
 
 	// create the pod watcher
+	// 创建pod watcher
 	podListWatcher := cache.NewListWatchFromClient(clientset.CoreV1().RESTClient(), "pods", v1.NamespaceDefault, fields.Everything())
 
 	// create the workqueue
@@ -169,8 +170,10 @@ func main() {
 
 	// Bind the workqueue to a cache with the help of an informer. This way we make sure that
 	// whenever the cache is updated, the pod key is added to the workqueue.
+	// 通过一个informer将workqueue和一个cache绑定，这可以保证无论何时cache发生了更新,pod key都会被加入到队列中
 	// Note that when we finally process the item from the workqueue, we might see a newer version
 	// of the Pod than the version which was responsible for triggering the update.
+	// 需要注意的是，当我们最后从workqueue处理这个item的时候，我们可能看到比触发这次update的更新版本的Pod
 	indexer, informer := cache.NewIndexerInformer(podListWatcher, &v1.Pod{}, 0, cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			key, err := cache.MetaNamespaceKeyFunc(obj)

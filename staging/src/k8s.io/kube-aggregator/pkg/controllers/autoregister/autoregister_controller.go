@@ -62,6 +62,8 @@ type AutoAPIServiceRegistration interface {
 
 // autoRegisterController is used to keep a particular set of APIServices present in the API.  It is useful
 // for cases where you want to auto-register APIs like TPRs or groups from the core kube-apiserver
+// autoRegisterController用于保持特定的APIServices出现在API上，这在你想要自动注册APIs或者groups到core kube-apiserver
+// 的时候是有用的
 type autoRegisterController struct {
 	apiServiceLister listers.APIServiceLister
 	apiServiceSynced cache.InformerSynced
@@ -98,6 +100,7 @@ func NewAutoRegisterController(apiServiceInformer informers.APIServiceInformer, 
 
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "autoregister"),
 	}
+	// 调用checkAPIService对事件进行处理
 	c.syncHandler = c.checkAPIService
 
 	apiServiceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -153,6 +156,7 @@ func (c *autoRegisterController) Run(threadiness int, stopCh <-chan struct{}) {
 	}
 
 	// start up your worker threads based on threadiness.  Some controllers have multiple kinds of workers
+	// 基于worker threadiness启动worker threads，有的controller可能有多个workers
 	for i := 0; i < threadiness; i++ {
 		// runWorker will loop until "something bad" happens.  The .Until will then rekick the worker
 		// after one second
@@ -181,6 +185,7 @@ func (c *autoRegisterController) processNextWorkItem() bool {
 	defer c.queue.Done(key)
 
 	// do your work on the key.  This method will contains your "do stuff" logic
+	// 对key进行操作，这个方法包含了所有的业务逻辑
 	err := c.syncHandler(key.(string))
 	if err == nil {
 		// if you had no error, tell the queue to stop tracking history for your key.  This will
@@ -196,6 +201,7 @@ func (c *autoRegisterController) processNextWorkItem() bool {
 	// to avoid hotlooping on particular items (they're probably still not going to work right away)
 	// and overall controller protection (everything I've done is broken, this controller needs to
 	// calm down or it can starve other useful work) cases.
+	// 因为我们失败了，所以我们应该将item of work重新入队，这个方法增加了一个backoff防止在某个特定的items的hotlooping
 	c.queue.AddRateLimited(key)
 
 	return true

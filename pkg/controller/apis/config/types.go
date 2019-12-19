@@ -45,6 +45,7 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // KubeControllerManagerConfiguration contains elements describing kube-controller manager.
+// KubeControllerManagerConfiguration包含了描述kube-controller manager的信息
 type KubeControllerManagerConfiguration struct {
 	metav1.TypeMeta
 
@@ -127,6 +128,7 @@ type GenericControllerManagerConfiguration struct {
 	Address string
 	// minResyncPeriod is the resync period in reflectors; will be random between
 	// minResyncPeriod and 2*minResyncPeriod.
+	// minResyncPeriod是reflector中的resync period，会在minResyncPeriod和2*minResyncPeriod之间随机决定
 	MinResyncPeriod metav1.Duration
 	// ClientConnection specifies the kubeconfig file and client connection
 	// settings for the proxy server to use when communicating with the apiserver.
@@ -140,6 +142,7 @@ type GenericControllerManagerConfiguration struct {
 	// 'foo' means "enable 'foo'"
 	// '-foo' means "disable 'foo'"
 	// first item for a particular name wins
+	// Controller是一系列要开启或者关闭的controllers
 	Controllers []string
 	// DebuggingConfiguration holds configuration for Debugging related features.
 	Debugging componentbaseconfig.DebuggingConfiguration

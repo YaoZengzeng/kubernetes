@@ -16,4 +16,5 @@ limitations under the License.
 
 // Package generic provides a generic object store interface and a
 // generic label/field matching type.
+// generic提供了一个通用对象的存储接口以及通用label/filed的匹配类型
 package generic // import "k8s.io/apiserver/pkg/registry/generic"
