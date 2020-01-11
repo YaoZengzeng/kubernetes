@@ -32,6 +32,7 @@ type SummaryProvider interface {
 	// and will update some stats if updateStats is true
 	Get(updateStats bool) (*statsapi.Summary, error)
 	// GetCPUAndMemoryStats provides a new Summary with the CPU and memory stats from Kubelet,
+	// GetCPUAndMemoryStats提供了从Kubelet获取的新的关于CPU和memeory的数据
 	GetCPUAndMemoryStats() (*statsapi.Summary, error)
 }
 

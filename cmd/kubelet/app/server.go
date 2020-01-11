@@ -123,12 +123,15 @@ func NewKubeletCommand() *cobra.Command {
 		Long: `The kubelet is the primary "node agent" that runs on each
 node. It can register the node with the apiserver using one of: the hostname; a flag to
 override the hostname; or specific logic for a cloud provider.
+kubelet用hostname, override hostname的flag以及cloud provider特定的逻辑来将node注册到apiserver
 
 The kubelet works in terms of a PodSpec. A PodSpec is a YAML or JSON object
 that describes a pod. The kubelet takes a set of PodSpecs that are provided through
 various mechanisms (primarily through the apiserver) and ensures that the containers
 described in those PodSpecs are running and healthy. The kubelet doesn't manage
 containers which were not created by Kubernetes.
+kubelet面向PodSpec工作，一个PodSpec是一个YAML或者JSON对象，用来描述一个pod，kubelet会通过多种机制获取一系列的PodSpecs
+并且确保PodSpecs中描述的容器正在运行并且是健康的，kubelet不管理不是Kubernetes创建的容器
 
 Other than from an PodSpec from the apiserver, there are three ways that a container
 manifest can be provided to the Kubelet.
@@ -190,6 +193,7 @@ HTTP server: The kubelet can also listen for HTTP and respond to a simple API
 			}
 
 			// load kubelet config file, if provided
+			// 加载kubelet的配置文件
 			if configFile := kubeletFlags.KubeletConfigFile; len(configFile) > 0 {
 				kubeletConfig, err = loadConfigFile(configFile)
 				if err != nil {
@@ -258,6 +262,7 @@ HTTP server: The kubelet can also listen for HTTP and respond to a simple API
 			stopCh := genericapiserver.SetupSignalHandler()
 
 			// start the experimental docker shim, if enabled
+			// 启动Docker shim
 			if kubeletServer.KubeletFlags.ExperimentalDockershim {
 				if err := RunDockershim(&kubeletServer.KubeletFlags, kubeletConfig, stopCh); err != nil {
 					klog.Fatal(err)
@@ -266,6 +271,7 @@ HTTP server: The kubelet can also listen for HTTP and respond to a simple API
 			}
 
 			// run the kubelet
+			// 启动kubelet
 			klog.V(5).Infof("KubeletConfiguration: %#v", kubeletServer.KubeletConfiguration)
 			if err := Run(kubeletServer, kubeletDeps, stopCh); err != nil {
 				klog.Fatal(err)
@@ -480,6 +486,7 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.Dependencies, stopCh <-chan
 	}
 
 	// Obtain Kubelet Lock File
+	// 首先需要获取Kubelet的Lock File
 	if s.ExitOnLockContention && s.LockFilePath == "" {
 		return errors.New("cannot exit on lock file contention: no lock file specified")
 	}
@@ -541,6 +548,7 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.Dependencies, stopCh <-chan
 	}
 
 	// if in standalone mode, indicate as much by setting all clients to nil
+	// 如果处于standalone mode，表示将所有的clients设置为nil
 	switch {
 	case standaloneMode:
 		kubeDeps.KubeClient = nil
@@ -564,6 +572,7 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.Dependencies, stopCh <-chan
 		}
 
 		// make a separate client for events
+		// 构建event client
 		eventClientConfig := *clientConfig
 		eventClientConfig.QPS = float32(s.EventRecordQPS)
 		eventClientConfig.Burst = int(s.EventBurst)
@@ -573,6 +582,7 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.Dependencies, stopCh <-chan
 		}
 
 		// make a separate client for heartbeat with throttling disabled and a timeout attached
+		// 创建一个独立的client用于heartbeat，禁止限流并且有超时关联
 		heartbeatClientConfig := *clientConfig
 		heartbeatClientConfig.Timeout = s.KubeletConfiguration.NodeStatusUpdateFrequency.Duration
 		// if the NodeLease feature is enabled, the timeout is the minimum of the lease duration and status update frequency
@@ -582,6 +592,7 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.Dependencies, stopCh <-chan
 				heartbeatClientConfig.Timeout = leaseTimeout
 			}
 		}
+		// QPS设置为-1，表示没有QPS限制
 		heartbeatClientConfig.QPS = float32(-1)
 		kubeDeps.HeartbeatClient, err = clientset.NewForConfig(&heartbeatClientConfig)
 		if err != nil {
@@ -590,6 +601,7 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.Dependencies, stopCh <-chan
 	}
 
 	// If the kubelet config controller is available, and dynamic config is enabled, start the config and status sync loops
+	// 如果kubelet的config controller是可用的，并且动态配置是使能的，启动config以及status sync loops
 	if utilfeature.DefaultFeatureGate.Enabled(features.DynamicKubeletConfig) && len(s.DynamicConfigDir.Value()) > 0 &&
 		kubeDeps.KubeletConfigController != nil && !standaloneMode && !s.RunOnce {
 		if err := kubeDeps.KubeletConfigController.StartSync(kubeDeps.KubeClient, kubeDeps.EventClient, string(nodeName)); err != nil {
@@ -629,6 +641,7 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.Dependencies, stopCh <-chan
 	}
 
 	if kubeDeps.CAdvisorInterface == nil {
+		// 新建cadvisor interface
 		imageFsInfoProvider := cadvisor.NewImageFsInfoProvider(s.ContainerRuntime, s.RemoteRuntimeEndpoint)
 		kubeDeps.CAdvisorInterface, err = cadvisor.New(imageFsInfoProvider, s.RootDirectory, cgroupRoots, cadvisor.UsingLegacyCadvisorStats(s.ContainerRuntime, s.RemoteRuntimeEndpoint))
 		if err != nil {
@@ -639,6 +652,7 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.Dependencies, stopCh <-chan
 	// Setup event recorder if required.
 	makeEventRecorder(kubeDeps, nodeName)
 
+	// 构建container manager
 	if kubeDeps.ContainerManager == nil {
 		if s.CgroupsPerQOS && s.CgroupRoot == "" {
 			klog.Info("--cgroups-per-qos enabled, but --cgroup-root was not specified.  defaulting to /")
@@ -717,11 +731,13 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.Dependencies, stopCh <-chan
 		klog.Warning(err)
 	}
 
+	// 运行Kubelet
 	if err := RunKubelet(s, kubeDeps, s.RunOnce); err != nil {
 		return err
 	}
 
 	if s.HealthzPort > 0 {
+		// 单独用http.NewServeMux()启动一个端口进行监听
 		mux := http.NewServeMux()
 		healthz.InstallHandler(mux)
 		go wait.Until(func() {
@@ -751,6 +767,7 @@ func run(s *options.KubeletServer, kubeDeps *kubelet.Dependencies, stopCh <-chan
 
 // buildKubeletClientConfig constructs the appropriate client config for the kubelet depending on whether
 // bootstrapping is enabled or client certificate rotation is enabled.
+// buildKubeletClientConfig为kubelet构建合适的client config，基于bootstrapping或者client certificate rotation是否使能
 func buildKubeletClientConfig(s *options.KubeletServer, nodeName types.NodeName) (*restclient.Config, func(), error) {
 	if s.RotateCertificates && utilfeature.DefaultFeatureGate.Enabled(features.RotateKubeletClientCertificate) {
 		// Rules for client rotation and the handling of kube config files:
@@ -1047,6 +1064,8 @@ func RunKubelet(kubeServer *options.KubeletServer, kubeDeps *kubelet.Dependencie
 
 	// NewMainKubelet should have set up a pod source config if one didn't exist
 	// when the builder was run. This is just a precaution.
+	// NewMainKubelet应该已经设置了pod source config，如果在builder运行的时候不存在的话
+	// 这只是一个precaution
 	if kubeDeps.PodConfig == nil {
 		return fmt.Errorf("failed to create kubelet, pod source config was nil")
 	}
@@ -1069,16 +1088,19 @@ func RunKubelet(kubeServer *options.KubeletServer, kubeDeps *kubelet.Dependencie
 
 func startKubelet(k kubelet.Bootstrap, podCfg *config.PodConfig, kubeCfg *kubeletconfiginternal.KubeletConfiguration, kubeDeps *kubelet.Dependencies, enableCAdvisorJSONEndpoints, enableServer bool) {
 	// start the kubelet
+	// 启动kubelet
 	go wait.Until(func() {
 		k.Run(podCfg.Updates())
 	}, 0, wait.NeverStop)
 
 	// start the kubelet server
 	if enableServer {
+		// 启动kubelet server
 		go k.ListenAndServe(net.ParseIP(kubeCfg.Address), uint(kubeCfg.Port), kubeDeps.TLSOptions, kubeDeps.Auth, enableCAdvisorJSONEndpoints, kubeCfg.EnableDebuggingHandlers, kubeCfg.EnableContentionProfiling)
 
 	}
 	if kubeCfg.ReadOnlyPort > 0 {
+		// 如果readonly端口不为0，则运行readonly server
 		go k.ListenAndServeReadOnly(net.ParseIP(kubeCfg.Address), uint(kubeCfg.ReadOnlyPort), enableCAdvisorJSONEndpoints)
 	}
 	if utilfeature.DefaultFeatureGate.Enabled(features.KubeletPodResources) {
@@ -1155,6 +1177,7 @@ func createAndInitKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 		return nil, err
 	}
 
+	// 发送一个Kubelet已经启动的event
 	k.BirthCry()
 
 	k.StartGarbageCollection()

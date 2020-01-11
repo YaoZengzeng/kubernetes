@@ -213,6 +213,8 @@ func SingleObject(meta ObjectMeta) ListOptions {
 // be deleted within the specified grace period. Use zero to indicate
 // immediate deletion. If you would prefer to use the default grace period,
 // use &metav1.DeleteOptions{} directly.
+// NewDeleteOptions返回一个DeleteOptions，表示资源应该在指定的grace period时间段内完成
+// 如果为0表示立即删除
 func NewDeleteOptions(grace int64) *DeleteOptions {
 	return &DeleteOptions{GracePeriodSeconds: &grace}
 }

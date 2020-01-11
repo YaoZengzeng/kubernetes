@@ -119,6 +119,7 @@ const (
 	SyncPodCreate
 	// SyncPodKill is when the pod is killed based on a trigger internal to the kubelet for eviction.
 	// If a SyncPodKill request is made to pod workers, the request is never dropped, and will always be processed.
+	// 如果一个SyncPodKill请求被发送给pod workers，这个请求不会被dropped并且总是会被处理
 	SyncPodKill
 )
 

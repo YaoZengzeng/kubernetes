@@ -223,6 +223,7 @@ func (kl *Kubelet) getRuntime() kubecontainer.Runtime {
 }
 
 // GetNode returns the node info for the configured node name of this Kubelet.
+// GetNode返回这个Kubelet配置的node name的node信息
 func (kl *Kubelet) GetNode() (*v1.Node, error) {
 	if kl.kubeClient == nil {
 		return kl.initialNode()
@@ -232,6 +233,7 @@ func (kl *Kubelet) GetNode() (*v1.Node, error) {
 
 // getNodeAnyWay() must return a *v1.Node which is required by RunGeneralPredicates().
 // The *v1.Node is obtained as follows:
+// getNodeAnyWay()必须返回一个*v1.Node，RunGeneralPredicates()需要它
 // Return kubelet's nodeInfo for this node, except on error or if in standalone mode,
 // in which case return a manufactured nodeInfo representing a node with no pods,
 // zero capacity, and the default labels.
@@ -241,6 +243,7 @@ func (kl *Kubelet) getNodeAnyWay() (*v1.Node, error) {
 			return n, nil
 		}
 	}
+	// 初始化Node
 	return kl.initialNode()
 }
 

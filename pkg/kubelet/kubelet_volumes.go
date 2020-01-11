@@ -51,6 +51,7 @@ func (kl *Kubelet) ListVolumesForPod(podUID types.UID) (map[string]volume.Volume
 
 // podVolumesExist checks with the volume manager and returns true any of the
 // pods for the specified volume are mounted.
+// podVolumesExist检测volume manager并且返回true如果pod的volume还依然mounted
 func (kl *Kubelet) podVolumesExist(podUID types.UID) bool {
 	if mountedVolumes :=
 		kl.volumeManager.GetMountedVolumesForPod(
@@ -66,6 +67,7 @@ func (kl *Kubelet) podVolumesExist(podUID types.UID) bool {
 		return true
 	}
 	if len(volumePaths) > 0 {
+		// volume还依然挂载在disk上
 		klog.V(4).Infof("pod %q found, but volumes are still mounted on disk %v", podUID, volumePaths)
 		return true
 	}

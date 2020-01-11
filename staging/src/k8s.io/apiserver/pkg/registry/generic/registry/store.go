@@ -76,6 +76,7 @@ type GenericStore interface {
 // RESTStorage implementation. This type provides CRUD semantics on a Kubelike
 // resource, handling details like conflict detection with ResourceVersion and
 // semantics. The RESTCreateStrategy, RESTUpdateStrategy, and
+// 处理ResourceVersion和sematics冲突的问题
 // RESTDeleteStrategy are generic across all backends, and encapsulate logic
 // specific to the API.
 //
@@ -454,6 +455,7 @@ func (e *Store) deleteWithoutFinalizers(ctx context.Context, name, key string, o
 // Update performs an atomic update and set of the object. Returns the result of the update
 // or an error. If the registry allows create-on-update, the create flow will be executed.
 // A bool is returned along with the object and any errors, to indicate object creation.
+// Update执行一个原子的更新以及设置对象，返回更新的结果或者一个error，如果registry允许create-on-update，create的流就会执行
 func (e *Store) Update(ctx context.Context, name string, objInfo rest.UpdatedObjectInfo, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc, forceAllowCreate bool, options *metav1.UpdateOptions) (runtime.Object, bool, error) {
 	key, err := e.KeyFunc(ctx, name)
 	if err != nil {
@@ -525,6 +527,7 @@ func (e *Store) Update(ctx context.Context, name string, objInfo rest.UpdatedObj
 		if doUnconditionalUpdate {
 			// Update the object's resource version to match the latest
 			// storage object's resource version.
+			// 更新对象的resouce version来匹配最新的storage object的resource version
 			err = e.Storage.Versioner().UpdateObject(obj, res.ResourceVersion)
 			if err != nil {
 				return nil, nil, err

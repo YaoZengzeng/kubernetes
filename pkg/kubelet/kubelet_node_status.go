@@ -85,6 +85,9 @@ func (kl *Kubelet) registerWithAPIServer() {
 // successful.  If a node with the same name already exists, it reconciles the
 // value of the annotation for controller-managed attach-detach of attachable
 // persistent volumes for the node.
+// tryRegisterWithAPIServer试着将注册给定的node到API server
+// 如果有着同样名字的node已经存在，它会reconciles annotation的值用于controller-managed attach-detach
+// 那些挂载到这个node的attachable persistent volumes
 func (kl *Kubelet) tryRegisterWithAPIServer(node *v1.Node) bool {
 	_, err := kl.kubeClient.CoreV1().Nodes().Create(node)
 	if err == nil {
@@ -383,8 +386,10 @@ func (kl *Kubelet) syncNodeStatus() {
 
 // updateNodeStatus updates node status to master with retries if there is any
 // change or enough time passed from the last sync.
+// 
 func (kl *Kubelet) updateNodeStatus() error {
 	klog.V(5).Infof("Updating node status")
+	// 最多重试五次
 	for i := 0; i < nodeStatusUpdateRetry; i++ {
 		if err := kl.tryUpdateNodeStatus(i); err != nil {
 			if i > 0 && kl.onRepeatedHeartbeatFailure != nil {
@@ -400,17 +405,24 @@ func (kl *Kubelet) updateNodeStatus() error {
 
 // tryUpdateNodeStatus tries to update node status to master if there is any
 // change or enough time passed from the last sync.
+// tryUpdateNodeStatus试着更新node status到master，如果有任何更新或者从上次同步以来经过
+// 了足够长的时间
 func (kl *Kubelet) tryUpdateNodeStatus(tryNumber int) error {
 	// In large clusters, GET and PUT operations on Node objects coming
 	// from here are the majority of load on apiserver and etcd.
+	// 在大的集群，这里对于Node对象的GET和PUT会成为apiserver和etcd的主要负载
 	// To reduce the load on etcd, we are serving GET operations from
 	// apiserver cache (the data might be slightly delayed but it doesn't
 	// seem to cause more conflict - the delays are pretty small).
+	// 为了减少etcd负载，我们用apiserver的cache来服务GET操作（虽然可能有些延迟，但是
+	// 看起来不会造成冲突 - 延迟很小）
 	// If it result in a conflict, all retries are served directly from etcd.
+	// 如果造成了冲突，所有的重试都会直接来自etcd
 	opts := metav1.GetOptions{}
 	if tryNumber == 0 {
 		util.FromApiserverCache(&opts)
 	}
+	// 先从apiserver获取node
 	node, err := kl.heartbeatClient.CoreV1().Nodes().Get(string(kl.nodeName), opts)
 	if err != nil {
 		return fmt.Errorf("error getting node %q: %v", kl.nodeName, err)
@@ -459,6 +471,7 @@ func (kl *Kubelet) tryUpdateNodeStatus(tryNumber int) error {
 	}
 
 	// Patch the current status on the API server
+	// 将当前的status打Patch到API Server
 	updatedNode, _, err := nodeutil.PatchNodeStatus(kl.heartbeatClient.CoreV1(), types.NodeName(kl.nodeName), originalNode, node)
 	if err != nil {
 		return err
@@ -526,6 +539,7 @@ func (kl *Kubelet) getLastObservedNodeAddresses() []v1.NodeAddress {
 
 // defaultNodeStatusFuncs is a factory that generates the default set of
 // setNodeStatus funcs
+// defaultNodeStatusFuncs是一个工厂，它能够产生一系列默认的setNodeStatus函数
 func (kl *Kubelet) defaultNodeStatusFuncs() []func(*v1.Node) error {
 	// if cloud is not nil, we expect the cloud resource sync manager to exist
 	var nodeAddressesFunc func() ([]v1.NodeAddress, error)

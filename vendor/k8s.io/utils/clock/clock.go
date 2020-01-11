@@ -20,6 +20,7 @@ import "time"
 
 // Clock allows for injecting fake or real clocks into code that
 // needs to do arbitrary things based on time.
+// Clock允许注入fake或者real clocks，从而能够基于时间做任何事
 type Clock interface {
 	Now() time.Time
 	Since(time.Time) time.Duration

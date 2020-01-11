@@ -65,6 +65,7 @@ type ImageGCManager interface {
 type ImageGCPolicy struct {
 	// Any usage above this threshold will always trigger garbage collection.
 	// This is the highest usage we will allow.
+	// 任何超过这个threshold的使用率都会触发GC，这个是我们能够允许的最大的usage
 	HighThresholdPercent int
 
 	// Any usage below this threshold will never trigger garbage collection.

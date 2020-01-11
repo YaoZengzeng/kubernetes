@@ -131,6 +131,7 @@ type DynamicPluginProber interface {
 
 // VolumePlugin is an interface to volume plugins that can be used on a
 // kubernetes node (e.g. by kubelet) to instantiate and manage volumes.
+// VolumePlugin是一个volume plugins的接口，它可以被kubernetes node用来初始化以及管理volumes
 type VolumePlugin interface {
 	// Init initializes the plugin.  This will be called exactly once
 	// before any New* calls are made - implementations of plugins may
@@ -452,6 +453,7 @@ type VolumeHost interface {
 }
 
 // VolumePluginMgr tracks registered plugins.
+// VolumePluginMgr追踪注册的plugins
 type VolumePluginMgr struct {
 	mutex         sync.Mutex
 	plugins       map[string]VolumePlugin

@@ -32,6 +32,7 @@ import (
 
 // PluginManager runs a set of asynchronous loops that figure out which plugins
 // need to be registered/deregistered and makes it so.
+// PluginManager运行一系列的异步的loops，用来发现哪些plugins需要注册/解注册并且执行
 type PluginManager interface {
 	// Starts the plugin manager and all the asynchronous loops that it controls
 	Run(sourcesReady config.SourcesReady, stopCh <-chan struct{})

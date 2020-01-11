@@ -28,11 +28,14 @@ import (
 )
 
 // MirrorClient knows how to create/delete a mirror pod in the API server.
+// MirrorClient知道如何在API server创建或者删除一个mirror pod
 type MirrorClient interface {
 	// CreateMirrorPod creates a mirror pod in the API server for the given
 	// pod or returns an error.  The mirror pod will have the same annotations
 	// as the given pod as well as an extra annotation containing the hash of
 	// the static pod.
+	// CreateMirrorPod在API server创建一个mirror pod为给定的pod或者返回一个error
+	// mirror pod会和给定pod有着同样的annotations以及一个额外的annotations包含static pod的哈希
 	CreateMirrorPod(pod *v1.Pod) error
 	// DeleteMirrorPod deletes the mirror pod with the given full name from
 	// the API server or returns an error.
@@ -56,17 +59,21 @@ func (mc *basicMirrorClient) CreateMirrorPod(pod *v1.Pod) error {
 		return nil
 	}
 	// Make a copy of the pod.
+	// 创建一个pod的拷贝
 	copyPod := *pod
 	copyPod.Annotations = make(map[string]string)
 
+	// 复制static pod已有的annotations
 	for k, v := range pod.Annotations {
 		copyPod.Annotations[k] = v
 	}
 	hash := getPodHash(pod)
+	// 额外的annotations，包含static pod的hash
 	copyPod.Annotations[kubetypes.ConfigMirrorAnnotationKey] = hash
 	apiPod, err := mc.apiserverClient.CoreV1().Pods(copyPod.Namespace).Create(&copyPod)
 	if err != nil && errors.IsAlreadyExists(err) {
 		// Check if the existing pod is the same as the pod we want to create.
+		// 检查已有的pod是否和我们想要创建的pod相同，主要是哈希值是否相同
 		if h, ok := apiPod.Annotations[kubetypes.ConfigMirrorAnnotationKey]; ok && h == hash {
 			return nil
 		}
@@ -75,12 +82,16 @@ func (mc *basicMirrorClient) CreateMirrorPod(pod *v1.Pod) error {
 }
 
 // DeleteMirrorPod deletes a mirror pod.
+// DeleteMirrorPod删除一个mirror pod
 // It takes the full name of the pod and optionally a UID.  If the UID
 // is non-nil, the pod is deleted only if its UID matches the supplied UID.
 // It returns whether the pod was actually deleted, and any error returned
 // while parsing the name of the pod.
+// 参数为pod的full name以及一个可选的UID，如果UID不是nil，则pod只有在它的UID和提供的UID
+// 匹配的情况下才被删除
 // Non-existence of the pod or UID mismatch is not treated as an error; the
 // routine simply returns false in that case.
+// pod不存在或者UID不匹配不被作为一个error，在这种情况下仅仅返回false
 func (mc *basicMirrorClient) DeleteMirrorPod(podFullName string, uid *types.UID) (bool, error) {
 	if mc.apiserverClient == nil {
 		return false, nil
@@ -97,6 +108,7 @@ func (mc *basicMirrorClient) DeleteMirrorPod(podFullName string, uid *types.UID)
 		if !(errors.IsNotFound(err) || errors.IsConflict(err)) {
 			// We should return the error here, but historically this routine does
 			// not return an error unless it can't parse the pod name
+			// 除了不能解析pod name以外，都不报错
 			klog.Errorf("Failed deleting a mirror pod %q: %v", podFullName, err)
 		}
 		return false, nil

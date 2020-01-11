@@ -53,6 +53,7 @@ type KillPodOptions struct {
 }
 
 // UpdatePodOptions is an options struct to pass to a UpdatePod operation.
+// UpdatePodOptions是一个options结构用于传递给一个UpdatePod操作
 type UpdatePodOptions struct {
 	// pod to update
 	Pod *v1.Pod
@@ -92,6 +93,7 @@ type syncPodOptions struct {
 }
 
 // the function to invoke to perform a sync.
+// syncPodFnType是一个用来执行sync的函数
 type syncPodFnType func(options syncPodOptions) error
 
 const (
@@ -113,6 +115,7 @@ type podWorkers struct {
 	// processing updates received through its corresponding channel.
 	podUpdates map[types.UID]chan UpdatePodOptions
 	// Track the current state of per-pod goroutines.
+	// 用于追踪每个pod的goroutines的当前状态
 	// Currently all update request for a given pod coming when another
 	// update of this pod is being processed are ignored.
 	isWorking map[types.UID]bool
@@ -195,8 +198,10 @@ func (p *podWorkers) managePodLoop(podUpdates <-chan UpdatePodOptions) {
 }
 
 // Apply the new setting to the specified pod.
+// 将新的配置应用到指定的pod
 // If the options provide an OnCompleteFunc, the function is invoked if the update is accepted.
 // Update requests are ignored if a kill pod request is pending.
+// Update请求会被忽略，如果有一个kill pod请求正在pending
 func (p *podWorkers) UpdatePod(options *UpdatePodOptions) {
 	pod := options.Pod
 	uid := pod.UID
@@ -217,6 +222,7 @@ func (p *podWorkers) UpdatePod(options *UpdatePodOptions) {
 		// kubelet just restarted. In either case the kubelet is willing to believe
 		// the status of the pod for the first pod worker sync. See corresponding
 		// comment in syncPod.
+		// 创建一个新的pod worker，这意味着这是一个新的pod或者kubelet刚刚重启
 		go func() {
 			defer runtime.HandleCrash()
 			p.managePodLoop(podUpdates)
@@ -227,6 +233,7 @@ func (p *podWorkers) UpdatePod(options *UpdatePodOptions) {
 		podUpdates <- *options
 	} else {
 		// if a request to kill a pod is pending, we do not let anything overwrite that request.
+		// 如果一个kill pod的请求处于pending状态，则我们不能覆盖这个请求
 		update, found := p.lastUndeliveredWorkUpdate[pod.UID]
 		if !found || update.UpdateType != kubetypes.SyncPodKill {
 			p.lastUndeliveredWorkUpdate[pod.UID] = *options
@@ -262,6 +269,7 @@ func (p *podWorkers) ForgetNonExistingPodWorkers(desiredPods map[types.UID]sets.
 
 func (p *podWorkers) wrapUp(uid types.UID, syncErr error) {
 	// Requeue the last update if the last sync returned error.
+	// 如果上一次同步返回error，将上一次的update重新入队
 	switch {
 	case syncErr == nil:
 		// No error; requeue at the regular resync interval.
@@ -271,6 +279,7 @@ func (p *podWorkers) wrapUp(uid types.UID, syncErr error) {
 		p.workQueue.Enqueue(uid, wait.Jitter(backOffOnTransientErrorPeriod, workerBackOffPeriodJitterFactor))
 	default:
 		// Error occurred during the sync; back off and then retry.
+		// 在同步的时候遇到了错误；回退并且重试
 		p.workQueue.Enqueue(uid, wait.Jitter(p.backOffPeriod, workerBackOffPeriodJitterFactor))
 	}
 	p.checkForUpdates(uid)

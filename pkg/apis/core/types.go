@@ -2505,14 +2505,17 @@ type PreferredSchedulingTerm struct {
 
 // The node this Taint is attached to has the "effect" on
 // any pod that does not tolerate the Taint.
+// 这个node关联的Taint，对于任何不能容忍这个Taint的pod会产生效果
 type Taint struct {
 	// Required. The taint key to be applied to a node.
 	Key string
 	// Required. The taint value corresponding to the taint key.
+	// Value是可选的
 	// +optional
 	Value string
 	// Required. The effect of the taint on pods
 	// that do not tolerate the taint.
+	// 对于那些不能容忍这个taint的pods产生的效果
 	// Valid effects are NoSchedule, PreferNoSchedule and NoExecute.
 	Effect TaintEffect
 	// TimeAdded represents the time at which the taint was added.
@@ -2528,6 +2531,9 @@ const (
 	// but allow all pods submitted to Kubelet without going through the scheduler
 	// to start, and allow all already-running pods to continue running.
 	// Enforced by the scheduler.
+	// 不允许新的pods调度到这个节点，除非它们能容忍这个taint，但是允许所有直接提交到Kubelet而未经过scheduler
+	// 的pods启动，并且允许所有已经运行的pods继续运行
+	// 由调度器执行
 	TaintEffectNoSchedule TaintEffect = "NoSchedule"
 	// Like TaintEffectNoSchedule, but the scheduler tries not to schedule
 	// new pods onto the node, rather than prohibiting new pods from scheduling
@@ -2541,6 +2547,7 @@ const (
 
 	// Evict any already-running pods that do not tolerate the taint.
 	// Currently enforced by NodeController.
+	// NoExecute会驱逐任何正在运行但是不能容忍这个taint的pods，由NodeController执行
 	TaintEffectNoExecute TaintEffect = "NoExecute"
 )
 
@@ -3709,6 +3716,7 @@ type NodeDaemonEndpoints struct {
 }
 
 // NodeSystemInfo is a set of ids/uuids to uniquely identify the node.
+// NodeSystemInfor是一系列的ids/uuids用于唯一地标识这个node
 type NodeSystemInfo struct {
 	// MachineID reported by the node. For unique machine identification
 	// in the cluster this field is preferred. Learn more from man(5)
@@ -3784,32 +3792,41 @@ type NodeConfigStatus struct {
 }
 
 // NodeStatus is information about the current status of a node.
+// NodeStatus是一个节点的当前状态的信息
+// 节点信息中并不包含pod或者容器的信息，因为它们是独立上传的
 type NodeStatus struct {
 	// Capacity represents the total resources of a node.
 	// +optional
+	// Capacity是这个节点的所有资源信息
 	Capacity ResourceList
 	// Allocatable represents the resources of a node that are available for scheduling.
 	// +optional
+	// Allocatable代表这个节点能够用于调度的资源信息
 	Allocatable ResourceList
 	// NodePhase is the current lifecycle phase of the node.
 	// +optional
 	Phase NodePhase
 	// Conditions is an array of current node conditions.
+	// Conditions是一系列当前节点的状态
 	// +optional
 	Conditions []NodeCondition
 	// Queried from cloud provider, if available.
+	// Addresses从cloud provider获取，如果可得的话
 	// +optional
 	Addresses []NodeAddress
 	// Endpoints of daemons running on the Node.
+	// 运行在这个Node上的daemons的Endpoints
 	// +optional
 	DaemonEndpoints NodeDaemonEndpoints
 	// Set of ids/uuids to uniquely identify the node.
 	// +optional
 	NodeInfo NodeSystemInfo
 	// List of container images on this node
+	// 这个节点上一系列的container images
 	// +optional
 	Images []ContainerImage
 	// List of attachable volumes in use (mounted) by the node.
+	// 这个节点上一系列的正在使用的attachable volumes
 	// +optional
 	VolumesInUse []UniqueVolumeName
 	// List of volumes that are attached to the node.
@@ -3878,10 +3895,12 @@ type NodePhase string
 // These are the valid phases of node.
 const (
 	// NodePending means the node has been created/added by the system, but not configured.
+	// NodePending意味着node已经由system创建或者添加，但是没有被配置
 	NodePending NodePhase = "Pending"
 	// NodeRunning means the node has been configured and has Kubernetes components running.
 	NodeRunning NodePhase = "Running"
 	// NodeTerminated means the node has been removed from the cluster.
+	// NodeTerminated意味着node已经从cluster移出了
 	NodeTerminated NodePhase = "Terminated"
 )
 
@@ -4253,7 +4272,8 @@ type ServiceProxyOptions struct {
 }
 
 // ObjectReference contains enough information to let you inspect or modify the referred object.
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// ObjectReference包含了足够的信息从而能让你inspect或者修改任何的
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object被引用的对象
 type ObjectReference struct {
 	// +optional
 	Kind string

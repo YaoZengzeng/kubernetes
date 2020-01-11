@@ -49,6 +49,7 @@ var ErrNotInCluster = errors.New("unable to load in-cluster configuration, KUBER
 
 // Config holds the common attributes that can be passed to a Kubernetes client on
 // initialization.
+// Config包含了在初始化的时候传递给Kubernetes client的通用特性
 type Config struct {
 	// Host must be a host string, a host:port pair, or a URL to the base of the apiserver.
 	// If a URL is given then the (optional) Path of that URL represents a prefix that must

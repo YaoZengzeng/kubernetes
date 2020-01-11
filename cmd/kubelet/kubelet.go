@@ -18,6 +18,9 @@ limitations under the License.
 // It syncs data from both configuration file(s) as well as from a quorum of etcd servers.
 // It then queries Docker to see what is currently running.  It synchronizes the configuration data,
 // with the running set of containers by starting or stopping Docker containers.
+// kubelet负责在一个特定的host VM上维护一系列的容器
+// 它从配置文件以及quorum of etcd servers同步数据，之后请求Docker，查看当前正在运行的容器，它通过启停容器来同步配置数据
+// 和一系列正在运行的容器
 package main
 
 import (

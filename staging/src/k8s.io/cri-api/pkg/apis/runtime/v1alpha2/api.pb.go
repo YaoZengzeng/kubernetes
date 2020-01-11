@@ -5618,7 +5618,9 @@ func (m *UpdateRuntimeConfigResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_UpdateRuntimeConfigResponse proto.InternalMessageInfo
 
 // RuntimeCondition contains condition information for the runtime.
+// RuntimeCondition包含了运行时的状态信息
 // There are 2 kinds of runtime conditions:
+// 有两类运行时状态：
 // 1. Required conditions: Conditions are required for kubelet to work
 // properly. If any required condition is unmet, the node will be not ready.
 // The required conditions include:
@@ -5626,6 +5628,10 @@ var xxx_messageInfo_UpdateRuntimeConfigResponse proto.InternalMessageInfo
 //   basic containers e.g. container only needs host network.
 //   * NetworkReady: NetworkReady means the runtime network is up and ready to
 //   accept containers which require container network.
+// 1. Required conditions：用于让kubelet能够正常工作，如果任何required condition没有满足
+// node会处于not ready，需要的condition包括：
+//   * RuntimeReady：RuntimeReady意味着运行时处于up状态并且准备接受好basic containers，比如那些只需要host network的容器
+//   * NetworkReady: NetworkReady意味着runtime network处于up并且准备好接收需要容器网络的容器
 // 2. Optional conditions: Conditions are informative to the user, but kubelet
 // will not rely on. Since condition type is an arbitrary string, all conditions
 // not required are optional. These conditions will be exposed to users to help
@@ -7154,6 +7160,7 @@ var _ grpc.ClientConn
 const _ = grpc.SupportPackageIsVersion4
 
 // RuntimeServiceClient is the client API for RuntimeService service.
+// RuntimeServiceClient是RuntimeService服务的client API
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type RuntimeServiceClient interface {
@@ -7225,6 +7232,7 @@ type RuntimeServiceClient interface {
 	// UpdateRuntimeConfig updates the runtime configuration based on the given request.
 	UpdateRuntimeConfig(ctx context.Context, in *UpdateRuntimeConfigRequest, opts ...grpc.CallOption) (*UpdateRuntimeConfigResponse, error)
 	// Status returns the status of the runtime.
+	// Status返回容器运行时的status
 	Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 }
 

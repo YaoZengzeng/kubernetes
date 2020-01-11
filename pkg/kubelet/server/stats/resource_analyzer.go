@@ -21,9 +21,11 @@ import (
 )
 
 // ResourceAnalyzer provides statistics on node resource consumption
+// ResourceAnalyzer提供节点资源消耗的数据
 type ResourceAnalyzer interface {
 	Start()
 
+	// 关于pod的volumes数据信息
 	fsResourceAnalyzerInterface
 	SummaryProvider
 }

@@ -23,8 +23,10 @@ import (
 // Summary is a top-level container for holding NodeStats and PodStats.
 type Summary struct {
 	// Overall node stats.
+	// Node的数据
 	Node NodeStats `json:"node"`
 	// Per-pod stats.
+	// 每个Pod的数据
 	Pods []PodStats `json:"pods"`
 }
 
@@ -47,10 +49,12 @@ type NodeStats struct {
 	// +optional
 	Memory *MemoryStats `json:"memory,omitempty"`
 	// Stats pertaining to network resources.
+	// 网络相关的数据
 	// +optional
 	Network *NetworkStats `json:"network,omitempty"`
 	// Stats pertaining to total usage of filesystem resources on the rootfs used by node k8s components.
 	// NodeFs.Used is the total bytes used on the filesystem.
+	// node的资源使用率信息
 	// +optional
 	Fs *FsStats `json:"fs,omitempty"`
 	// Stats about the underlying container runtime.
@@ -250,6 +254,7 @@ type AcceleratorStats struct {
 }
 
 // VolumeStats contains data about Volume filesystem usage.
+// VolumeStats包含了Voluem文件系统的使用率数据
 type VolumeStats struct {
 	// Embedded FsStats
 	FsStats

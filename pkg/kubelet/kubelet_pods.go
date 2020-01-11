@@ -814,6 +814,7 @@ func (kl *Kubelet) killPod(pod *v1.Pod, runningPod *kubecontainer.Pod, status *k
 	}
 
 	// Call the container runtime KillPod method which stops all running containers of the pod
+	// 调用容器运行时的KillPod方法，它会停止pod中所有正在运行的容器
 	if err := kl.containerRuntime.KillPod(pod, p, gracePeriodOverride); err != nil {
 		return err
 	}
@@ -826,6 +827,7 @@ func (kl *Kubelet) killPod(pod *v1.Pod, runningPod *kubecontainer.Pod, status *k
 // makePodDataDirs creates the dirs for the pod datas.
 func (kl *Kubelet) makePodDataDirs(pod *v1.Pod) error {
 	uid := pod.UID
+	// 创建pod，volume以及plugin目录
 	if err := os.MkdirAll(kl.getPodDir(uid), 0750); err != nil && !os.IsExist(err) {
 		return err
 	}
@@ -840,6 +842,7 @@ func (kl *Kubelet) makePodDataDirs(pod *v1.Pod) error {
 
 // getPullSecretsForPod inspects the Pod and retrieves the referenced pull
 // secrets.
+// getPullSecretsForPod解析Pod并且获取引用的pull secrets
 func (kl *Kubelet) getPullSecretsForPod(pod *v1.Pod) []v1.Secret {
 	pullSecrets := []v1.Secret{}
 
@@ -857,13 +860,17 @@ func (kl *Kubelet) getPullSecretsForPod(pod *v1.Pod) []v1.Secret {
 }
 
 // podIsTerminated returns true if pod is in the terminated state ("Failed" or "Succeeded").
+// 如果pod处于terminated状态（Failed或者Succeede），则返回true
 func (kl *Kubelet) podIsTerminated(pod *v1.Pod) bool {
 	// Check the cached pod status which was set after the last sync.
+	// 检查上次同步缓存的pod status
 	status, ok := kl.statusManager.GetPodStatus(pod.UID)
 	if !ok {
 		// If there is no cached status, use the status from the
 		// apiserver. This is useful if kubelet has recently been
 		// restarted.
+		// 如果没有cached status，使用从apiserver获取的status，着对于kubelet
+		// 刚刚重启的情况很有用
 		status = pod.Status
 	}
 	return status.Phase == v1.PodFailed || status.Phase == v1.PodSucceeded || (pod.DeletionTimestamp != nil && notRunning(status.ContainerStatuses))
@@ -897,15 +904,19 @@ func (kl *Kubelet) IsPodDeleted(uid types.UID) bool {
 
 // PodResourcesAreReclaimed returns true if all required node-level resources that a pod was consuming have
 // been reclaimed by the kubelet.  Reclaiming resources is a prerequisite to deleting a pod from the API server.
+// PodResourcesAreReclaimed返回true，如果一个pod消费的所有node级别的资源都已经被kubelet回收，回收资源是pod从API server中删除的
+// 先决条件
 func (kl *Kubelet) PodResourcesAreReclaimed(pod *v1.Pod, status v1.PodStatus) bool {
 	if !notRunning(status.ContainerStatuses) {
 		// We shouldnt delete pods that still have running containers
+		// 如果容器有着还在运行的containers，则我们不应该删除这个pod
 		klog.V(3).Infof("Pod %q is terminated, but some containers are still running", format.Pod(pod))
 		return false
 	}
 	// pod's containers should be deleted
 	runtimeStatus, err := kl.podCache.Get(pod.UID)
 	if err != nil {
+		// 如果无法从podCache中得到runtimeStatus，则pod也不能被删除
 		klog.V(3).Infof("Pod %q is terminated, Error getting runtimeStatus from the podCache: %s", format.Pod(pod), err)
 		return false
 	}
@@ -914,17 +925,20 @@ func (kl *Kubelet) PodResourcesAreReclaimed(pod *v1.Pod, status v1.PodStatus) bo
 		for _, status := range runtimeStatus.ContainerStatuses {
 			statusStr += fmt.Sprintf("%+v ", *status)
 		}
+		// 虽然Pod已经被终止了，但是containers还没有被清理干净，Pod也不能被删除
 		klog.V(3).Infof("Pod %q is terminated, but some containers have not been cleaned up: %s", format.Pod(pod), statusStr)
 		return false
 	}
 	if kl.podVolumesExist(pod.UID) && !kl.keepTerminatedPodVolumes {
 		// We shouldnt delete pods whose volumes have not been cleaned up if we are not keeping terminated pod volumes
+		// 如果volumes还没有被清理干净并且我们不保留terminated pod的volumes，则不应该删除pod
 		klog.V(3).Infof("Pod %q is terminated, but some volumes have not been cleaned up", format.Pod(pod))
 		return false
 	}
 	if kl.kubeletConfiguration.CgroupsPerQOS {
 		pcm := kl.containerManager.NewPodContainerManager()
 		if pcm.Exists(pod) {
+			// 如果pod的cgroup sandbox没有被清理干净，则pod不能被删除
 			klog.V(3).Infof("Pod %q is terminated, but pod cgroup sandbox has not been cleaned up", format.Pod(pod))
 			return false
 		}
@@ -943,9 +957,11 @@ func (kl *Kubelet) podResourcesAreReclaimed(pod *v1.Pod) bool {
 
 // notRunning returns true if every status is terminated or waiting, or the status list
 // is empty.
+// notRunning返回true，如果每个container的status都是terminated或者waiting，或者status list为空
 func notRunning(statuses []v1.ContainerStatus) bool {
 	for _, status := range statuses {
 		if status.State.Terminated == nil && status.State.Waiting == nil {
+			// 说明容器处于running状态
 			return false
 		}
 	}
@@ -954,6 +970,7 @@ func notRunning(statuses []v1.ContainerStatus) bool {
 
 // filterOutTerminatedPods returns the given pods which the status manager
 // does not consider failed or succeeded.
+// filterOutTerminatedPods返回给定的pods，那些status manager不认为是failed或者succeeded
 func (kl *Kubelet) filterOutTerminatedPods(pods []*v1.Pod) []*v1.Pod {
 	var filteredPods []*v1.Pod
 	for _, p := range pods {
@@ -981,6 +998,8 @@ func (kl *Kubelet) removeOrphanedPodStatuses(pods []*v1.Pod, mirrorPods []*v1.Po
 // HandlePodCleanups performs a series of cleanup work, including terminating
 // pod workers, killing unwanted pods, and removing orphaned volumes/pod
 // directories.
+// HandlePodCleanups执行一系列的清理工作，包括终结pod workers，kill不想要的pods，以及移除
+// orphaned volumes/pod目录
 // NOTE: This function is executed by the main sync loop, so it
 // should not contain any blocking calls.
 func (kl *Kubelet) HandlePodCleanups() error {

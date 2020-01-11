@@ -118,6 +118,11 @@ func main() {
 	//       you no longer get a conflict error. This way, you can preserve changes made
 	//       by other clients between Create() and Update(). This is implemented below
 	//			 using the retry utility package included with client-go. (RECOMMENDED)
+	//    有两种调用Update()的方法：
+	//    1. 修改"deployment"变量并且调用Update(deployment)，这就像运行"kubectl replace"方法并且覆盖/丢弃
+	//       其他的client在本client调用Create()以及Update()之间的修改
+	//    2. 修改Get()返回的"result"并且重试Update(result)直到不再得到conflict error，这样能够保留Create()和
+	//       Update()之间其他clients做的变更
 	//
 	// More Info:
 	// https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency

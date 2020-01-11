@@ -41,6 +41,7 @@ import (
 type ActivePodsFunc func() []*v1.Pod
 
 // Manages the containers running on a machine.
+// 管理运行在机器上的容器
 type ContainerManager interface {
 	// Runs the container manager's housekeeping.
 	// - Ensures that the Docker daemon is in a container.

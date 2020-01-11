@@ -71,6 +71,7 @@ const (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // KubeletConfiguration contains the configuration for the Kubelet
+// KubeletConfiguration包含了Kubelet的配置
 type KubeletConfiguration struct {
 	metav1.TypeMeta
 
@@ -91,11 +92,13 @@ type KubeletConfiguration struct {
 	StaticPodURLHeader map[string][]string
 	// address is the IP address for the Kubelet to serve on (set to 0.0.0.0
 	// for all interfaces)
+	// Kubelet服务的地址
 	Address string
 	// port is the port for the Kubelet to serve on.
 	Port int32
 	// readOnlyPort is the read-only port for the Kubelet to serve on with
 	// no authentication/authorization (set to 0 to disable)
+	// readOnlyPort是没有认证鉴权的Kubelet的只读端口
 	ReadOnlyPort int32
 	// tlsCertFile is the file containing x509 Certificate for HTTPS.  (CA cert,
 	// if any, concatenated after server cert). If tlsCertFile and
@@ -135,6 +138,7 @@ type KubeletConfiguration struct {
 	RegistryBurst int32
 	// eventRecordQPS is the maximum event creations per second. If 0, there
 	// is no limit enforced.
+	// eventRecordQPS每秒创建的event的最大数目，如果为0则表示没有限制
 	EventRecordQPS int32
 	// eventBurst is the maximum size of a burst of event creations, temporarily
 	// allows event creations to burst to this number, while still not exceeding

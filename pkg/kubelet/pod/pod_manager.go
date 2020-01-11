@@ -33,12 +33,15 @@ import (
 
 // Manager stores and manages access to pods, maintaining the mappings
 // between static pods and mirror pods.
+// Manager存储和管理对于pods的访问，维护了static pods和mirror pods间的映射
 //
 // The kubelet discovers pod updates from 3 sources: file, http, and
 // apiserver. Pods from non-apiserver sources are called static pods, and API
 // server is not aware of the existence of static pods. In order to monitor
 // the status of such pods, the kubelet creates a mirror pod for each static
 // pod via the API server.
+// 从非apiserver获取的pods称为static pods，为了监控这些pods，kubelet为每一个static
+// pod创建mirror pods到API server
 //
 // A mirror pod has the same pod full name (name and namespace) as its static
 // counterpart (albeit different metadata such as UID, etc). By leveraging the
@@ -46,6 +49,9 @@ import (
 // status of the mirror pod always reflects the actual status of the static
 // pod. When a static pod gets deleted, the associated orphaned mirror pod
 // will also be removed.
+// mirror pod有着和它对应的satic pods相同的full name(name以及namespace)，通过利用kubelet
+// 使用pod full name汇报pod status的事实，mirror pod的状态总是反映static pod的真实状态
+// 当static pod被删除的时候，相关的orphaned mirror pod也会被移除
 type Manager interface {
 	// GetPods returns the regular pods bound to the kubelet and their spec.
 	GetPods() []*v1.Pod

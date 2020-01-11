@@ -42,6 +42,7 @@ import (
 
 // A wrapper around v1.PodStatus that includes a version to enforce that stale pod statuses are
 // not sent to the API server.
+// v1.PodStatus的wrapper，包含了一个version用来保证陈旧的pod status不会发送到API server
 type versionedPodStatus struct {
 	status v1.PodStatus
 	// Monotonically increasing version number (per pod).
@@ -58,6 +59,7 @@ type podStatusSyncRequest struct {
 
 // Updates pod statuses in apiserver. Writes only when new status has changed.
 // All methods are thread-safe.
+// 更新apiserver的pod statuses，只有在status变更的时候才写入，所有方法都线程安全
 type manager struct {
 	kubeClient clientset.Interface
 	podManager kubepod.Manager
@@ -121,6 +123,7 @@ func NewManager(kubeClient clientset.Interface, podManager kubepod.Manager, podD
 		kubeClient:        kubeClient,
 		podManager:        podManager,
 		podStatuses:       make(map[types.UID]versionedPodStatus),
+		// 缓存最多能存放1000个pod status
 		podStatusChannel:  make(chan podStatusSyncRequest, 1000), // Buffer up to 1000 statuses
 		apiStatusVersions: make(map[kubetypes.MirrorPodUID]uint64),
 		podDeletionSafety: podDeletionSafety,
@@ -149,6 +152,8 @@ func (m *manager) Start() {
 	// Don't start the status manager if we don't have a client. This will happen
 	// on the master, where the kubelet is responsible for bootstrapping the pods
 	// of the master components.
+	// 如果没有client的话，不要启动status manager，这会在master节点上发生，master上的kubelet负责
+	// 启动master components的pods
 	if m.kubeClient == nil {
 		klog.Infof("Kubernetes client is nil, not starting status manager.")
 		return
@@ -158,6 +163,7 @@ func (m *manager) Start() {
 	//lint:ignore SA1015 Ticker can link since this is only called once and doesn't handle termination.
 	syncTicker := time.Tick(syncPeriod)
 	// syncPod and syncBatch share the same go routine to avoid sync races.
+	// syncPod和syncBatch共享同一个goroutine来避免races
 	go wait.Forever(func() {
 		select {
 		case syncRequest := <-m.podStatusChannel:
@@ -318,6 +324,7 @@ func (m *manager) TerminatePod(pod *v1.Pod) {
 		oldStatus = &cachedStatus.status
 	}
 	status := *oldStatus.DeepCopy()
+	// 设置容器Status的Terminated状态
 	for i := range status.ContainerStatuses {
 		status.ContainerStatuses[i].State = v1.ContainerState{
 			Terminated: &v1.ContainerStateTerminated{},
@@ -359,6 +366,8 @@ func checkContainerStateTransition(oldStatuses, newStatuses []v1.ContainerStatus
 
 // updateStatusInternal updates the internal status cache, and queues an update to the api server if
 // necessary. Returns whether an update was triggered.
+// updateStatusInternal更新内部的status cache，并且将一个api server的更新请求入队，如果必要的话
+// 返回是否有一个更新被触发
 // This method IS NOT THREAD SAFE and must be called from a locked function.
 func (m *manager) updateStatusInternal(pod *v1.Pod, status v1.PodStatus, forceUpdate bool) bool {
 	var oldStatus v1.PodStatus
@@ -419,6 +428,7 @@ func (m *manager) updateStatusInternal(pod *v1.Pod, status v1.PodStatus, forceUp
 	m.podStatuses[pod.UID] = newStatus
 
 	select {
+		// 将podStatusSyncRequest注入channel
 	case m.podStatusChannel <- podStatusSyncRequest{pod.UID, newStatus}:
 		klog.V(5).Infof("Status Manager: adding pod: %q, with status: (%d, %v) to podStatusChannel",
 			pod.UID, newStatus.version, newStatus.status)
@@ -426,6 +436,7 @@ func (m *manager) updateStatusInternal(pod *v1.Pod, status v1.PodStatus, forceUp
 	default:
 		// Let the periodic syncBatch handle the update if the channel is full.
 		// We can't block, since we hold the mutex lock.
+		// 阶段性得执行syncBatch来处理更新，如果channel满了的话，我们不能阻塞，如果我们有锁的话
 		klog.V(4).Infof("Skipping the status update for pod %q for now because the channel is full; status: %+v",
 			format.Pod(pod), status)
 		return false
@@ -448,6 +459,7 @@ func updateLastTransitionTime(status, oldStatus *v1.PodStatus, conditionType v1.
 }
 
 // deletePodStatus simply removes the given pod from the status cache.
+// deletePodStatus简单地将给定pod从status cache中移除
 func (m *manager) deletePodStatus(uid types.UID) {
 	m.podStatusesLock.Lock()
 	defer m.podStatusesLock.Unlock()
@@ -507,6 +519,7 @@ func (m *manager) syncBatch() {
 
 	for _, update := range updatedStatuses {
 		klog.V(5).Infof("Status Manager: syncPod in syncbatch. pod UID: %q", update.podUID)
+		// 最终还是调用syncPod对每个pod进行同步
 		m.syncPod(update.podUID, update.status)
 	}
 }
@@ -520,6 +533,7 @@ func (m *manager) syncPod(uid types.UID, status versionedPodStatus) {
 	}
 
 	// TODO: make me easier to express from client code
+	// 直接从api server获取这个pod?
 	pod, err := m.kubeClient.CoreV1().Pods(status.podNamespace).Get(status.podName, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
 		klog.V(3).Infof("Pod %q does not exist on the server", format.PodDesc(status.podName, status.podNamespace, uid))
@@ -540,11 +554,13 @@ func (m *manager) syncPod(uid types.UID, status versionedPodStatus) {
 		return
 	}
 
+	// 从api server获取到是old status
 	oldStatus := pod.Status.DeepCopy()
 	// 对pod的状态进行更新
 	newPod, patchBytes, err := statusutil.PatchPodStatus(m.kubeClient, pod.Namespace, pod.Name, *oldStatus, mergePodStatus(*oldStatus, status.status))
 	klog.V(3).Infof("Patch status for pod %q with %q", format.Pod(pod), patchBytes)
 	if err != nil {
+		// 如果失败，则直接在日志中记录update status failed
 		klog.Warningf("Failed to update status for pod %q: %v", format.Pod(pod), err)
 		return
 	}
@@ -557,12 +573,15 @@ func (m *manager) syncPod(uid types.UID, status versionedPodStatus) {
 	if m.canBeDeleted(pod, status.status) {
 		deleteOptions := metav1.NewDeleteOptions(0)
 		// Use the pod UID as the precondition for deletion to prevent deleting a newly created pod with the same name and namespace.
+		// 使用pod UID作为删除的precondition，为了防止误删一个有着同样的name和namespace的新创建的pod
 		deleteOptions.Preconditions = metav1.NewUIDPreconditions(string(pod.UID))
+		// 直接访问APIServer，删除pod
 		err = m.kubeClient.CoreV1().Pods(pod.Namespace).Delete(pod.Name, deleteOptions)
 		if err != nil {
 			klog.Warningf("Failed to delete status for pod %q: %v", format.Pod(pod), err)
 			return
 		}
+		// Pod已经成功终止并且从etcd中移除
 		klog.V(3).Infof("Pod %q fully terminated and removed from etcd", format.Pod(pod))
 		m.deletePodStatus(uid)
 	}
@@ -584,6 +603,7 @@ func (m *manager) needsUpdate(uid types.UID, status versionedPodStatus) bool {
 
 func (m *manager) canBeDeleted(pod *v1.Pod, status v1.PodStatus) bool {
 	if pod.DeletionTimestamp == nil || kubepod.IsMirrorPod(pod) {
+		// 如果pod是mirror pod，则不能正常删除
 		return false
 	}
 	return m.podDeletionSafety.PodResourcesAreReclaimed(pod, status)
@@ -686,6 +706,7 @@ func normalizeStatus(pod *v1.Pod, status *v1.PodStatus) *v1.PodStatus {
 
 // mergePodStatus merges oldPodStatus and newPodStatus where pod conditions
 // not owned by kubelet is preserved from oldPodStatus
+// mergePodStatus将oldPodStatus和newPodStatus合并，如果oldPodStatus不为kubelet所有，则保留
 func mergePodStatus(oldPodStatus, newPodStatus v1.PodStatus) v1.PodStatus {
 	podConditions := []v1.PodCondition{}
 	for _, c := range oldPodStatus.Conditions {

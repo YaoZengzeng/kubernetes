@@ -84,6 +84,7 @@ type FakeClock struct {
 	FakePassiveClock
 
 	// waiters are waiting for the fake time to pass their specified time
+	// waiters用于等待fake time通过它们指定的时间
 	waiters []fakeClockWaiter
 }
 
@@ -175,6 +176,7 @@ func (f *FakeClock) NewTicker(d time.Duration) Ticker {
 }
 
 // Move clock by Duration, notify anyone that's called After, Tick, or NewTimer
+// 移动clock的Duration，通知任何调用After，Tick或者NewTimer的任何waiter
 func (f *FakeClock) Step(d time.Duration) {
 	f.lock.Lock()
 	defer f.lock.Unlock()
@@ -189,9 +191,11 @@ func (f *FakeClock) SetTime(t time.Time) {
 }
 
 // Actually changes the time and checks any waiters. f must be write-locked.
+// 真正改变time并且检测任何的waiters，f必须write-locked
 func (f *FakeClock) setTimeLocked(t time.Time) {
 	f.time = t
 	newWaiters := make([]fakeClockWaiter, 0, len(f.waiters))
+	// 遍历waiters，筛选出
 	for i := range f.waiters {
 		w := &f.waiters[i]
 		if !w.targetTime.After(t) {
@@ -232,6 +236,7 @@ func (f *FakeClock) Sleep(d time.Duration) {
 }
 
 // IntervalClock implements Clock, but each invocation of Now steps the clock forward the specified duration
+// IntervalClock实现了Clock接口，但是每次调用New都会将clock移动特定的duration
 type IntervalClock struct {
 	Time     time.Time
 	Duration time.Duration

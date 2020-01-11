@@ -53,10 +53,12 @@ type Config struct {
 }
 
 // Manager evaluates when an eviction threshold for node stability has been met on the node.
+// Manager用来评估什么时候达到了eviction threshold，会影响到节点的稳定性
 type Manager interface {
 	// Start starts the control loop to monitor eviction thresholds at specified interval.
 	Start(diskInfoProvider DiskInfoProvider, podFunc ActivePodsFunc, podCleanedUpFunc PodCleanedUpFunc, monitoringInterval time.Duration)
 
+	// 节点的压力主要来自内存，磁盘以及PID
 	// IsUnderMemoryPressure returns true if the node is under memory pressure.
 	IsUnderMemoryPressure() bool
 

@@ -24,15 +24,19 @@ import (
 )
 
 // Specified a policy for garbage collecting containers.
+// 指定用于GC容器的策略
 type ContainerGCPolicy struct {
 	// Minimum age at which a container can be garbage collected, zero for no limit.
+	// 一个容器可以被GC的最小时间
 	MinAge time.Duration
 
 	// Max number of dead containers any single pod (UID, container name) pair is
 	// allowed to have, less than zero for no limit.
+	// 单个的pod（UID, container name）pair能够有的最大的dead containers的数目，小于0意味着没有limit
 	MaxPerPodContainer int
 
 	// Max number of total dead containers, less than zero for no limit.
+	// 总的dead containers的数目
 	MaxContainers int
 }
 
@@ -43,6 +47,7 @@ type ContainerGC interface {
 	// Garbage collect containers.
 	GarbageCollect() error
 	// Deletes all unused containers, including containers belonging to pods that are terminated but not deleted
+	// 删除所有未使用的containers，包括那些pods处于terminated但是还没有deleted的容器
 	DeleteAllUnusedContainers() error
 }
 

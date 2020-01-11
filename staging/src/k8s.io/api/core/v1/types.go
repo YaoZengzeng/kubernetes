@@ -2330,6 +2330,7 @@ type ContainerStateWaiting struct {
 // ContainerStateRunning is a running state of a container.
 type ContainerStateRunning struct {
 	// Time at which the container was last (re-)started
+	// 容器上一次启动或者重启的时间
 	// +optional
 	StartedAt metav1.Time `json:"startedAt,omitempty" protobuf:"bytes,1,opt,name=startedAt"`
 }
@@ -2361,6 +2362,8 @@ type ContainerStateTerminated struct {
 // ContainerState holds a possible state of container.
 // Only one of its members may be specified.
 // If none of them is specified, the default one is ContainerStateWaiting.
+// ContainerState维护容器可能的状态，只有它们其中之一能够被指定
+// 如果一个都没有指定，则默认为ContainerStateWaiting
 type ContainerState struct {
 	// Details about a waiting container
 	// +optional
@@ -2374,6 +2377,7 @@ type ContainerState struct {
 }
 
 // ContainerStatus contains details for the current status of this container.
+// ContainerStatus包含了当前这个container的状态的详细信息
 type ContainerStatus struct {
 	// This must be a DNS_LABEL. Each container in a pod must have a unique name.
 	// Cannot be updated.
@@ -2437,13 +2441,17 @@ type PodConditionType string
 // These are valid conditions of pod.
 const (
 	// ContainersReady indicates whether all containers in the pod are ready.
+	// ContainersReady意味着pod里的所有容器都ready
 	ContainersReady PodConditionType = "ContainersReady"
 	// PodInitialized means that all init containers in the pod have started successfully.
+	// PodInitialized意味着这个pod所有的init containers都已经启动成功了
 	PodInitialized PodConditionType = "Initialized"
 	// PodReady means the pod is able to service requests and should be added to the
 	// load balancing pools of all matching services.
+	// PodReady意味着这个pod能够服务请求并且能够加入到所有匹配的service的load balancing pools
 	PodReady PodConditionType = "Ready"
 	// PodScheduled represents status of the scheduling process for this pod.
+	// PodScheduled代表这个pod的调度过程的状态
 	PodScheduled PodConditionType = "PodScheduled"
 )
 
@@ -2455,6 +2463,7 @@ const (
 )
 
 // PodCondition contains details for the current condition of this pod.
+// PodCondition包含了当前这个pod的详细信息
 type PodCondition struct {
 	// Type is the type of the condition.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
@@ -3421,6 +3430,7 @@ type PodStatus struct {
 	// +optional
 	Phase PodPhase `json:"phase,omitempty" protobuf:"bytes,1,opt,name=phase,casttype=PodPhase"`
 	// Current service state of pod.
+	// 当前pod的状态
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
 	// +optional
 	// +patchMergeKey=type
@@ -4412,6 +4422,7 @@ type NodeStatus struct {
 	// +optional
 	NodeInfo NodeSystemInfo `json:"nodeInfo,omitempty" protobuf:"bytes,7,opt,name=nodeInfo"`
 	// List of container images on this node
+	// 节点上的一系列容器镜像
 	// +optional
 	Images []ContainerImage `json:"images,omitempty" protobuf:"bytes,8,rep,name=images"`
 	// List of attachable volumes in use (mounted) by the node.
@@ -5554,6 +5565,7 @@ type ConfigMapList struct {
 type ComponentConditionType string
 
 // These are the valid conditions for the component.
+// 合法的component状态只有Healthy
 const (
 	ComponentHealthy ComponentConditionType = "Healthy"
 )
@@ -5565,6 +5577,7 @@ type ComponentCondition struct {
 	Type ComponentConditionType `json:"type" protobuf:"bytes,1,opt,name=type,casttype=ComponentConditionType"`
 	// Status of the condition for a component.
 	// Valid values for "Healthy": "True", "False", or "Unknown".
+	// component的状态，合法的值为"Healthy"，"True"，"False"或者"Unknown"
 	Status ConditionStatus `json:"status" protobuf:"bytes,2,opt,name=status,casttype=ConditionStatus"`
 	// Message about the condition for a component.
 	// For example, information about a health check.
@@ -5581,6 +5594,7 @@ type ComponentCondition struct {
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ComponentStatus (and ComponentStatusList) holds the cluster validation info.
+// ComponentStatus包含了集群验证信息
 type ComponentStatus struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.

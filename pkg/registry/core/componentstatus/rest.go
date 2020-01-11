@@ -55,11 +55,13 @@ func (rs *REST) NewList() runtime.Object {
 // Returns the list of component status. Note that the label and field are both ignored.
 // Note that this call doesn't support labels or selectors.
 func (rs *REST) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
+	// 获取需要验证的servers
 	servers := rs.GetServersToValidate()
 
 	wait := sync.WaitGroup{}
 	wait.Add(len(servers))
 	statuses := make(chan api.ComponentStatus, len(servers))
+	// 遍历所有的servers获取相应的状态
 	for k, v := range servers {
 		go func(name string, server *Server) {
 			defer wait.Done()

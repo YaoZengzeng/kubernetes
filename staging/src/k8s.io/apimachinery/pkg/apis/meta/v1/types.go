@@ -720,6 +720,7 @@ const (
 	StatusReasonNotFound StatusReason = "NotFound"
 
 	// StatusReasonAlreadyExists means the resource you are creating already exists.
+	// StatusReasonAlreadyExists意味着创建的资源已经存在了
 	// Details (optional):
 	//   "kind" string - the kind attribute of the conflicting resource
 	//   "id"   string - the identifier of the conflicting resource

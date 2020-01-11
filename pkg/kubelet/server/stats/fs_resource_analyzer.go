@@ -93,6 +93,7 @@ func (s *fsResourceAnalyzer) updateCachedPodVolumeStats() {
 
 // GetPodVolumeStats returns the PodVolumeStats for a given pod.  Results are looked up from a cache that
 // is eagerly populated in the background, and never calculated on the fly.
+// GetPodVolumeStats返回给定pod的PodVolumeStats，Results从cache中获取，cache之前就已经被填充了而不会即时处理
 func (s *fsResourceAnalyzer) GetPodVolumeStats(uid types.UID) (PodVolumeStats, bool) {
 	cache := s.cachedVolumeStats.Load().(statCache)
 	statCalc, found := cache[uid]

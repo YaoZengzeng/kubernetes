@@ -72,6 +72,7 @@ func (server *Server) DoServerCheck() (probe.Result, string, error) {
 	}
 	url := utilnet.FormatURL(scheme, server.Addr, server.Port, server.Path)
 
+	// 直接调用http prober进行检测
 	result, data, err := server.Prober.Probe(url, nil, probeTimeOut)
 
 	if err != nil {

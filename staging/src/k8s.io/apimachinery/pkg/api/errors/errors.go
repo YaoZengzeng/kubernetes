@@ -172,6 +172,7 @@ func NewForbidden(qualifiedResource schema.GroupResource, name string, err error
 }
 
 // NewConflict returns an error indicating the item can't be updated as provided.
+// NewConflict返回一个error，表明item不能以提供的方式被更新
 func NewConflict(qualifiedResource schema.GroupResource, name string, err error) *StatusError {
 	return &StatusError{metav1.Status{
 		Status: metav1.StatusFailure,
@@ -616,6 +617,7 @@ func SuggestsClientDelay(err error) (int, bool) {
 }
 
 // ReasonForError returns the HTTP status for a particular error.
+// ReasonForError返回一个特定error的HTTP status
 func ReasonForError(err error) metav1.StatusReason {
 	switch t := err.(type) {
 	case APIStatus:

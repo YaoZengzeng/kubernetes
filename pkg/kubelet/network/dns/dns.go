@@ -55,6 +55,7 @@ const (
 )
 
 // Configurer is used for setting up DNS resolver configuration when launching pods.
+// Configurer用于在启动pods的时候创建DNS resolver configuration
 type Configurer struct {
 	recorder record.EventRecorder
 	nodeRef  *v1.ObjectReference

@@ -89,6 +89,7 @@ func ProbeVolumePlugins() []volume.VolumePlugin {
 // GetDynamicPluginProber gets the probers of dynamically discoverable plugins
 // for kubelet.
 // Currently only Flexvolume plugins are dynamically discoverable.
+// 当前只有Flexvolume plugins是动态发现的
 func GetDynamicPluginProber(pluginDir string, runner exec.Interface) volume.DynamicPluginProber {
 	return flexvolume.GetDynamicPluginProber(pluginDir, runner)
 }

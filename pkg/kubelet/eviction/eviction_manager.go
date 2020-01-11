@@ -165,6 +165,7 @@ func (m *managerImpl) Admit(attrs *lifecycle.PodAdmitAttributes) lifecycle.PodAd
 }
 
 // Start starts the control loop to observe and response to low compute resources.
+// Start启动control loop用于发现以及回应low compute resource
 func (m *managerImpl) Start(diskInfoProvider DiskInfoProvider, podFunc ActivePodsFunc, podCleanedUpFunc PodCleanedUpFunc, monitoringInterval time.Duration) {
 	thresholdHandler := func(message string) {
 		klog.Infof(message)

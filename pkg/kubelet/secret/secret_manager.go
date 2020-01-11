@@ -133,9 +133,12 @@ func NewCachingSecretManager(kubeClient clientset.Interface, getTTL manager.GetO
 // necessary for registered pods.
 // NewWatchingSecretManager创建一个manager，它为所有registered pods的所有secrets保持一个缓存
 // It implements the following logic:
+// 它实现的逻辑如下
 // - whenever a pod is created or updated, we start individual watches for all
 //   referenced objects that aren't referenced from other registered pods
+// - 当一个pod被创建或者更新，我们启动单独的watches用于所有哪些没有被其他registered pods引用的referenced objects
 // - every GetObject() returns a value from local cache propagated via watches
+// - 每次的GetObject()返回本地缓存返回value，本地缓存通过watchers进行填充
 func NewWatchingSecretManager(kubeClient clientset.Interface) Manager {
 	listSecret := func(namespace string, opts metav1.ListOptions) (runtime.Object, error) {
 		return kubeClient.CoreV1().Secrets(namespace).List(opts)

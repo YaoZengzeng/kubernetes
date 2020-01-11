@@ -347,12 +347,14 @@ func (vm *volumeManager) WaitForAttachAndMount(pod *v1.Pod) error {
 		return nil
 	}
 
+	// 首先获取期望的volumes
 	expectedVolumes := getExpectedVolumes(pod)
 	if len(expectedVolumes) == 0 {
 		// No volumes to verify
 		return nil
 	}
 
+	// 等待volumes的attach和mount
 	klog.V(3).Infof("Waiting for volumes to attach and mount for pod %q", format.Pod(pod))
 	uniquePodName := util.GetUniquePodName(pod)
 

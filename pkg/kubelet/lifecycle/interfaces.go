@@ -81,6 +81,7 @@ type PodSyncHandler interface {
 	// and the pod is immediately killed.
 	// This operation must return immediately as its called for each sync pod.
 	// The provided pod should never be modified.
+	// 下面的操作应该尽快返回，因为每次sync pod都会调用，提供的pod不应该被更改
 	ShouldEvict(pod *v1.Pod) ShouldEvictResponse
 }
 

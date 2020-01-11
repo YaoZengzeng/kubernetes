@@ -27,6 +27,7 @@ const (
 	PodPresetOptOutAnnotationKey string = "podpreset.admission.kubernetes.io/exclude"
 
 	// MirrorAnnotationKey represents the annotation key set by kubelets when creating mirror pods
+	// MirrorAnnotationKey代表了在创建mirror pods时，kubelet会设置的annotation key
 	MirrorPodAnnotationKey string = "kubernetes.io/config.mirror"
 
 	// TolerationsAnnotationKey represents the key of tolerations data (json serialized)

@@ -16,4 +16,5 @@ limitations under the License.
 
 // Package eviction is responsible for enforcing eviction thresholds to maintain
 // node stability.
+// eviction负责执行eviction thresholds用来维持节点稳定
 package eviction // import "k8s.io/kubernetes/pkg/kubelet/eviction"

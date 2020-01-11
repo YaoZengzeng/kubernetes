@@ -34,6 +34,8 @@ import (
 // associated with it which runs the probe loop until the container permanently terminates, or the
 // stop channel is closed. The worker uses the probe Manager's statusManager to get up-to-date
 // container IDs.
+// worker处理它的assigned container的阶段性的probing，每个worker有一个goroutine，它会运行probe loop，直到
+// 容器永远终止，或者stop channel被关闭，worker用probe Manager的statusManager来获取最新的container IDs
 type worker struct {
 	// Channel for stopping the probe.
 	stopCh chan struct{}
@@ -54,10 +56,12 @@ type worker struct {
 	initialValue results.Result
 
 	// Where to store this workers results.
+	// resultManager和probeManager用来存储worker的results
 	resultsManager results.Manager
 	probeManager   *manager
 
 	// The last known container ID for this worker.
+	// 这个worker上一个知道的container ID
 	containerID kubecontainer.ContainerID
 	// The last probe result for this worker.
 	lastResult results.Result
@@ -125,6 +129,7 @@ func newWorker(
 }
 
 // run periodically probes the container.
+// run阶段性地对容器进行探测
 func (w *worker) run() {
 	probeTickerPeriod := time.Duration(w.spec.PeriodSeconds) * time.Second
 
@@ -170,10 +175,12 @@ func (w *worker) stop() {
 
 // doProbe probes the container once and records the result.
 // Returns whether the worker should continue.
+// 返回这个worker是否应该继续
 func (w *worker) doProbe() (keepGoing bool) {
 	defer func() { recover() }() // Actually eat panics (HandleCrash takes care of logging)
 	defer runtime.HandleCrash(func(_ interface{}) { keepGoing = true })
 
+	// 从statusManager获取pod的status
 	status, ok := w.probeManager.statusManager.GetPodStatus(w.pod.UID)
 	if !ok {
 		// Either the pod has not been created yet, or it was already deleted.
@@ -191,6 +198,7 @@ func (w *worker) doProbe() (keepGoing bool) {
 	c, ok := podutil.GetContainerStatus(status.ContainerStatuses, w.container.Name)
 	if !ok || len(c.ContainerID) == 0 {
 		// Either the container has not been created yet, or it was deleted.
+		// 容器还没有被创建或者已经被删除了
 		klog.V(3).Infof("Probe target container not found: %v - %v",
 			format.Pod(w.pod), w.container.Name)
 		return true // Wait for more information.
@@ -198,6 +206,7 @@ func (w *worker) doProbe() (keepGoing bool) {
 
 	if w.containerID.String() != c.ContainerID {
 		if !w.containerID.IsEmpty() {
+			// 如果容器的ID发生了变更，则从结果从resultsManager中移除
 			w.resultsManager.Remove(w.containerID)
 		}
 		w.containerID = kubecontainer.ParseContainerID(c.ContainerID)

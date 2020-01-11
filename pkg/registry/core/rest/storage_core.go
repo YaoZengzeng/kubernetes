@@ -344,11 +344,13 @@ type componentStatusStorage struct {
 }
 
 func (s componentStatusStorage) serversToValidate() map[string]*componentstatus.Server {
+	// 将scheduler和controller-manager默认写死
 	serversToValidate := map[string]*componentstatus.Server{
 		"controller-manager": {Addr: "127.0.0.1", Port: ports.InsecureKubeControllerManagerPort, Path: "/healthz"},
 		"scheduler":          {Addr: "127.0.0.1", Port: ports.InsecureSchedulerPort, Path: "/healthz"},
 	}
 
+	// 加入的都是etcd的server
 	for ix, machine := range s.storageFactory.Backends() {
 		etcdUrl, err := url.Parse(machine.Server)
 		if err != nil {
@@ -370,6 +372,7 @@ func (s componentStatusStorage) serversToValidate() map[string]*componentstatus.
 			port = 2379
 		}
 		// TODO: etcd health checking should be abstracted in the storage tier
+		// 构建etcd的validate server
 		serversToValidate[fmt.Sprintf("etcd-%d", ix)] = &componentstatus.Server{
 			Addr:        addr,
 			EnableHTTPS: etcdUrl.Scheme == "https",

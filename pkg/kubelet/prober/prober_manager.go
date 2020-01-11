@@ -55,6 +55,8 @@ var ProberResults = metrics.NewCounterVec(
 // manager use the cached probe results to set the appropriate Ready state in the PodStatus when
 // requested (UpdatePodStatus). Updating probe parameters is not currently supported.
 // TODO: Move liveness probing out of the runtime, to here.
+// Manager管理pod probing，它为每个指定了probe的每个容器创建一个probe "worker"
+// worker阶段性地对给定的container进行检测并且缓存结果，manager用缓存的probe results为PodStatus设置恰当的Ready state
 type Manager interface {
 	// AddPod creates new probe workers for every container probe. This should be called for every
 	// pod created.
@@ -128,6 +130,7 @@ func (m *manager) Start() {
 }
 
 // Key uniquely identifying container probes
+// Key唯一地标识container probes
 type probeKey struct {
 	podUID        types.UID
 	containerName string
@@ -188,6 +191,7 @@ func (m *manager) AddPod(pod *v1.Pod) {
 					format.Pod(pod), c.Name)
 				return
 			}
+			// 创建readiness probe worker
 			w := newWorker(m, readiness, pod, c)
 			m.workers[key] = w
 			go w.run()
@@ -200,6 +204,7 @@ func (m *manager) AddPod(pod *v1.Pod) {
 					format.Pod(pod), c.Name)
 				return
 			}
+			// 创建liveness probe worker
 			w := newWorker(m, liveness, pod, c)
 			m.workers[key] = w
 			go w.run()

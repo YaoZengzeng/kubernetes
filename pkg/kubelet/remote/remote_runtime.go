@@ -34,6 +34,7 @@ import (
 )
 
 // RemoteRuntimeService is a gRPC implementation of internalapi.RuntimeService.
+// RemoteRuntimeService是一个internalapi.RuntimeService的gRPC实现
 type RemoteRuntimeService struct {
 	timeout       time.Duration
 	runtimeClient runtimeapi.RuntimeServiceClient
@@ -454,6 +455,7 @@ func (r *RemoteRuntimeService) Status() (*runtimeapi.RuntimeStatus, error) {
 		return nil, err
 	}
 
+	// 至少需要两个conditions
 	if resp.Status == nil || len(resp.Status.Conditions) < 2 {
 		errorMessage := "RuntimeReady or NetworkReady condition are not set"
 		klog.Errorf("Status failed: %s", errorMessage)

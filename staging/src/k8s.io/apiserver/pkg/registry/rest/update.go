@@ -60,6 +60,8 @@ type RESTUpdateStrategy interface {
 	// AllowUnconditionalUpdate returns true if the object can be updated
 	// unconditionally (irrespective of the latest resource version), when
 	// there is no resource version specified in the object.
+	// AllowUnconditionalUpdate返回true，如果对象可以被无条件地更新（无需关注最新的resouce version）
+	// 当对象中没有指定resouce version时
 	AllowUnconditionalUpdate() bool
 }
 

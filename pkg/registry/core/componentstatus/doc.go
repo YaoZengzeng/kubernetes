@@ -16,4 +16,5 @@ limitations under the License.
 
 // Package componentstatus provides interfaces and implementation for retrieving cluster
 // component status.
+// componentstatus提供了接口以及实现用于获取集群组件的状态
 package componentstatus // import "k8s.io/kubernetes/pkg/registry/core/componentstatus"

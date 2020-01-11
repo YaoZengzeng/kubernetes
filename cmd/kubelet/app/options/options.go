@@ -296,6 +296,7 @@ func applyLegacyDefaults(kc *kubeletconfig.KubeletConfiguration) {
 
 // KubeletServer encapsulates all of the parameters necessary for starting up
 // a kubelet. These can either be set via command line or directly.
+// KubeletServer封装了所有启动一个kubelet所需的参数
 type KubeletServer struct {
 	KubeletFlags
 	kubeletconfig.KubeletConfiguration

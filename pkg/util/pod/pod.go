@@ -56,6 +56,7 @@ func preparePatchBytesForPodStatus(namespace, name string, oldPodStatus, newPodS
 		return nil, fmt.Errorf("failed to Marshal newData for pod %q/%q: %v", namespace, name, err)
 	}
 
+	// 将新老status进行merge
 	patchBytes, err := strategicpatch.CreateTwoWayMergePatch(oldData, newData, v1.Pod{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to CreateTwoWayMergePatch for pod %q/%q: %v", namespace, name, err)
